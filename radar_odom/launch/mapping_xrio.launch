@@ -1,0 +1,19 @@
+<launch>
+    
+    <param name="/use_sim_time" value="true" />
+
+    <node pkg="tf" type="static_transform_publisher" name="radar_center_broadcaster"
+        args="0.04 0.03 -0.03 0.030573233 -0.031111548 -0.712571593 0.700242154 base_link radar_center 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="radar_left_broadcaster"
+        args="0.02 0.11 0.07 -0.376115074 -0.926436839  -0.001703021  0.015790310 base_link radar_left 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="radar_right_broadcaster"
+        args="0.05 -0.04 0.04 -0.926237675 -0.373772748 0.026054024 0.041217599 base_link radar_right 100" />
+
+    <node name="doppler_odom" pkg="radar_odom" type="doppler_odom_multi" output="screen" />
+
+    <node name="rviz" pkg="rviz" type="rviz" respawn="false"
+        args="-d $(find radar_odom)/cfg/vis_odom_multi.rviz" />
+
+</launch>

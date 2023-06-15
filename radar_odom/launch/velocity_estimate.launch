@@ -1,0 +1,32 @@
+<launch>
+
+    <param name="/use_sim_time" value="true" />
+
+
+    <!-- 0: Fair, 1: Huber, 2: Cauchy, 3: Geman-McClure, 4: Welsch, 5: Tukey -->
+
+    <node ns="Huber" name="v_esimate" pkg="radar_odom" type="velocityEstimation" output="screen">
+        <param name="estimate_inlier" value="false"/>
+        <param name="robust_estimator" value="1"/>
+    </node>
+
+    <node ns="cauchy" name="v_esimate" pkg="radar_odom" type="velocityEstimation" output="screen">
+        <param name="estimate_inlier" value="false"/>
+        <param name="robust_estimator" value="2"/>
+    </node>
+
+    <node ns="GemanMcClure" name="v_esimate" pkg="radar_odom" type="velocityEstimation" output="screen">
+        <param name="estimate_inlier" value="false"/>
+        <param name="robust_estimator" value="3"/>
+    </node>
+
+    <node ns="cauchy_inlier" name="v_esimate" pkg="radar_odom" type="velocityEstimation" output="screen">
+        <param name="estimate_inlier" value="true"/>
+        <param name="robust_estimator" value="2"/>
+    </node>
+
+    <node pkg="plotjuggler" type="plotjuggler" name="plot"
+        args="-l $(find radar_odom)/cfg/info_vel.xml" />
+
+
+</launch>
