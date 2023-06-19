@@ -1,0 +1,21 @@
+<launch>
+
+    <node pkg="tf" type="static_transform_publisher" name="cam_left_broadcaster"
+        args="0.059579 -0.037328 -0.001354 0.496711 -0.500604 0.504629 -0.498020 epson camera_left 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="cam_right_broadcaster"
+        args="0.058270 -0.205956 -0.000909 -0.498194 0.500297 -0.500749 0.500756 epson camera_right 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="razor_broadcaster"
+        args="0.193860 -0.011371 -0.124871 0.499102 -0.496923 0.501641 0.502315 camera_left razor 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster"
+        args="0.00015 -0.11715 0.02135 0 0 0 epson velodyne 100" />
+
+    <node pkg="tf" type="static_transform_publisher" name="radar_broadcaster"
+        args="0 -0.11715 -0.1 0 0 0 epson radar 100" /> 
+
+    <node pkg="tf" type="static_transform_publisher" name="base_broadcaster"
+        args="0 0 0 0 0 0 base epson 100" />
+
+</launch>
