@@ -2,9 +2,7 @@
 
 DopplerIO::DopplerIO(NodeHandle *nh)
 {
-    param::get("~doppler_resolution", doppler_resolution);
-    param::get("~lag", lag);
-
+    params = rplrio::get_params(*nh);
     // radar noise model
 
     // velocity_estimator = new RadarVelocityEstimator(
@@ -14,7 +12,7 @@ DopplerIO::DopplerIO(NodeHandle *nh)
 
     // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
 
-    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>();
+    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
 
     // velocity_estimator = new RadarVelocityEstimatorGNC(
     //         noiseModel::Diagonal::Sigmas(Vector1(doppler_resolution)));
@@ -30,33 +28,17 @@ DopplerIO::DopplerIO(NodeHandle *nh)
     //         noiseModel::mEstimator::Cauchy::Create(0.1),
     //         noiseModel::Diagonal::Sigmas(Vector1(doppler_resolution))));
 
-    velocity_estimator->set_inlier_thresh(doppler_resolution);
+    velocity_estimator->set_inlier_thresh(params.doppler_std);
 
     // optimizer init
     ISAM2Params parameters;
     parameters.relinearizeThreshold = 0.0;
     parameters.relinearizeSkip = 1;
-    smootherISAM2 = std::make_unique<IncrementalFixedLagSmoother>(lag, parameters);
+    smootherISAM2 = std::make_unique<IncrementalFixedLagSmoother>(params.lag, parameters);
 
     // imu init
-    initializer = std::make_unique<StaticInitializer>(2, 0.1);
-    while (nh->ok())
-    {
-        try
-        {
-            tf::StampedTransform tf_ir;
-            listener.lookupTransform("radar", "epson", Time(0), tf_ir);
-            tf::Quaternion q = tf_ir.getRotation();
-            R_RtoI = gtsam::Rot3::Quaternion(q.w(), q.x(), q.y(), q.z());
-            break;
-        }
-        catch (tf::TransformException &ex)
-        {
-            ROS_WARN("%s", "Fail to catch tf imu to radar. Next attempt in 0.5s.");
-            Duration(0.5).sleep();
-        }
-    }
-
+    initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
+    
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
     pub_twist = nh->advertise<geometry_msgs::TwistWithCovarianceStamped>("radar/velocity", 1);
@@ -64,8 +46,8 @@ DopplerIO::DopplerIO(NodeHandle *nh)
     pub_error = nh->advertise<geometry_msgs::Twist>("radar/error", 1);
     pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
     pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 1);
-    sub_radar = nh->subscribe(radar_topic, 1, &DopplerIO::cb_radar, this);
-    sub_imu = nh->subscribe(imu_topic, 1000, &DopplerIO::cb_imu, this);
+    sub_radar = nh->subscribe(params.radar_topic, 1, &DopplerIO::cb_radar, this);
+    sub_imu = nh->subscribe(params.imu_topic, 1000, &DopplerIO::cb_imu, this);
 }
 
 void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
@@ -77,7 +59,7 @@ void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vect
     Vector3 prior_velocity(0, 0, 0);
     imuBias::ConstantBias prior_imu_bias(bias_acc, bias_gyro);
     // imuBias::ConstantBias prior_imu_bias;
-    preintegrated = std::make_shared<PreintegratedCombinedMeasurements>(imu_param, prior_imu_bias);
+    preintegrated = std::make_shared<PreintegratedCombinedMeasurements>(rplrio::imuParams(params), prior_imu_bias);
     assert(preintegrated);
 
     // pose init
@@ -95,7 +77,7 @@ void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vect
     // prior noise model
     pose_noise_model = noiseModel::Diagonal::Sigmas(
         (Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
-    velocity_noise_model = noiseModel::Isotropic::Sigma(3, 0.1);       // m/s
+    velocity_noise_model = noiseModel::Isotropic::Sigma(3, 1e-2);       // m/s
     bias_noise_model = noiseModel::Isotropic::Sigma(6, 1e-3);
 
     // Add all prior
@@ -158,6 +140,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     initial_values.insert(X(step), prop_state.pose());
     initial_values.insert(V(step), prop_state.v());
     initial_values.insert(B(step), prev_bias);
+
     key_timestamps[X(step)] = current_t;
     key_timestamps[V(step)] = current_t;
     key_timestamps[B(step)] = current_t;
@@ -237,14 +220,14 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
 
     double imu_t = imu_msg->header.stamp.toSec();
 
-    gtsam::Vector3 acc = (gtsam::Vector3() << imu_msg->linear_acceleration.x,
-                          imu_msg->linear_acceleration.y,
-                          imu_msg->linear_acceleration.z)
-                             .finished();
-    gtsam::Vector3 omega = (gtsam::Vector3() << imu_msg->angular_velocity.x,
-                            imu_msg->angular_velocity.y,
-                            imu_msg->angular_velocity.z)
-                               .finished();
+    gtsam::Vector3 acc = params.R_i_r * (gtsam::Vector3() << imu_msg->linear_acceleration.x,
+                                         imu_msg->linear_acceleration.y,
+                                         imu_msg->linear_acceleration.z)
+                                            .finished();
+    gtsam::Vector3 omega = params.R_i_r * (gtsam::Vector3() << imu_msg->angular_velocity.x,
+                                           imu_msg->angular_velocity.y,
+                                           imu_msg->angular_velocity.z)
+                                              .finished();
     if (!initialized)
     {
         bool init_success = initializer->init_update(

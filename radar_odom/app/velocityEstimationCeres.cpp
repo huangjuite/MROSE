@@ -1,6 +1,6 @@
 #include <string>
 #include <vector>
-#include <stdlib.h>
+#include <memory>
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -18,6 +18,7 @@
 #include "RadarVelocityEstimatorCeres.h"
 #include "RadarVelocityEstimatorCeresHCS.h"
 #include "utils.h"
+#include "params.h"
 
 using namespace std;
 using namespace ros;
@@ -25,9 +26,7 @@ using namespace ros;
 class VestimateCeres
 {
 private:
-    string radar_topic = "/radar_points";
-    float doppler_resolution = 0.05512325;
-    float doppler_sigma = doppler_resolution;
+    rplrio::Params param = rplrio::get_params(*nh);
     float inlier_thresh;
 
     NodeHandle *nh;
@@ -42,7 +41,8 @@ private:
     sensor_msgs::PointCloud2 inliers_msg;
 
     // RadarVelocityEstimatorCeres v_estimator;
-    RadarVelocityEstimatorCeresHCS v_estimator;
+    std::shared_ptr<RadarVelocityEstimatorCeresHCS> v_estimator;
+
 
     void cb_radar(const sensor_msgs::PointCloud2 pc_msg);
 
@@ -54,17 +54,16 @@ public:
 VestimateCeres::VestimateCeres(NodeHandle *nh)
 {
 
-    param::get("~doppler_sigma", doppler_sigma);
-
     // radar init
     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    v_estimator.set_inlier_thresh(doppler_resolution);
+    v_estimator.reset(new RadarVelocityEstimatorCeresHCS(param));
+    v_estimator->set_inlier_thresh(param.doppler_std);
 
     // ros init
     pub_twist = nh->advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity", 1);
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity_marker", 1);
     pub_inlier = nh->advertise<sensor_msgs::PointCloud2>("inliers", 1);
-    sub_radar = nh->subscribe(radar_topic, 1, &VestimateCeres::cb_radar, this);
+    sub_radar = nh->subscribe(param.radar_topic, 1, &VestimateCeres::cb_radar, this);
 }
 
 void VestimateCeres::cb_radar(const sensor_msgs::PointCloud2 pc_msg)
@@ -72,10 +71,10 @@ void VestimateCeres::cb_radar(const sensor_msgs::PointCloud2 pc_msg)
     // body frame velocity estimation
     pcl::fromROSMsg(pc_msg, *radar_pc);
 
-    v_estimator.set_initial_velocity(Eigen::Vector3d(1, 0, 0));
-    Eigen::Vector3d v_est = v_estimator.optimize(radar_pc);
-    inlier_pc = v_estimator.get_inlier(radar_pc, v_est);
-    Eigen::Matrix3d radar_cov = v_estimator.get_covariance(radar_pc, v_est);
+    v_estimator->set_initial_velocity(Eigen::Vector3d(1, 0, 0));
+    Eigen::Vector3d v_est = v_estimator->optimize(radar_pc);
+    inlier_pc = v_estimator->get_inlier(radar_pc, v_est);
+    Eigen::Matrix3d radar_cov = v_estimator->get_covariance(radar_pc, v_est);
 
     pcl::toROSMsg(*inlier_pc, inliers_msg);
     inliers_msg.header = pc_msg.header;

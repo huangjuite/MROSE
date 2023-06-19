@@ -9,6 +9,9 @@
 #include <Eigen/Dense>
 #include <ceres/ceres.h>
 #include <ceres/normal_prior.h>
+
+#include "params.h"
+
 class DopplerAngleCostFunctor
 {
 private:
@@ -100,7 +103,7 @@ public:
 class RadarVelocityEstimatorCeresHCS
 {
 private:
-    float doppler_resolution = 0.05512325; // meter/s
+    rplrio::Params param;
 
     Eigen::Vector3d initial_v;
 
@@ -110,7 +113,7 @@ private:
     float doppler_projection(pcl::PointXYZIS p, Eigen::Vector3d v);
 
 public:
-    RadarVelocityEstimatorCeresHCS();
+    RadarVelocityEstimatorCeresHCS(rplrio::Params &param);
     ~RadarVelocityEstimatorCeresHCS();
 
     Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);

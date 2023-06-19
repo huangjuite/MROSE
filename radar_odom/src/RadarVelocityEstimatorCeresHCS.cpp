@@ -1,7 +1,8 @@
 #include "RadarVelocityEstimatorCeresHCS.h"
 
-RadarVelocityEstimatorCeresHCS::RadarVelocityEstimatorCeresHCS()
+RadarVelocityEstimatorCeresHCS::RadarVelocityEstimatorCeresHCS(rplrio::Params &param)
 {
+    this->param = param;
     this->inlier_thresh = 0.1;
     inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
 }
@@ -44,7 +45,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(pcl::PointCloud<pcl::Po
 
         problem.AddParameterBlock(a, 2);
 
-        DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.speed, doppler_resolution);
+        DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.speed, param.doppler_std);
 
         ceres::ResidualBlockId id = problem.AddResidualBlock(
             cost_function, new ceres::CauchyLoss(0.2), v_est, a);
@@ -52,7 +53,8 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(pcl::PointCloud<pcl::Po
 
         // double s[2] = {2 * M_PI / 256.0, 2 * M_PI / 256.0};
         // s[1] *= 4;
-        double s[2] = {2 * M_PI / 256.0, 0.314159}; // {1.41 deg, 18 deg}
+
+        double s[2] = {param.azimuth_std, param.elevation_std}; // {1.41 deg, 18 deg}
         
         Eigen::Vector2d angle_sigma(s);
         Eigen::Matrix2d A_mat =
