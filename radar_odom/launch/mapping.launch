@@ -1,9 +1,8 @@
 <launch>
 
     <!-- odometry parameter -->
+    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
     <arg name="info_plot" default="false" />
-    <arg name="doppler_resolution" default="0.05512325" />  <!-- meter/s-->
-    <arg name="optimization_window" default="2.0" />        <!-- seconds-->
 
     <!-- loop close parameter -->
     <arg name="enable_loop_close" default="true" />
@@ -22,10 +21,7 @@
     <arg name="map_snr_thresh" default="4" />               <!-- log dB-->
 
     <!-- odometry -->
-    <node name="doppler_odom" pkg="radar_odom" type="doppler_odom" output="screen">
-        <param name="doppler_resolution" value="$(arg doppler_resolution)" />
-        <param name="lag" value="$(arg optimization_window)" />
-    </node>
+    <node name="doppler_odom" pkg="radar_odom" type="doppler_odom" output="screen" />
     <node if="$(arg info_plot)" pkg="plotjuggler" type="plotjuggler" name="plot"
         args="-l $(find radar_odom)/cfg/info_vis.xml" />
 

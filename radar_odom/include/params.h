@@ -33,20 +33,20 @@ namespace rplrio
     Params get_params(ros::NodeHandle &nh)
     {
         Params param;
-        nh.getParam("radar0/rostopic", param.radar_topic);
-        nh.getParam("imu0/rostopic", param.imu_topic);
+        nh.getParam("/radar0/rostopic", param.radar_topic);
+        nh.getParam("/imu0/rostopic", param.imu_topic);
 
-        nh.getParam("imu0/accelerometer_noise_density", param.acc_noise);
-        nh.getParam("imu0/accelerometer_random_walk", param.acc_rw);
-        nh.getParam("imu0/gyroscope_noise_density", param.gyro_noise);
-        nh.getParam("imu0/gyroscope_random_walk", param.gyro_rw);
+        nh.getParam("/imu0/accelerometer_noise_density", param.acc_noise);
+        nh.getParam("/imu0/accelerometer_random_walk", param.acc_rw);
+        nh.getParam("/imu0/gyroscope_noise_density", param.gyro_noise);
+        nh.getParam("/imu0/gyroscope_random_walk", param.gyro_rw);
 
-        nh.getParam("radar0/doppler_sigma", param.doppler_std);
-        nh.getParam("radar0/azimuth_sigma", param.azimuth_std);
-        nh.getParam("radar0/elevation_sigma", param.elevation_std);
-        nh.getParam("odom/static_init_window", param.init_window);
-        nh.getParam("odom/static_init_threshold", param.init_thres);
-        nh.getParam("odom/optimization_window", param.lag);
+        nh.getParam("/radar0/doppler_sigma", param.doppler_std);
+        nh.getParam("/radar0/azimuth_sigma", param.azimuth_std);
+        nh.getParam("/radar0/elevation_sigma", param.elevation_std);
+        nh.getParam("/odom/static_init_window", param.init_window);
+        nh.getParam("/odom/static_init_threshold", param.init_thres);
+        nh.getParam("/odom/optimization_window", param.lag);
 
         XmlRpc::XmlRpcValue tf;
         nh.getParam(std::string("radar0/T_i_r"), tf);
