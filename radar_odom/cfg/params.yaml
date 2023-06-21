@@ -12,6 +12,20 @@ imu0:
   rostopic: /epson_imu
   time_offset: 0.0
   update_rate: 200.0
+# imu0:
+#   T_i_b:
+#   - [1.0, 0.0, 0.0, 0.0]
+#   - [0.0, 1.0, 0.0, 0.0]
+#   - [0.0, 0.0, 1.0, 0.0]
+#   - [0.0, 0.0, 0.0, 1.0]
+#   accelerometer_noise_density: 0.0021228729869763063
+#   accelerometer_random_walk: 9.865802854378535e-05
+#   gyroscope_noise_density: 0.00016730892911503262
+#   gyroscope_random_walk: 7.396238607333077e-06
+#   model: calibrated
+#   rostopic: /razor_imu
+#   time_offset: 0.0
+#   update_rate: 100.0
 radar0:
   T_i_r:
     - [1.0, 0.0, 0.0, 0.0]

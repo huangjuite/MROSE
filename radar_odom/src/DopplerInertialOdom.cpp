@@ -10,9 +10,9 @@ DopplerIO::DopplerIO(NodeHandle *nh)
     //         noiseModel::mEstimator::Cauchy::Create(0.1),
     //         noiseModel::Diagonal::Sigmas(Vector1(doppler_resolution))));
 
-    // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
+    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
 
-    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
+    // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
 
     // velocity_estimator = new RadarVelocityEstimatorGNC(
     //         noiseModel::Diagonal::Sigmas(Vector1(doppler_resolution)));

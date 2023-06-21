@@ -82,8 +82,8 @@ private:
 
     // radar
     // RadarVelocityEstimator *velocity_estimator;
-    // std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
-    std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
+    std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
+    // std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
     // RadarVelocityEstimatorGNC *velocity_estimator;
     // RadarVelocityEstimatorCelestial *velocity_estimator;
     // RadarVelocityEstimatorHCS *velocity_estimator;
