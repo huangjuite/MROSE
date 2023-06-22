@@ -38,7 +38,7 @@ DopplerIO::DopplerIO(NodeHandle *nh)
 
     // imu init
     initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
-    
+
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
     pub_twist = nh->advertise<geometry_msgs::TwistWithCovarianceStamped>("radar/velocity", 1);
@@ -77,7 +77,7 @@ void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vect
     // prior noise model
     pose_noise_model = noiseModel::Diagonal::Sigmas(
         (Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
-    velocity_noise_model = noiseModel::Isotropic::Sigma(3, 1e-2);       // m/s
+    velocity_noise_model = noiseModel::Isotropic::Sigma(3, 1e-2);      // m/s
     bias_noise_model = noiseModel::Isotropic::Sigma(6, 1e-3);
 
     // Add all prior
@@ -127,6 +127,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
 
     pcl::fromROSMsg(*radar_msg, *radar_pc);
+    pcl::transformPointCloud(*radar_pc, *radar_pc, params.T_i_r);
     double current_t = radar_msg->header.stamp.toSec();
 
     // combined IMU factor ---------------------------------------------------------------------------
@@ -160,6 +161,10 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
         radar_pc, measured_v);
 
     // velocity pose measurement
+
+    // measured_v = params.R_i_r * measured_v;
+    // radar_velocity_cov = params.R_i_r * radar_velocity_cov;
+
     // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
     auto robust_rv_noise = noiseModel::Robust::Create(
         noiseModel::mEstimator::Huber::Create(1.345),
@@ -213,6 +218,14 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     pub_bias.publish(toROStwist(prev_bias));
     pub_v.publish(velocityMarker(prev_state.velocity(),
                                  prev_state.pose().translation(), "map", "velocity"));
+
+    // broadcast odometry transformation
+    // tf::Transform transform;
+    // auto trans = prev_state.pose().translation();
+    // auto orien = prev_state.pose().rotation().toQuaternion();
+    // transform.setOrigin(tf::Vector3(trans.x(), trans.y(), trans.z()));
+    // transform.setRotation(tf::Quaternion(orien.x(), orien.y(), orien.z(), orien.w()));
+    // br.sendTransform(tf::StampedTransform(transform, radar_msg->header.stamp, "map", "base"));
 }
 
 void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
@@ -220,14 +233,14 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
 
     double imu_t = imu_msg->header.stamp.toSec();
 
-    gtsam::Vector3 acc = params.R_i_r * (gtsam::Vector3() << imu_msg->linear_acceleration.x,
-                                         imu_msg->linear_acceleration.y,
-                                         imu_msg->linear_acceleration.z)
-                                            .finished();
-    gtsam::Vector3 omega = params.R_i_r * (gtsam::Vector3() << imu_msg->angular_velocity.x,
-                                           imu_msg->angular_velocity.y,
-                                           imu_msg->angular_velocity.z)
-                                              .finished();
+    gtsam::Vector3 acc = (gtsam::Vector3() << imu_msg->linear_acceleration.x,
+                          imu_msg->linear_acceleration.y,
+                          imu_msg->linear_acceleration.z)
+                             .finished();
+    gtsam::Vector3 omega = (gtsam::Vector3() << imu_msg->angular_velocity.x,
+                            imu_msg->angular_velocity.y,
+                            imu_msg->angular_velocity.z)
+                               .finished();
     if (!initialized)
     {
         bool init_success = initializer->init_update(
@@ -259,15 +272,6 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
     // cout.precision(15);
     // cout << "add new imu: " << imu_t << endl;
     imu_que.emplace_back(std::make_shared<rio::IMU>(acc, omega, imu_t));
-
-    // broadcast odometry transformation
-    // prop_state = preintegrated->predict(prev_state, prev_bias);
-    // tf::Transform transform;
-    // auto trans = prop_state.pose().translation();
-    // auto orien = prop_state.pose().rotation().toQuaternion();
-    // transform.setOrigin(tf::Vector3(trans.x(), trans.y(), trans.z()));
-    // transform.setRotation(tf::Quaternion(orien.x(), orien.y(), orien.z(), orien.w()));
-    // br.sendTransform(tf::StampedTransform(transform, imu_msg.header.stamp, "map", "base"));
 }
 
 void DopplerIO::cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg)

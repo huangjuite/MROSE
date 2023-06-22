@@ -21,6 +21,7 @@ namespace rplrio
         double gyro_rw;
 
         Eigen::Matrix3d R_i_r;
+        Eigen::Matrix4d T_i_r;
         double doppler_std;
         double azimuth_std;
         double elevation_std;
@@ -28,6 +29,8 @@ namespace rplrio
         double init_window;
         double init_thres;
         double lag;
+
+        double gravity;
     };
 
     Params get_params(ros::NodeHandle &nh)
@@ -40,6 +43,7 @@ namespace rplrio
         nh.getParam("/imu0/accelerometer_random_walk", param.acc_rw);
         nh.getParam("/imu0/gyroscope_noise_density", param.gyro_noise);
         nh.getParam("/imu0/gyroscope_random_walk", param.gyro_rw);
+        nh.getParam("/imu0/gravity", param.gravity);
 
         nh.getParam("/radar0/doppler_sigma", param.doppler_std);
         nh.getParam("/radar0/azimuth_sigma", param.azimuth_std);
@@ -50,39 +54,23 @@ namespace rplrio
 
         XmlRpc::XmlRpcValue tf;
         nh.getParam(std::string("radar0/T_i_r"), tf);
-        Eigen::Matrix4d T;
         for (uint i = 0; i < tf.size(); i++)
         {
             for (uint j = 0; j < tf[i].size(); j++)
             {
-                T(i, j) = tf[i][j];
+                param.T_i_r(i, j) = tf[i][j];
             }
         }
-        param.R_i_r = T.block(0, 0, 3, 3);
+        param.R_i_r = param.T_i_r.block(0, 0, 3, 3);
 
         return param;
     }
 
     ImuParam_ptr imuParams(Params param) // EPSON G364
     {
-        // use the sensor specs to build the noise model for the IMU factor.
-
-        // The units for stddev are σ = m/s²/√Hz
-        // 0.06 mG/√Hz
-        // double accel_noise_sigma = 0.00006;
         double accel_noise_sigma = param.acc_noise;
-
-        // The units for stddev are σ = rad/s/√Hz
-        // 7.6 degree/h/√Hz --> 7.6 / 180 * pi / 3600
-        // double gyro_noise_sigma = 0.00003684583;
         double gyro_noise_sigma = param.gyro_noise;
-
-        // ? Velocity Random Walk 0.025 (m/s)/√h --> 0.025/√3600
-        // double accel_bias_rw_sigma = 0.00041666666;
         double accel_bias_rw_sigma = param.acc_rw;
-
-        // 0.09 degree/√h --> 0.09 / 180 * pi / √3600
-        // double gyro_bias_rw_sigma = 0.00002617993;
         double gyro_bias_rw_sigma = param.gyro_rw;
 
         gtsam::Matrix33 measured_acc_cov = gtsam::I_3x3 * pow(accel_noise_sigma, 2);
@@ -92,9 +80,7 @@ namespace rplrio
         gtsam::Matrix33 bias_omega_cov = gtsam::I_3x3 * pow(gyro_bias_rw_sigma, 2);
         gtsam::Matrix66 bias_acc_omega_init = gtsam::I_6x6 * 1e-5; // error in the bias used for preintegration
 
-        const double kGravity = 9.81;
-
-        auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(kGravity);
+        auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(param.gravity);
         // PreintegrationBase params:
         p->accelerometerCovariance = measured_acc_cov;    // acc white noise in continuous
         p->integrationCovariance = integration_error_cov; // integration uncertainty continuous

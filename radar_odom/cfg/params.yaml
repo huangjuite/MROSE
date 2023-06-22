@@ -12,6 +12,8 @@ imu0:
   rostopic: /epson_imu
   time_offset: 0.0
   update_rate: 200.0
+  gravity: 9.80126
+
 # imu0:
 #   T_i_b:
 #   - [1.0, 0.0, 0.0, 0.0]
@@ -26,17 +28,32 @@ imu0:
 #   rostopic: /razor_imu
 #   time_offset: 0.0
 #   update_rate: 100.0
+#   gravity: 9.80126
+
+# radar0:
+#   T_i_r:
+#     - [1.0, 0.0, 0.0, 0.0]
+#     - [0.0, 1.0, 0.0, -0.11715]
+#     - [0.0, 0.0, 1.0, -0.1]
+#     - [0.0, 0.0, 0.0, 1.0]
+#   rostopic: /radar_points
+#   doppler_sigma: 0.05512325       # doppler uncertainty (m/s)
+#   azimuth_sigma: 0.0245436926     # azimuth uncertainty (1.41 degree)
+#   elevation_sigma: 0.314159       # elevation uncertainty (18 degree)
+
 radar0:
   T_i_r:
     - [1.0, 0.0, 0.0, 0.0]
-    - [0.0, 1.0, 0.0, -0.11715]
-    - [0.0, 0.0, 1.0, -0.1]
+    - [0.0, 0.0, -1.0, -0.1]
+    - [0.0, 1.0, 0.0, 0.0]
     - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar_points
   doppler_sigma: 0.05512325       # doppler uncertainty (m/s)
   azimuth_sigma: 0.0245436926     # azimuth uncertainty (1.41 degree)
   elevation_sigma: 0.314159       # elevation uncertainty (18 degree)
+
 odom:
   static_init_window: 2.0         # seconds
   static_init_threshold: 0.1      # seconds
   optimization_window: 2.0        # seconds
+  
