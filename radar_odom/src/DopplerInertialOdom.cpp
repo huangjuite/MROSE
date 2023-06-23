@@ -1,6 +1,6 @@
 #include "DopplerInertialOdom.h"
 
-DopplerIO::DopplerIO(NodeHandle *nh)
+DopplerIO::DopplerIO(ros::NodeHandle *nh)
 {
     params = rplrio::get_params(*nh);
     // radar noise model
@@ -10,9 +10,9 @@ DopplerIO::DopplerIO(NodeHandle *nh)
     //         noiseModel::mEstimator::Cauchy::Create(0.1),
     //         noiseModel::Diagonal::Sigmas(Vector1(doppler_resolution))));
 
-    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
+    // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
 
-    // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
+    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
 
     // velocity_estimator = new RadarVelocityEstimatorGNC(
     //         noiseModel::Diagonal::Sigmas(Vector1(doppler_resolution)));
@@ -103,7 +103,7 @@ void DopplerIO::update()
     double radar_stamp = radar_msg->header.stamp.toSec();
     radar_que.pop_front();
 
-    // preintegrate imu measurements
+    // integrate imu measurements
     while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp)
     {
         auto imu_data = imu_que.front();
@@ -127,7 +127,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
 
     pcl::fromROSMsg(*radar_msg, *radar_pc);
-    pcl::transformPointCloud(*radar_pc, *radar_pc, params.T_i_r);
+    pcl::transformPointCloud(*radar_pc, *radar_pc, params.T_r_b);
     double current_t = radar_msg->header.stamp.toSec();
 
     // combined IMU factor ---------------------------------------------------------------------------
@@ -161,10 +161,6 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
         radar_pc, measured_v);
 
     // velocity pose measurement
-
-    // measured_v = params.R_i_r * measured_v;
-    // radar_velocity_cov = params.R_i_r * radar_velocity_cov;
-
     // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
     auto robust_rv_noise = noiseModel::Robust::Create(
         noiseModel::mEstimator::Huber::Create(1.345),
@@ -175,8 +171,8 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
 
     // optimize ----------------------------------------------------------------------------
     smootherISAM2->update(*graph, initial_values, key_timestamps);
-    Values result = smootherISAM2->calculateEstimate();
-    Matrix x_cov = smootherISAM2->marginalCovariance(X(step));
+    gtsam::Values result = smootherISAM2->calculateEstimate();
+    gtsam::Matrix x_cov = smootherISAM2->marginalCovariance(X(step));
 
     graph->resize(0);
     initial_values.clear();
@@ -200,11 +196,13 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
 
     sensor_msgs::PointCloud2 inlier_msg;
     pcl::toROSMsg(*radar_inlier, inlier_msg);
-    inlier_msg.header = radar_msg->header;
+    inlier_msg.header.stamp = radar_msg->header.stamp;
+    inlier_msg.header.frame_id = "base";
     inlier_msg.header.seq = step;
     geometry_msgs::TwistWithCovarianceStamped radar_v =
         toROSTwist(measured_v, radar_velocity_cov, radar_msg->header);
     radar_v.header.seq = step;
+    radar_v.header.frame_id = "base";
 
     geometry_msgs::Twist v_err;
     gtsam::Vector3 verr = prev_state.pose().rotation().unrotate(prev_state.velocity()) - measured_v;
@@ -233,11 +231,11 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
 
     double imu_t = imu_msg->header.stamp.toSec();
 
-    gtsam::Vector3 acc = (gtsam::Vector3() << imu_msg->linear_acceleration.x,
+    gtsam::Vector3 acc = params.R_i_b * (gtsam::Vector3() << imu_msg->linear_acceleration.x,
                           imu_msg->linear_acceleration.y,
                           imu_msg->linear_acceleration.z)
                              .finished();
-    gtsam::Vector3 omega = (gtsam::Vector3() << imu_msg->angular_velocity.x,
+    gtsam::Vector3 omega = params.R_i_b * (gtsam::Vector3() << imu_msg->angular_velocity.x,
                             imu_msg->angular_velocity.y,
                             imu_msg->angular_velocity.z)
                                .finished();
@@ -268,9 +266,6 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
 
         return;
     }
-
-    // cout.precision(15);
-    // cout << "add new imu: " << imu_t << endl;
     imu_que.emplace_back(std::make_shared<rio::IMU>(acc, omega, imu_t));
 }
 
@@ -294,10 +289,10 @@ DopplerIO::~DopplerIO()
 
 int main(int argc, char *argv[])
 {
-    init(argc, argv, "doppler_inertial_odom");
-    NodeHandle nh;
+    ros::init(argc, argv, "doppler_inertial_odom");
+    ros::NodeHandle nh;
     DopplerIO dio(&nh);
-    spin();
+    ros::spin();
 
     return 0;
 }

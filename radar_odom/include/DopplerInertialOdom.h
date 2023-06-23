@@ -50,9 +50,6 @@
 #include "utils.h"
 #include "params.h"
 
-using namespace ros;
-using namespace std;
-
 using symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
 using symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
 using symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
@@ -68,22 +65,22 @@ private:
     bool correct_now = false;
     bool initialized = false;
 
-    NodeHandle *nh;
-    Subscriber sub_radar;
-    Subscriber sub_imu;
-    Publisher pub_odom;
-    Publisher pub_v;
-    Publisher pub_twist;
-    Publisher pub_bias;
-    Publisher pub_radar;
-    Publisher pub_error;
+    ros::NodeHandle *nh;
+    ros::Subscriber sub_radar;
+    ros::Subscriber sub_imu;
+    ros::Publisher pub_odom;
+    ros::Publisher pub_v;
+    ros::Publisher pub_twist;
+    ros::Publisher pub_bias;
+    ros::Publisher pub_radar;
+    ros::Publisher pub_error;
     tf::TransformBroadcaster br;
     tf::TransformListener listener;
 
     // radar
     // RadarVelocityEstimator *velocity_estimator;
-    std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
-    // std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
+    // std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
+    std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
     // RadarVelocityEstimatorGNC *velocity_estimator;
     // RadarVelocityEstimatorCelestial *velocity_estimator;
     // RadarVelocityEstimatorHCS *velocity_estimator;
@@ -118,7 +115,7 @@ private:
     void optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg);
 
 public:
-    DopplerIO(NodeHandle *nh);
+    DopplerIO(ros::NodeHandle *nh);
     ~DopplerIO();
 
     // tmp
