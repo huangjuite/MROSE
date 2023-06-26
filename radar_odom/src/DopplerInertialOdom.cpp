@@ -127,7 +127,6 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
 
     pcl::fromROSMsg(*radar_msg, *radar_pc);
-    pcl::transformPointCloud(*radar_pc, *radar_pc, params.T_r_b);
     double current_t = radar_msg->header.stamp.toSec();
 
     // combined IMU factor ---------------------------------------------------------------------------
@@ -161,6 +160,9 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
         radar_pc, measured_v);
 
     // velocity pose measurement
+    measured_v = params.R_r_b * measured_v;
+    radar_velocity_cov = params.R_r_b * radar_velocity_cov * params.R_r_b.transpose();
+
     // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
     auto robust_rv_noise = noiseModel::Robust::Create(
         noiseModel::mEstimator::Huber::Create(1.345),
@@ -232,13 +234,13 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
     double imu_t = imu_msg->header.stamp.toSec();
 
     gtsam::Vector3 acc = params.R_i_b * (gtsam::Vector3() << imu_msg->linear_acceleration.x,
-                          imu_msg->linear_acceleration.y,
-                          imu_msg->linear_acceleration.z)
-                             .finished();
+                                         imu_msg->linear_acceleration.y,
+                                         imu_msg->linear_acceleration.z)
+                                            .finished();
     gtsam::Vector3 omega = params.R_i_b * (gtsam::Vector3() << imu_msg->angular_velocity.x,
-                            imu_msg->angular_velocity.y,
-                            imu_msg->angular_velocity.z)
-                               .finished();
+                                           imu_msg->angular_velocity.y,
+                                           imu_msg->angular_velocity.z)
+                                              .finished();
     if (!initialized)
     {
         bool init_success = initializer->init_update(

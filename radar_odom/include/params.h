@@ -24,6 +24,7 @@ namespace rplrio
 
         Eigen::Matrix4d T_r_i;
         Eigen::Matrix4d T_r_b;
+        Eigen::Matrix3d R_r_b;
         double doppler_std;
         double azimuth_std;
         double elevation_std;
@@ -73,6 +74,7 @@ namespace rplrio
             }
         }
         param.T_r_b = param.T_i_b * param.T_r_i;
+        param.R_r_b = param.T_r_b.block(0, 0, 3, 3);
 
         nh.getParam("/odom/static_init_window", param.init_window);
         nh.getParam("/odom/static_init_threshold", param.init_thres);
