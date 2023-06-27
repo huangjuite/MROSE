@@ -1,0 +1,10 @@
+<launch>
+
+    <arg name="bag_folder" default=""/>
+
+    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
+    <node name="rio_extrinsic" pkg="radar_odom" type="dio_ex" output="screen">
+        <param name="bag_folder" value="$(arg bag_folder)" />
+    </node>
+
+</launch>
