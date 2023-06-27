@@ -8,21 +8,18 @@
 #include <gtsam/geometry/Point3.h>
 #include <gtsam/geometry/Pose3.h>
 
-using namespace std;
-using namespace gtsam;
-
-class VelocityPoseMeasurementFactor : public NoiseModelFactor2<Vector3, Pose3>
+class VelocityPoseMeasurementFactor : public gtsam::NoiseModelFactor2<gtsam::Vector3, gtsam::Pose3>
 {
 private:
-    Vector3 v_measure;
+    gtsam::Vector3 v_measure;
 
 public:
-    VelocityPoseMeasurementFactor(Key v_key, Key p_key, Vector3 measure, const SharedNoiseModel &model);
+    VelocityPoseMeasurementFactor(gtsam::Key v_key, gtsam::Key p_key, gtsam::Vector3 measure, const gtsam::SharedNoiseModel &model);
 
     ~VelocityPoseMeasurementFactor();
 
-    Vector evaluateError(const Vector3 &vel, const Pose3 &pose,
-                         boost::optional<Matrix &> H1, boost::optional<Matrix &> H2) const;
+    gtsam::Vector evaluateError(const gtsam::Vector3 &vel, const gtsam::Pose3 &pose,
+                         boost::optional<gtsam::Matrix &> H1, boost::optional<gtsam::Matrix &> H2) const;
 };
 
 #endif

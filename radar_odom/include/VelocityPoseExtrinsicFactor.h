@@ -9,21 +9,18 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
 
-using namespace std;
-using namespace gtsam;
-
-class VelocityPoseExtrinsicFactor : public NoiseModelFactor3<Vector3, Pose3, Rot3>
+class VelocityPoseExtrinsicFactor : public gtsam::NoiseModelFactor3<gtsam::Vector3, gtsam::Pose3, gtsam::Rot3>
 {
 private:
-    Vector3 v_measure;
+    gtsam::Vector3 v_measure;
 
 public:
-    VelocityPoseExtrinsicFactor(Key v_key, Key p_key, Key e_key, Vector3 measure, const SharedNoiseModel &model);
+    VelocityPoseExtrinsicFactor(gtsam::Key v_key, gtsam::Key p_key, gtsam::Key e_key, gtsam::Vector3 measure, const gtsam::SharedNoiseModel &model);
 
     ~VelocityPoseExtrinsicFactor();
 
-    Vector evaluateError(const Vector3 &vel, const Pose3 &pose, const Rot3 &extrinsic,
-                         boost::optional<Matrix &> H1, boost::optional<Matrix &> H2, boost::optional<Matrix &> He) const;
+    gtsam::Vector evaluateError(const gtsam::Vector3 &vel, const gtsam::Pose3 &pose, const gtsam::Rot3 &extrinsic,
+                         boost::optional<gtsam::Matrix &> H1, boost::optional<gtsam::Matrix &> H2, boost::optional<gtsam::Matrix &> He) const;
 };
 
 #endif

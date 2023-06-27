@@ -6,9 +6,7 @@
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <gtsam/geometry/Pose3.h>
 
-using namespace gtsam;
-
-class AltitudeFactor : public NoiseModelFactor1<Pose3>
+class AltitudeFactor : public gtsam::NoiseModelFactor1<gtsam::Pose3>
 {
 private:
     double height;
@@ -16,17 +14,17 @@ private:
 public:
     AltitudeFactor(){};
 
-    AltitudeFactor(Key poseKey, const double &measured, const SharedNoiseModel &model)
-        : NoiseModelFactor1<Pose3>(model, poseKey), height(measured){};
+    AltitudeFactor(gtsam::Key poseKey, const double &measured, const gtsam::SharedNoiseModel &model)
+        : gtsam::NoiseModelFactor1<gtsam::Pose3>(model, poseKey), height(measured){};
 
-    Vector evaluateError(const Pose3 &pose, boost::optional<Matrix &> H = boost::none) const override
+    gtsam::Vector evaluateError(const gtsam::Pose3 &pose, boost::optional<gtsam::Matrix &> H = boost::none) const override
     {
         if (H)
         {
-            *H = Matrix::Zero(1, 6);
+            *H = gtsam::Matrix::Zero(1, 6);
             (*H)(0, 5) = -1;
         }
-        return Vector1(height - pose.z());
+        return gtsam::Vector1(height - pose.z());
     }
 };
 
