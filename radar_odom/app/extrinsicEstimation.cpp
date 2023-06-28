@@ -65,7 +65,6 @@ private:
     ros::Publisher pub_odom;
     ros::Publisher pub_v;
     ros::Publisher pub_radar;
-    ros::Publisher pub_path;
     tf::TransformBroadcaster br;
     ros::ServiceServer calibrate_srv;
 
@@ -78,7 +77,6 @@ private:
 
     // states
     gtsam::Values initial_values;
-    gtsam::Values cache_results;
     gtsam::NavState prev_state;
     gtsam::NavState prop_state;
     gtsam::imuBias::ConstantBias prev_bias;
@@ -107,12 +105,11 @@ public:
 
     uint step = 0;
     gtsam::NonlinearFactorGraph offline_graph;
-    gtsam::Values result;
-    gtsam::Rot3 tf_radar2imu;
-    std::map<uint, gtsam::Vector3> radar_velocity_cache;
-    std::map<uint, gtsam::Matrix> cov_cache;
-    gtsam::noiseModel::Diagonal::shared_ptr radar_velocity_noise;
-    gtsam::noiseModel::Diagonal::shared_ptr altitude_noise_model;
+    gtsam::Values cache_results;
+    std::vector<gtsam::Vector3> radar_velocity_cache;
+    std::vector<gtsam::Matrix3> radar_cov_cache;
+
+    ros::Publisher pub_path;
 
     void feed_radar(const sensor_msgs::PointCloud2::ConstPtr pc_msg);
     void feed_imu(const sensor_msgs::Imu::ConstPtr imu);
@@ -139,6 +136,7 @@ DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
     pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
     pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 1);
+    pub_path = nh->advertise<nav_msgs::Path>("optimized_odom", 1);
 }
 
 void DopplerIOex::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
@@ -175,6 +173,13 @@ void DopplerIOex::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Ve
     graph->addPrior(X(0), prior_pose, pose_noise_model);
     graph->addPrior(V(0), prior_velocity, velocity_noise_model);
     graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
+
+    cache_results.insert(X(0), prior_pose);
+    cache_results.insert(V(0), prior_velocity);
+    cache_results.insert(B(0), prior_imu_bias);
+    offline_graph.addPrior(X(0), prior_pose, pose_noise_model);
+    offline_graph.addPrior(V(0), prior_velocity, velocity_noise_model);
+    offline_graph.addPrior(B(0), prior_imu_bias, bias_noise_model);
 }
 
 void DopplerIOex::update()
@@ -225,6 +230,7 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
         X(step - 1), V(step - 1), X(step),
         V(step), B(step - 1), B(step), preint_imu_combined);
     graph->add(imu_factor);
+    offline_graph.add(imu_factor);
 
     prop_state = preintegrated->predict(prev_state, prev_bias);
     initial_values.insert(X(step), prop_state.pose());
@@ -246,8 +252,11 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     // velocity_estimator->set_initial_velocity(measured_v);
     // measured_v = velocity_estimator->optimize(radar_inlier);
 
-    gtsam::Matrix radar_velocity_cov = velocity_estimator->get_covariance(
+    gtsam::Matrix3 radar_velocity_cov = velocity_estimator->get_covariance(
         radar_pc, measured_v);
+
+    radar_velocity_cache.emplace_back(measured_v);
+    radar_cov_cache.emplace_back(radar_velocity_cov);
 
     // velocity pose measurement
     measured_v = params.R_r_b * measured_v;
@@ -276,6 +285,10 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
                                  result.at<gtsam::Vector3>(V(step)));
     prev_bias = result.at<gtsam::imuBias::ConstantBias>(B(step));
     preintegrated->resetIntegrationAndSetBias(prev_bias);
+
+    cache_results.insert(X(step), prev_state.pose());
+    cache_results.insert(V(step), prev_state.velocity());
+    cache_results.insert(B(step), prev_bias);
 
     // reset & publish -----------------------------------------------------------------------------
     radar_pc->clear();
@@ -409,49 +422,37 @@ int main(int argc, char *argv[])
         bag.close();
     }
 
-    // // extrinsic optimization
-    // altitude_noise_model = noiseModel::Diagonal::Sigmas(Vector1(0.05));
-    // auto extrinsic_noise = noiseModel::Diagonal::Sigmas(Vector3(0.1, 0.1, 0.1));
-    // offline_graph.addPrior(E(0), tf_radar2imu, extrinsic_noise);
-    // cache_results.insert(E(0), tf_radar2imu);
+    // extrinsic optimization
 
-    // Values calibrate_result;
+    auto altitude_noise_model = gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector1(0.01));
+    dio.cache_results.insert(E(0), gtsam::Rot3(dio.params.R_r_b));
 
-    // for (uint i = 1; i <= step; i++)
-    // {
+    gtsam::Values calibrate_result;
 
-    //     auto rv_noise = noiseModel::Gaussian::Covariance(cov_cache[i]);
-    //     // auto rv_noise = noiseModel::Diagonal::Sigmas(Vector3(0.05, 0.05, 0.05));
-    //     offline_graph.add(VelocityPoseExtrinsicFactor(
-    //         V(i), X(i), E(0), radar_velocity_cache[i], rv_noise));
-    //     offline_graph.add(AltitudeFactor(X(i), 0, altitude_noise_model));
-    // }
+    for (uint i = 1; i <= dio.step; i++)
+    {
 
-    // calibrate_result = LevenbergMarquardtOptimizer(offline_graph, cache_results).optimize();
+        auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(
+            dio.params.R_r_b * dio.radar_cov_cache[i] * dio.params.R_r_b.transpose());
+        dio.offline_graph.add(VelocityPoseExtrinsicFactor(
+            V(i), X(i), E(0), dio.radar_velocity_cache[i], rv_noise));
+        dio.offline_graph.add(AltitudeFactor(X(i), 0, altitude_noise_model));
+    }
 
-    // Rot3 extrinsic = calibrate_result.at<Rot3>(E(0));
-    // tf_radar2imu.print("before");
-    // extrinsic.print("after");
-    // auto q = extrinsic.toQuaternion();
-    // auto e = extrinsic.ypr();
-    // printf("tf radar to imu\n");
-    // printf("x,y,z,w: %.4f, %.4f, %.4f, %.4f \n", q.x(), q.y(), q.z(), q.w());
-    // printf("y,p,r: %.4f, %.4f, %.4f \n", e[0], e[1], e[2]);
+    calibrate_result = gtsam::LevenbergMarquardtOptimizer(dio.offline_graph, dio.cache_results).optimize();
 
-    // extrinsic = extrinsic.inverse();
-    // q = extrinsic.toQuaternion();
-    // e = extrinsic.ypr();
-    // printf("\ntf imu to radar\n");
-    // printf("x,y,z,w: %.4f, %.4f, %.4f, %.4f \n", q.x(), q.y(), q.z(), q.w());
-    // printf("y,p,r: %.4f, %.4f, %.4f \n", e[0], e[1], e[2]);
+    gtsam::Rot3 extrinsic = calibrate_result.at<gtsam::Rot3>(E(0));
+    auto R_r_i = dio.params.R_i_b.transpose() * extrinsic.matrix();
+    std::cout << "R_r_i: " << std::endl
+              << R_r_i << std::endl;
 
-    // nav_msgs::Path path;
-    // path.header.frame_id = "map";
-    // for (uint i = 0; i < step; i++)
-    // {
-    //     path.poses.push_back(toROSPoseStamped(calibrate_result.at<Pose3>(X(i)), path.header));
-    // }
-    // pub_path.publish(path);
+    nav_msgs::Path path;
+    path.header.frame_id = "map";
+    for (uint i = 0; i < dio.step; i++)
+    {
+        path.poses.push_back(toROSPoseStamped(calibrate_result.at<gtsam::Pose3>(X(i)), path.header));
+    }
+    dio.pub_path.publish(path);
 
     return 0;
 }
