@@ -286,7 +286,9 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     prev_bias = result.at<gtsam::imuBias::ConstantBias>(B(step));
     preintegrated->resetIntegrationAndSetBias(prev_bias);
 
-    cache_results.insert(X(step), prev_state.pose());
+    gtsam::Pose3 xg(prev_state.pose().rotation(),
+                    gtsam::Point3(prev_state.pose().x(), prev_state.pose().y(), 0));
+    cache_results.insert(X(step), xg);
     cache_results.insert(V(step), prev_state.velocity());
     cache_results.insert(B(step), prev_bias);
 
@@ -424,7 +426,10 @@ int main(int argc, char *argv[])
 
     // extrinsic optimization
 
-    auto altitude_noise_model = gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector1(0.01));
+    // auto altitude_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
+    //     gtsam::Vector1(0.01));
+    auto ground_prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
+        (gtsam::Vector6() << 1e-3, 1e-3, 1e-3, 0.05, 0.05, 0.01).finished());
     dio.cache_results.insert(E(0), gtsam::Rot3(dio.params.R_r_b));
 
     gtsam::Values calibrate_result;
@@ -436,7 +441,10 @@ int main(int argc, char *argv[])
             dio.params.R_r_b * dio.radar_cov_cache[i] * dio.params.R_r_b.transpose());
         dio.offline_graph.add(VelocityPoseExtrinsicFactor(
             V(i), X(i), E(0), dio.radar_velocity_cache[i], rv_noise));
-        dio.offline_graph.add(AltitudeFactor(X(i), 0, altitude_noise_model));
+
+        // dio.offline_graph.add(AltitudeFactor(X(i), 0, altitude_noise_model));
+        dio.offline_graph.addPrior(
+            X(i), dio.cache_results.at<gtsam::Pose3>(X(i)), ground_prior_noise);
     }
 
     calibrate_result = gtsam::LevenbergMarquardtOptimizer(dio.offline_graph, dio.cache_results).optimize();
