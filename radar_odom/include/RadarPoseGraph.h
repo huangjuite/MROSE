@@ -2,6 +2,7 @@
 // std includes
 #include <string>
 #include <vector>
+#include <memory>
 
 // ROS includes
 #include <ros/ros.h>
@@ -40,12 +41,7 @@
 
 #include "utils.h"
 
-using namespace ros;
-using namespace pcl;
-using namespace gtsam;
-using namespace std;
-
-using symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
+using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
 typedef message_filters::sync_policies::ExactTime<sensor_msgs::PointCloud2, nav_msgs::Odometry> MySyncPolicy;
 
@@ -55,42 +51,42 @@ private:
     int sub_map_size;
     uint step = 0;
     uint last_loop_detect = 0;
-    const uint loop_close_rate = 50; // step
-    const uint loop_ignore = 50;     // step
+    const uint loop_close_rate = 50;  // step
+    const uint loop_ignore = 50;      // step
     const uint key_frame_search = 20; // step
     const double loop_distance_thresh = 0.5;
     bool enable_loop_close = true;
-    vector<pcl::PointCloud<PointXYZIS>::Ptr> points_cache;
-    vector<pair<int, int>> loop_cache;
-    Pose3 last_pose;
+    std::vector<pcl::PointCloud<pcl::PointXYZIS>::Ptr> points_cache;
+    std::vector<std::pair<int, int>> loop_cache;
+    gtsam::Pose3 last_pose;
 
-    Publisher pub_local, pub_subm, pub_aligned;
-    Publisher pub_path;
-    Publisher pub_loop_marker;
+    ros::Publisher pub_local, pub_subm, pub_aligned;
+    ros::Publisher pub_path;
+    ros::Publisher pub_loop_marker;
     nav_msgs::Path path;
     visualization_msgs::Marker loop_marker;
 
-    VoxelGrid<PointXYZIS> voxel_filter;
-    PassThrough<PointXYZIS> intensity_filter;
-    pclomp::NormalDistributionsTransform<PointXYZIS, PointXYZIS> ndt_omp;
+    pcl::VoxelGrid<pcl::PointXYZIS> voxel_filter;
+    pcl::PassThrough<pcl::PointXYZIS> intensity_filter;
+    pclomp::NormalDistributionsTransform<pcl::PointXYZIS, pcl::PointXYZIS> ndt_omp;
 
     tf::TransformBroadcaster br;
     message_filters::Subscriber<sensor_msgs::PointCloud2> sub_radar;
     message_filters::Subscriber<nav_msgs::Odometry> sub_odom;
     message_filters::Synchronizer<MySyncPolicy> *sync;
 
-    Values init_values;
-    noiseModel::Diagonal::shared_ptr pose_noise_model;
-    noiseModel::Diagonal::shared_ptr loop_noise_model;
-    NonlinearFactorGraph *graph;
-    ISAM2 *isam2;
+    gtsam::Values init_values;
+    gtsam::noiseModel::Diagonal::shared_ptr pose_noise_model;
+    gtsam::noiseModel::Diagonal::shared_ptr loop_noise_model;
+    std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
+    // std::unique_ptr<gtsam::ISAM2> isam2;
 
-    pair<int, int> detect_loop(Values &nodes, uint step);
-    PointCloud<PointXYZIS>::Ptr build_submap(uint step, uint start, uint end);
+    std::pair<int, int> detect_loop(gtsam::Values &nodes, uint step);
+    pcl::PointCloud<pcl::PointXYZIS>::Ptr build_submap(uint step, uint start, uint end);
     void cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                  const nav_msgs::OdometryConstPtr odom);
 
 public:
-    RadarPoseGraph(NodeHandle *nh);
+    RadarPoseGraph(ros::NodeHandle *nh);
     ~RadarPoseGraph();
 };

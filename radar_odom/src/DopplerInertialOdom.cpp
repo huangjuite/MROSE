@@ -31,10 +31,10 @@ DopplerIO::DopplerIO(ros::NodeHandle *nh)
     velocity_estimator->set_inlier_thresh(params.doppler_std);
 
     // optimizer init
-    ISAM2Params parameters;
+    gtsam::ISAM2Params parameters;
     parameters.relinearizeThreshold = 0.0;
     parameters.relinearizeSkip = 1;
-    smootherISAM2 = std::make_unique<IncrementalFixedLagSmoother>(params.lag, parameters);
+    smootherISAM2 = std::make_unique<gtsam::IncrementalFixedLagSmoother>(params.lag, parameters);
 
     // imu init
     initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
@@ -55,11 +55,11 @@ void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vect
 {
 
     // priors
-    Pose3 prior_pose(Rot3::Quaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()), Point3(0, 0, 0));
-    Vector3 prior_velocity(0, 0, 0);
-    imuBias::ConstantBias prior_imu_bias(bias_acc, bias_gyro);
+    gtsam::Pose3 prior_pose(gtsam::Rot3::Quaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()), gtsam::Point3(0, 0, 0));
+    gtsam::Vector3 prior_velocity(0, 0, 0);
+    gtsam::imuBias::ConstantBias prior_imu_bias(bias_acc, bias_gyro);
     // imuBias::ConstantBias prior_imu_bias;
-    preintegrated = std::make_shared<PreintegratedCombinedMeasurements>(rplrio::imuParams(params), prior_imu_bias);
+    preintegrated = std::make_shared<gtsam::PreintegratedCombinedMeasurements>(rplrio::imuParams(params), prior_imu_bias);
     assert(preintegrated);
 
     // pose init
@@ -70,18 +70,18 @@ void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vect
     key_timestamps[V(0)] = stamp;
     key_timestamps[B(0)] = stamp;
 
-    prev_state = NavState(prior_pose, prior_velocity);
+    prev_state = gtsam::NavState(prior_pose, prior_velocity);
     prop_state = prev_state;
     prev_bias = prior_imu_bias;
 
     // prior noise model
-    pose_noise_model = noiseModel::Diagonal::Sigmas(
-        (Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
-    velocity_noise_model = noiseModel::Isotropic::Sigma(3, 1e-2);      // m/s
-    bias_noise_model = noiseModel::Isotropic::Sigma(6, 1e-3);
+    pose_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
+        (gtsam::Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
+    velocity_noise_model = gtsam::noiseModel::Isotropic::Sigma(3, 1e-2);      // m/s
+    bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
 
     // Add all prior
-    graph = std::make_unique<NonlinearFactorGraph>();
+    graph = std::make_unique<gtsam::NonlinearFactorGraph>();
     graph->addPrior(X(0), prior_pose, pose_noise_model);
     graph->addPrior(V(0), prior_velocity, velocity_noise_model);
     graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
@@ -130,8 +130,8 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     double current_t = radar_msg->header.stamp.toSec();
 
     // combined IMU factor ---------------------------------------------------------------------------
-    auto preint_imu_combined = dynamic_cast<const PreintegratedCombinedMeasurements &>(*preintegrated);
-    CombinedImuFactor imu_factor(
+    auto preint_imu_combined = dynamic_cast<const gtsam::PreintegratedCombinedMeasurements &>(*preintegrated);
+    gtsam::CombinedImuFactor imu_factor(
         X(step - 1), V(step - 1), X(step),
         V(step), B(step - 1), B(step), preint_imu_combined);
     graph->add(imu_factor);
@@ -148,7 +148,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     // ------------------------------------------------------------------------------------
 
     velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
-    Vector3 measured_v = velocity_estimator->optimize(radar_pc);
+    gtsam::Vector3 measured_v = velocity_estimator->optimize(radar_pc);
     pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_inlier =
         velocity_estimator->get_inlier(radar_pc, measured_v);
 
@@ -156,7 +156,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     // velocity_estimator->set_initial_velocity(measured_v);
     // measured_v = velocity_estimator->optimize(radar_inlier);
 
-    Matrix radar_velocity_cov = velocity_estimator->get_covariance(
+    gtsam::Matrix radar_velocity_cov = velocity_estimator->get_covariance(
         radar_pc, measured_v);
 
     // velocity pose measurement
@@ -164,9 +164,9 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     radar_velocity_cov = params.R_r_b * radar_velocity_cov * params.R_r_b.transpose();
 
     // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
-    auto robust_rv_noise = noiseModel::Robust::Create(
-        noiseModel::mEstimator::Huber::Create(1.345),
-        noiseModel::Gaussian::Covariance(radar_velocity_cov));
+    auto robust_rv_noise = gtsam::noiseModel::Robust::Create(
+        gtsam::noiseModel::mEstimator::Huber::Create(1.345),
+        gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov));
 
     graph->add(VelocityPoseMeasurementFactor(
         V(step), X(step), measured_v, robust_rv_noise));
@@ -182,9 +182,9 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
 
     //-----------------------------------------------------------------------------
     // Overwrite the beginning of the preintegration for the next step.
-    prev_state = NavState(result.at<Pose3>(X(step)),
-                          result.at<Vector3>(V(step)));
-    prev_bias = result.at<imuBias::ConstantBias>(B(step));
+    prev_state = gtsam::NavState(result.at<gtsam::Pose3>(X(step)),
+                          result.at<gtsam::Vector3>(V(step)));
+    prev_bias = result.at<gtsam::imuBias::ConstantBias>(B(step));
     preintegrated->resetIntegrationAndSetBias(prev_bias);
 
     // reset & publish -----------------------------------------------------------------------------

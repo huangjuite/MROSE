@@ -23,12 +23,13 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+find_package(Eigen3 REQUIRED)
 find_package(GTSAM REQUIRED)
-find_package(PCL REQUIRED QUIET)
-find_package(Eigen REQUIRED)
-find_package(octomap REQUIRED)
-find_package(OpenCV REQUIRED)
 find_package(Ceres REQUIRED)
+find_package(PCL REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(octomap REQUIRED)
+
 
 
 add_service_files(

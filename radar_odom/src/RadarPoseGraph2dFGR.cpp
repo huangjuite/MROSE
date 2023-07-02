@@ -124,8 +124,6 @@ void RadarPoseGraph2dFGR::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_m
     path.poses.push_back(toROSPoseStamped(tail_pose, odom->header));
     init_values.insert(X(step), tail_pose);
 
-    // auto noise = noiseModel::Gaussian::Covariance(fromROSCov_2d(odom->pose.covariance));
-    // auto noise = noiseModel::Diagonal::Covariance(fromROSCov_2d(odom->pose.covariance));
     auto noise = noiseModel::Diagonal::Sigmas(Vector3(0.01, 0.01, 0.01));
     graph->add(BetweenFactor<Pose2>(X(step - 1), X(step), last_pose.between(current_pose), noise));
 

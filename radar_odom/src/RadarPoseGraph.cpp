@@ -1,6 +1,6 @@
 #include "RadarPoseGraph.h"
 
-RadarPoseGraph::RadarPoseGraph(NodeHandle *nh)
+RadarPoseGraph::RadarPoseGraph(ros::NodeHandle *nh)
 {
     // pcl init
     points_cache.push_back(nullptr); // align index with graph
@@ -12,20 +12,21 @@ RadarPoseGraph::RadarPoseGraph(NodeHandle *nh)
     ndt_omp.setNeighborhoodSearchMethod(pclomp::DIRECT7);
 
     // gtsam init
-    graph = new NonlinearFactorGraph();
-    Pose3 prior_pose(Rot3::Quaternion(1, 0, 0, 0), Point3(0, 0, 0));
-    pose_noise_model = noiseModel::Diagonal::Sigmas(
-        (Vector(6) << 1e-3, 1e-3, 1e-3, 1e-2, 1e-2, 1e-2).finished());
-    loop_noise_model = noiseModel::Diagonal::Sigmas(
-        (Vector(6) << 0.01, 0.01, 0.01, 0.02, 0.02, 0.02).finished());
+    // graph = new NonlinearFactorGraph();
+    graph = std::make_unique<gtsam::NonlinearFactorGraph>();
+    gtsam::Pose3 prior_pose(gtsam::Rot3::Quaternion(1, 0, 0, 0), gtsam::Point3(0, 0, 0));
+    pose_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
+        (gtsam::Vector(6) << 1e-3, 1e-3, 1e-3, 1e-2, 1e-2, 1e-2).finished());
+    loop_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
+        (gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.02, 0.02, 0.02).finished());
     graph->addPrior(X(0), prior_pose, pose_noise_model);
     init_values.insert(X(0), prior_pose);
     last_pose = prior_pose;
 
-    // ISAM2Params parameters;
+    // gtsam::ISAM2Params parameters;
     // parameters.relinearizeThreshold = 0.0;
     // parameters.relinearizeSkip = 1;
-    // isam2 = new ISAM2(parameters);
+    // isam2 = std::make_unique<gtsam::ISAM2>(parameters);
 
     // ros init
     loop_marker.header.frame_id = "map";
@@ -33,7 +34,7 @@ RadarPoseGraph::RadarPoseGraph(NodeHandle *nh)
     loop_marker.ns = "loop_detected";
     loop_marker.id = 0;
     loop_marker.type = visualization_msgs::Marker::LINE_LIST;
-    loop_marker.pose = toROSPose(Pose3::Identity());
+    loop_marker.pose = toROSPose(gtsam::Pose3::Identity());
     loop_marker.scale.x = 0.1;
     loop_marker.color.a = 1;
     loop_marker.color.r = 1;
@@ -52,20 +53,20 @@ RadarPoseGraph::RadarPoseGraph(NodeHandle *nh)
     ROS_INFO("radar pose graph init");
 }
 
-pair<int, int> RadarPoseGraph::detect_loop(Values &nodes, uint step)
+std::pair<int, int> RadarPoseGraph::detect_loop(gtsam::Values &nodes, uint step)
 {
-    pair<int, int> close_pairs{step, -1};
+    std::pair<int, int> close_pairs{step, -1};
 
     if (step < loop_ignore)
         return close_pairs;
 
     double min_dis = 1e4;
-    Pose3 head_pose = nodes.at<Pose3>(X(step));
+    gtsam::Pose3 head_pose = nodes.at<gtsam::Pose3>(X(step));
 
     for (uint i = step - loop_ignore; i > key_frame_search; i--)
     {
-        Pose3 node_pose = nodes.at<Pose3>(X(i));
-        double dis = distance3(node_pose.translation(), head_pose.translation());
+        gtsam::Pose3 node_pose = nodes.at<gtsam::Pose3>(X(i));
+        double dis = gtsam::distance3(node_pose.translation(), head_pose.translation());
         if (dis < loop_distance_thresh && dis < min_dis)
         {
             close_pairs.second = i;
@@ -76,16 +77,16 @@ pair<int, int> RadarPoseGraph::detect_loop(Values &nodes, uint step)
     return close_pairs;
 }
 
-PointCloud<PointXYZIS>::Ptr RadarPoseGraph::build_submap(uint step, uint start, uint end)
+pcl::PointCloud<pcl::PointXYZIS>::Ptr RadarPoseGraph::build_submap(uint step, uint start, uint end)
 {
-    PointCloud<PointXYZIS>::Ptr smap(new PointCloud<PointXYZIS>);
+    pcl::PointCloud<pcl::PointXYZIS>::Ptr smap(new pcl::PointCloud<pcl::PointXYZIS>);
     smap->header.frame_id = "map";
-    Pose3 cp = init_values.at<Pose3>(X(step));
+    gtsam::Pose3 cp = init_values.at<gtsam::Pose3>(X(step));
     for (uint i = start; i <= end; i++)
     {
-        Pose3 t = cp * cp.between(init_values.at<Pose3>(X(i)));
-        PointCloud<PointXYZIS> p;
-        transformPointCloud(*points_cache[i], p, t.matrix());
+        gtsam::Pose3 t = cp * cp.between(init_values.at<gtsam::Pose3>(X(i)));
+        pcl::PointCloud<pcl::PointXYZIS> p;
+        pcl::transformPointCloud(*points_cache[i], p, t.matrix());
         *smap += p;
     }
 
@@ -100,7 +101,7 @@ void RadarPoseGraph::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
 {
     step++;
 
-    PointCloud<PointXYZIS>::Ptr radar_pc(new PointCloud<PointXYZIS>);
+    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc(new pcl::PointCloud<pcl::PointXYZIS>);
     fromROSMsg(*radar_msg, *radar_pc);
     voxel_filter.setInputCloud(radar_pc);
     voxel_filter.filter(*radar_pc);
@@ -108,18 +109,16 @@ void RadarPoseGraph::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
     intensity_filter.filter(*radar_pc);
     points_cache.push_back(radar_pc);
 
-    Pose3 current_pose(Rot3(odom->pose.pose.orientation.w, odom->pose.pose.orientation.x,
-                            odom->pose.pose.orientation.y, odom->pose.pose.orientation.z),
-                       Point3(odom->pose.pose.position.x, odom->pose.pose.position.y, 0));
-    Pose3 tail_pose = init_values.at<Pose3>(X(step - 1));
+    gtsam::Pose3 current_pose(gtsam::Rot3(odom->pose.pose.orientation.w, odom->pose.pose.orientation.x,
+                                          odom->pose.pose.orientation.y, odom->pose.pose.orientation.z),
+                              gtsam::Point3(odom->pose.pose.position.x, odom->pose.pose.position.y, 0));
+    gtsam::Pose3 tail_pose = init_values.at<gtsam::Pose3>(X(step - 1));
     tail_pose = tail_pose * last_pose.between(current_pose);
     path.poses.push_back(toROSPoseStamped(tail_pose, odom->header));
     init_values.insert(X(step), tail_pose);
 
-    // auto noise = noiseModel::Gaussian::Covariance(fromROSCov(odom->pose.covariance));
-    // auto noise = noiseModel::Diagonal::Covariance(fromROSCov(odom->pose.covariance));
-    auto noise = noiseModel::Diagonal::Sigmas((Vector(6) << 1e-1, 1e-1, 1e-1, 2e-2, 2e-2, 2e-2).finished());
-    graph->add(BetweenFactor<Pose3>(X(step - 1), X(step), last_pose.between(current_pose), noise));
+    auto noise = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 1e-1, 1e-1, 1e-1, 2e-2, 2e-2, 2e-2).finished());
+    graph->add(gtsam::BetweenFactor<gtsam::Pose3>(X(step - 1), X(step), last_pose.between(current_pose), noise));
 
     // loop detect
     uint detect_point = (step > key_frame_search) ? step - key_frame_search : 0;
@@ -131,13 +130,13 @@ void RadarPoseGraph::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
             last_loop_detect = detect_point;
 
             // build submap
-            PointCloud<PointXYZIS>::Ptr local_map =
+            pcl::PointCloud<pcl::PointXYZIS>::Ptr local_map =
                 build_submap(l.first, l.first - key_frame_search, l.first + key_frame_search);
-            PointCloud<PointXYZIS>::Ptr sub_map =
+            pcl::PointCloud<pcl::PointXYZIS>::Ptr sub_map =
                 build_submap(l.second, l.second - key_frame_search, l.second + key_frame_search);
 
             // find transform
-            PointCloud<PointXYZIS> aligned_map;
+            pcl::PointCloud<pcl::PointXYZIS> aligned_map;
             ndt_omp.setInputSource(local_map);
             ndt_omp.setInputTarget(sub_map);
             ndt_omp.align(aligned_map);
@@ -149,29 +148,29 @@ void RadarPoseGraph::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                 loop_cache.push_back(l);
 
                 // loop close on 2d only
-                Pose3 t(tf.cast<double>());
-                Pose3 tf3(Rot3::Yaw(t.rotation().yaw()),
-                          Point3(t.translation().x(), t.translation().y(), 0));
-                Pose3 correct_tf = tf3 * init_values.at<Pose3>(X(l.first));
-                Pose3 between_tf = correct_tf.between(init_values.at<Pose3>(X(l.second)));
-                graph->add(BetweenFactor<Pose3>(X(l.first), X(l.second),
-                                                between_tf, loop_noise_model));
+                gtsam::Pose3 t(tf.cast<double>());
+                gtsam::Pose3 tf3(gtsam::Rot3::Yaw(t.rotation().yaw()),
+                                 gtsam::Point3(t.translation().x(), t.translation().y(), 0));
+                gtsam::Pose3 correct_tf = tf3 * init_values.at<gtsam::Pose3>(X(l.first));
+                gtsam::Pose3 between_tf = correct_tf.between(init_values.at<gtsam::Pose3>(X(l.second)));
+                graph->add(gtsam::BetweenFactor<gtsam::Pose3>(X(l.first), X(l.second),
+                                                              between_tf, loop_noise_model));
 
                 // optimize
-                LevenbergMarquardtOptimizer optimizer(*graph, init_values);
+                gtsam::LevenbergMarquardtOptimizer optimizer(*graph, init_values);
                 init_values = optimizer.optimize();
 
                 // update visualization
                 for (uint i = 0; i < step; i++)
                 {
-                    path.poses[i].pose = toROSPose(init_values.at<Pose3>(X(i + 1)));
+                    path.poses[i].pose = toROSPose(init_values.at<gtsam::Pose3>(X(i + 1)));
                 }
 
                 loop_marker.points.clear();
                 for (auto p : loop_cache)
                 {
-                    Point3 p1 = init_values.at<Pose3>(X(p.first)).translation();
-                    Point3 p2 = init_values.at<Pose3>(X(p.second)).translation();
+                    gtsam::Point3 p1 = init_values.at<gtsam::Pose3>(X(p.first)).translation();
+                    gtsam::Point3 p2 = init_values.at<gtsam::Pose3>(X(p.second)).translation();
                     loop_marker.points.push_back(toROSPoint(p1));
                     loop_marker.points.push_back(toROSPoint(p2));
                 }
@@ -215,9 +214,9 @@ RadarPoseGraph::~RadarPoseGraph()
 
 int main(int argc, char *argv[])
 {
-    init(argc, argv, "radar_pose_graph");
-    NodeHandle nh;
+    ros::init(argc, argv, "radar_pose_graph");
+    ros::NodeHandle nh;
     RadarPoseGraph rpg(&nh);
-    spin();
+    ros::spin();
     return 0;
 }

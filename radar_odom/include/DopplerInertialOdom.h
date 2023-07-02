@@ -33,15 +33,13 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
-#include "DopplerMeasurementFactor.h"
-#include "VelocityMeasurementFactor.h"
+// #include "DopplerMeasurementFactor.h"
+// #include "VelocityMeasurementFactor.h"
+// #include "RadarVelocityEstimator.h"
+// #include "RadarVelocityEstimatorGNC.h"
+// #include "RadarVelocityEstimatorHCS.h"
+// #include "RadarVelocityEstimatorCelestial.h"
 #include "VelocityPoseMeasurementFactor.h"
-#include "AltitudeFactor.h"
-#include "RotationFactor.h"
-#include "RadarVelocityEstimator.h"
-#include "RadarVelocityEstimatorGNC.h"
-#include "RadarVelocityEstimatorHCS.h"
-#include "RadarVelocityEstimatorCelestial.h"
 #include "RadarVelocityEstimatorCeres.h"
 #include "RadarVelocityEstimatorCeresHCS.h"
 #include "StaticInitializer.hpp"
@@ -50,9 +48,9 @@
 #include "utils.h"
 #include "params.h"
 
-using symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
-using symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
-using symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
+using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
+using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
+using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 class DopplerIO
 {
 private:
@@ -87,30 +85,30 @@ private:
     std::deque<sensor_msgs::PointCloud2::ConstPtr> radar_que;
 
     // imu settings
-    std::shared_ptr<PreintegrationType> preintegrated;
+    std::shared_ptr<gtsam::PreintegrationType> preintegrated;
     std::deque<std::shared_ptr<rio::IMU>> imu_que;
     std::shared_ptr<StaticInitializer> initializer;
 
     // states
-    Values initial_values;
-    NavState prev_state;
-    NavState prop_state;
-    imuBias::ConstantBias prev_bias;
+    gtsam::Values initial_values;
+    gtsam::NavState prev_state;
+    gtsam::NavState prop_state;
+    gtsam::imuBias::ConstantBias prev_bias;
 
     // noise models
-    noiseModel::Diagonal::shared_ptr pose_noise_model;
-    noiseModel::Isotropic::shared_ptr velocity_noise_model;
-    noiseModel::Isotropic::shared_ptr bias_noise_model;
+    gtsam::noiseModel::Diagonal::shared_ptr pose_noise_model;
+    gtsam::noiseModel::Isotropic::shared_ptr velocity_noise_model;
+    gtsam::noiseModel::Isotropic::shared_ptr bias_noise_model;
 
     // optimizer & graph
-    FixedLagSmoother::KeyTimestampMap key_timestamps;
-    std::unique_ptr<IncrementalFixedLagSmoother> smootherISAM2;
-    std::unique_ptr<NonlinearFactorGraph> graph;
+    gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
+    std::unique_ptr<gtsam::IncrementalFixedLagSmoother> smootherISAM2;
+    std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
 
     void cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg);
     void cb_imu(const sensor_msgs::Imu::ConstPtr &imu);
     void graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
-                           const Eigen::Vector3d &bias_gyro, const double &stamp);
+                    const Eigen::Vector3d &bias_gyro, const double &stamp);
     void update();
     void optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg);
 
@@ -118,6 +116,4 @@ public:
     DopplerIO(ros::NodeHandle *nh);
     ~DopplerIO();
 
-    // tmp
-    ofstream err_file;
 };
