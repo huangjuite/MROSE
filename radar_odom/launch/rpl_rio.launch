@@ -1,0 +1,15 @@
+<launch>
+
+    <!-- parameter -->
+    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
+    <arg name="info_plot" default="false" />
+
+    <!-- odometry -->
+    <node name="doppler_odom" pkg="radar_odom" type="doppler_odom" output="screen" />
+    <node if="$(arg info_plot)" pkg="plotjuggler" type="plotjuggler" name="plot"
+        args="-l $(find radar_odom)/cfg/info_vis.xml" />
+
+    <!-- pose graph -->
+    <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize" output="screen" />
+
+</launch>

@@ -53,7 +53,7 @@ DopplerIO::DopplerIO(ros::NodeHandle *nh)
 void DopplerIO::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
                            const Eigen::Vector3d &bias_gyro, const double &stamp)
 {
-
+    
     // priors
     gtsam::Pose3 prior_pose(gtsam::Rot3::Quaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()), gtsam::Point3(0, 0, 0));
     gtsam::Vector3 prior_velocity(0, 0, 0);
@@ -183,7 +183,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     //-----------------------------------------------------------------------------
     // Overwrite the beginning of the preintegration for the next step.
     prev_state = gtsam::NavState(result.at<gtsam::Pose3>(X(step)),
-                          result.at<gtsam::Vector3>(V(step)));
+                                 result.at<gtsam::Vector3>(V(step)));
     prev_bias = result.at<gtsam::imuBias::ConstantBias>(B(step));
     preintegrated->resetIntegrationAndSetBias(prev_bias);
 
@@ -197,6 +197,7 @@ void DopplerIO::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     pub_odom.publish(odom);
 
     sensor_msgs::PointCloud2 inlier_msg;
+    pcl::transformPointCloud(*radar_inlier, *radar_inlier, params.T_r_b);
     pcl::toROSMsg(*radar_inlier, inlier_msg);
     inlier_msg.header.stamp = radar_msg->header.stamp;
     inlier_msg.header.frame_id = "base";

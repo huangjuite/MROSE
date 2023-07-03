@@ -159,6 +159,9 @@ target_link_libraries(doppler_odom_multi ${PROJECT_NAME})
 # add_dependencies(rio ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(rio ${PROJECT_NAME})
 
+add_executable(map_optimize src/MapOptimize.cpp)
+target_link_libraries(map_optimize ${PROJECT_NAME})
+
 add_executable(radar_pose_graph src/RadarPoseGraph.cpp)
 add_dependencies(radar_pose_graph ${catkin_EXPORTED_TARGETS})
 target_link_libraries(radar_pose_graph ${PROJECT_NAME})
