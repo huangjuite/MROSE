@@ -50,6 +50,52 @@ using gtsam::symbol_shorthand::E;
 using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
 using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
+std::vector<rio::Odom> odom_csv(std::string path)
+{
+    std::vector<rio::Odom> gt;
+
+    std::ifstream file;
+    file.open(path, std::ios::in);
+
+    std::string line;
+    std::getline(file, line, '\n');
+
+    gtsam::Pose3 tf(gtsam::Rot3::Yaw(M_PI / 2), gtsam::Point3(0, 0, 0));
+
+    while (file.good())
+    {
+        std::string line;
+        std::getline(file, line, '\n');
+
+        if (line.empty())
+            continue;
+
+        std::replace(line.begin(), line.end(), ',', ' ');
+        std::istringstream ss(line);
+
+        double stamp;
+        ss >> stamp;
+        uint seq;
+        ss >> seq;
+
+        std::vector<double> v;
+        std::copy(std::istream_iterator<double>(ss),
+                  std::istream_iterator<double>(),
+                  std::back_inserter(v));
+
+        // tx, ty, tz, qx, qy, qz, qw, vx, vy, vz, ax, ay, az
+
+        gtsam::Pose3 pose = tf * gtsam::Pose3(gtsam::Rot3(v[6], v[3], v[4], v[5]),
+                                              gtsam::Point3(v[0], v[1], v[2]));
+
+        gt.emplace_back(rio::Odom(stamp, seq, pose,
+                                  Eigen::Vector3d(v[7], v[8], v[9]),
+                                  Eigen::Vector3d(v[10], v[11], v[12])));
+    }
+
+    return gt;
+}
+
 class DopplerIOex
 {
 private:
@@ -108,8 +154,9 @@ public:
     gtsam::Values cache_results;
     std::vector<gtsam::Vector3> radar_velocity_cache;
     std::vector<gtsam::Matrix3> radar_cov_cache;
+    std::map<uint, double> key_frame_stamp;
 
-    ros::Publisher pub_path;
+    ros::Publisher pub_path, pub_gt_path;
 
     void feed_radar(const sensor_msgs::PointCloud2::ConstPtr pc_msg);
     void feed_imu(const sensor_msgs::Imu::ConstPtr imu);
@@ -137,6 +184,7 @@ DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
     pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
     pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 1);
     pub_path = nh->advertise<nav_msgs::Path>("optimized_odom", 1);
+    pub_gt_path = nh->advertise<nav_msgs::Path>("gt_odom", 1);
 }
 
 void DopplerIOex::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
@@ -241,6 +289,8 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     key_timestamps[V(step)] = current_t;
     key_timestamps[B(step)] = current_t;
 
+    key_frame_stamp[step] = radar_msg->header.stamp.toSec();
+
     // ------------------------------------------------------------------------------------
 
     velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
@@ -286,9 +336,9 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     prev_bias = result.at<gtsam::imuBias::ConstantBias>(B(step));
     preintegrated->resetIntegrationAndSetBias(prev_bias);
 
-    gtsam::Pose3 xg(prev_state.pose().rotation(),
-                    gtsam::Point3(prev_state.pose().x(), prev_state.pose().y(), 0));
-    cache_results.insert(X(step), xg);
+    // gtsam::Pose3 xg(prev_state.pose().rotation(),
+    //                 gtsam::Point3(prev_state.pose().x(), prev_state.pose().y(), 0));
+    cache_results.insert(X(step), prev_state.pose());
     cache_results.insert(V(step), prev_state.velocity());
     cache_results.insert(B(step), prev_bias);
 
@@ -387,6 +437,11 @@ int main(int argc, char *argv[])
     ros::NodeHandle nh;
     DopplerIOex dio(&nh);
 
+    std::string csv_path;
+    ros::param::get("~gt_path", csv_path);
+    std::vector<rio::Odom> odom_vio = odom_csv(csv_path);
+    std::cout << "vio: " << odom_vio.size() << std::endl;
+
     std::string bag_folder;
     ros::param::get("~bag_folder", bag_folder);
 
@@ -429,10 +484,12 @@ int main(int argc, char *argv[])
     // auto altitude_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
     //     gtsam::Vector1(0.01));
     auto ground_prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
-        (gtsam::Vector6() << 1e-3, 1e-3, 1e-3, 0.05, 0.05, 0.01).finished());
+        (gtsam::Vector6() << 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6).finished());
     dio.cache_results.insert(E(0), gtsam::Rot3(dio.params.R_r_b));
 
     gtsam::Values calibrate_result;
+    nav_msgs::Path path;
+    path.header.frame_id = "map";
 
     for (uint i = 1; i <= dio.step; i++)
     {
@@ -442,10 +499,16 @@ int main(int argc, char *argv[])
         dio.offline_graph.add(VelocityPoseExtrinsicFactor(
             V(i), X(i), E(0), dio.radar_velocity_cache[i], rv_noise));
 
-        // dio.offline_graph.add(AltitudeFactor(X(i), 0, altitude_noise_model));
+        double key_stamp = dio.key_frame_stamp[i];
+        auto it = std::lower_bound(odom_vio.begin(), odom_vio.end(), key_stamp);
+        path.poses.push_back(toROSPoseStamped(it->pose, path.header));
+        // std::cout.precision(15);
+        // std::cout << key_stamp << ", " << it->stamp << std::endl;
+
         dio.offline_graph.addPrior(
-            X(i), dio.cache_results.at<gtsam::Pose3>(X(i)), ground_prior_noise);
+            X(i), it->pose, ground_prior_noise);
     }
+    dio.pub_gt_path.publish(path);
 
     calibrate_result = gtsam::LevenbergMarquardtOptimizer(dio.offline_graph, dio.cache_results).optimize();
 
@@ -454,8 +517,7 @@ int main(int argc, char *argv[])
     std::cout << "R_r_i: " << std::endl
               << R_r_i << std::endl;
 
-    nav_msgs::Path path;
-    path.header.frame_id = "map";
+    path.poses.clear();
     for (uint i = 0; i < dio.step; i++)
     {
         path.poses.push_back(toROSPoseStamped(calibrate_result.at<gtsam::Pose3>(X(i)), path.header));

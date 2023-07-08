@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <Eigen/Eigen>
+#include <gtsam/geometry/Pose3.h>
 
 namespace rio
 {
@@ -19,6 +20,33 @@ namespace rio
             gyro = g;
             stamp = t;
         }
+    };
+
+    struct Odom
+    {
+        double stamp;
+        uint seq;
+        gtsam::Pose3 pose;
+        Eigen::Vector3d v;
+        Eigen::Vector3d a;
+
+        Odom(double t,
+             uint s,
+             gtsam::Pose3 p,
+             Eigen::Vector3d lv,
+             Eigen::Vector3d av)
+        {
+            stamp = t;
+            seq = s;
+            pose = p;
+            v = lv;
+            a = av;
+        }
+
+        bool operator<(double right){
+            return stamp < right;
+        }
+
     };
 };
 

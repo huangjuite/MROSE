@@ -1,6 +1,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <fstream>
+#include <vector>
+
 // PCL includes
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -26,6 +29,8 @@
 #include <gtsam/nonlinear/GaussNewtonOptimizer.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Marginals.h>
+
+#include "types.h"
 
 visualization_msgs::Marker velocityMarker(gtsam::Vector3 velocity, gtsam::Vector3 position = gtsam::Vector3(0, 0, 0),
                                           std::string frame_id = "radar", std::string ns = "radar_doppler")
