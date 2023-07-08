@@ -12,7 +12,7 @@ Panels:
         - /Odometry1/Covariance1
         - /Odometry1/Covariance1/Position1
         - /Odometry1/Covariance1/Orientation1
-        - /Path2
+        - /Path1/Status1
       Splitter Ratio: 0.6067864298820496
     Tree Height: 471
   - Class: rviz/Selection
@@ -296,7 +296,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Billboards
       Line Width: 0.10000000149011612
-      Name: Path
+      Name: gt_Path
       Offset:
         X: 0
         Y: 0
@@ -338,7 +338,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 19.511638641357422
+      Distance: 14.257662773132324
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -346,17 +346,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: -0.5972124338150024
+        Y: -1.4602283239364624
+        Z: -0.43683159351348877
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7853981852531433
+      Pitch: 0.9747962951660156
       Target Frame: <Fixed Frame>
-      Yaw: 0.7853981852531433
+      Yaw: 2.8772339820861816
     Saved: ~
 Window Geometry:
   Displays:

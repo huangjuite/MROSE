@@ -59,7 +59,7 @@ radar2:
 
 odom:
   imu: imu0
-  radar: radar2
+  radar: radar1
   static_init_window: 2.0 # seconds
   static_init_threshold: 0.1
   optimization_window: 2.0 # seconds

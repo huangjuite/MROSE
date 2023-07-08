@@ -501,12 +501,18 @@ int main(int argc, char *argv[])
 
         double key_stamp = dio.key_frame_stamp[i];
         auto it = std::lower_bound(odom_vio.begin(), odom_vio.end(), key_stamp);
-        path.poses.push_back(toROSPoseStamped(it->pose, path.header));
-        // std::cout.precision(15);
-        // std::cout << key_stamp << ", " << it->stamp << std::endl;
+
+        if (it == odom_vio.begin() || it==odom_vio.end())
+            continue;
+
+        gtsam::Pose3 T_t0 = (it - 1)->pose;
+        gtsam::Pose3 T_t1 = it->pose;
+        double t = (key_stamp - (it - 1)->stamp) / (it->stamp - (it - 1)->stamp);
+        auto T_g = T_t0.interpolateRt(T_t1, t);
+        path.poses.push_back(toROSPoseStamped(T_g, path.header));
 
         dio.offline_graph.addPrior(
-            X(i), it->pose, ground_prior_noise);
+            X(i), T_g, ground_prior_noise);
     }
     dio.pub_gt_path.publish(path);
 
