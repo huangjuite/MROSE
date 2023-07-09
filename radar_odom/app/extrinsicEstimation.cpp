@@ -14,9 +14,12 @@
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <std_srvs/Trigger.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
+#include <radar_odom/extrinsicConfig.h>
+#include <dynamic_reconfigure/server.h>
 
 // PCL includes
 #include <pcl_ros/point_cloud.h>
@@ -34,6 +37,7 @@
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
+#include "VelocityMeasurementFactor.h"
 #include "VelocityPoseMeasurementFactor.h"
 #include "VelocityPoseExtrinsicFactor.h"
 #include "AltitudeFactor.h"
@@ -156,10 +160,18 @@ public:
     std::vector<gtsam::Matrix3> radar_cov_cache;
     std::map<uint, double> key_frame_stamp;
 
+    std::vector<rio::Odom> odom_vio;
+    std::vector<std::string> bags;
+    std::vector<std::string> topics;
+
     ros::Publisher pub_path, pub_gt_path;
 
     void feed_radar(const sensor_msgs::PointCloud2::ConstPtr pc_msg);
     void feed_imu(const sensor_msgs::Imu::ConstPtr imu);
+    void run_bags();
+    bool trigger_bags(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep);
+    void cb_config(radar_odom::extrinsicConfig &config, uint32_t level);
+    bool optimize(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep);
 };
 
 DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
@@ -173,12 +185,6 @@ DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
     velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
     velocity_estimator->set_inlier_thresh(params.doppler_std);
 
-    // fixed lag smoother init
-    gtsam::ISAM2Params parameters;
-    parameters.relinearizeThreshold = 0.0;
-    parameters.relinearizeSkip = 1;
-    smootherISAM2 = std::make_unique<gtsam::IncrementalFixedLagSmoother>(params.lag, parameters);
-
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
     pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
@@ -190,6 +196,7 @@ DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
 void DopplerIOex::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
                              const Eigen::Vector3d &bias_gyro, const double &stamp)
 {
+    step = 0;
 
     // priors
     gtsam::Pose3 prior_pose(gtsam::Rot3::Quaternion(rotation.w(), rotation.x(), rotation.y(), rotation.z()), gtsam::Point3(0, 0, 0));
@@ -199,9 +206,11 @@ void DopplerIOex::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Ve
     assert(preintegrated);
 
     // pose init
+    initial_values.clear();
     initial_values.insert(X(0), prior_pose);
     initial_values.insert(V(0), prior_velocity);
     initial_values.insert(B(0), prior_imu_bias);
+    key_timestamps.clear();
     key_timestamps[X(0)] = stamp;
     key_timestamps[V(0)] = stamp;
     key_timestamps[B(0)] = stamp;
@@ -222,12 +231,21 @@ void DopplerIOex::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Ve
     graph->addPrior(V(0), prior_velocity, velocity_noise_model);
     graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
 
+    cache_results.clear();
     cache_results.insert(X(0), prior_pose);
     cache_results.insert(V(0), prior_velocity);
     cache_results.insert(B(0), prior_imu_bias);
+
+    offline_graph = gtsam::NonlinearFactorGraph();
     offline_graph.addPrior(X(0), prior_pose, pose_noise_model);
     offline_graph.addPrior(V(0), prior_velocity, velocity_noise_model);
     offline_graph.addPrior(B(0), prior_imu_bias, bias_noise_model);
+
+    // fixed lag smoother init
+    gtsam::ISAM2Params parameters;
+    parameters.relinearizeThreshold = 0.0;
+    parameters.relinearizeSkip = 1;
+    smootherISAM2 = std::make_unique<gtsam::IncrementalFixedLagSmoother>(params.lag, parameters);
 }
 
 void DopplerIOex::update()
@@ -431,28 +449,13 @@ DopplerIOex::~DopplerIOex()
 {
 }
 
-int main(int argc, char *argv[])
+void DopplerIOex::run_bags()
 {
-    ros::init(argc, argv, "radar_inertial_extrinsic");
-    ros::NodeHandle nh;
-    DopplerIOex dio(&nh);
+    initialized = false;
+    radar_que.clear();
+    imu_que.clear();
 
-    std::string csv_path;
-    ros::param::get("~gt_path", csv_path);
-    std::vector<rio::Odom> odom_vio = odom_csv(csv_path);
-    std::cout << "vio: " << odom_vio.size() << std::endl;
-
-    std::string bag_folder;
-    ros::param::get("~bag_folder", bag_folder);
-
-    std::vector<std::string> bags;
-    for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
-        bags.emplace_back(entry.path().string());
-    std::sort(bags.begin(), bags.end());
-
-    std::vector<std::string> topics;
-    topics.push_back(dio.params.radar_topic);
-    topics.push_back(dio.params.imu_topic);
+    initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
 
     for (auto b : bags)
     {
@@ -466,43 +469,61 @@ int main(int argc, char *argv[])
             sensor_msgs::PointCloud2::ConstPtr radar_msg = m.instantiate<sensor_msgs::PointCloud2>();
             if (radar_msg != NULL)
             {
-                dio.feed_radar(radar_msg);
+                feed_radar(radar_msg);
             }
 
             sensor_msgs::Imu::ConstPtr imu_msg = m.instantiate<sensor_msgs::Imu>();
             if (imu_msg != NULL)
             {
-                dio.feed_imu(imu_msg);
+                feed_imu(imu_msg);
             }
         }
 
         bag.close();
     }
+}
+
+void DopplerIOex::cb_config(radar_odom::extrinsicConfig &config, uint32_t level)
+{
+    ROS_INFO("%f, %f, %f", config.Rx, config.Ry, config.Rz);
+
+    gtsam::Rot3 R_r_i = gtsam::Rot3::Ypr(config.Rz, config.Ry, config.Rx);
+
+    params.R_r_b = params.R_i_b * R_r_i.matrix();
+    std::cout << params.R_r_b << std::endl;
+}
+
+bool DopplerIOex::trigger_bags(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep)
+{
+    run_bags();
+    return true;
+}
+
+bool DopplerIOex::optimize(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep)
+{
+    run_bags();
 
     // extrinsic optimization
-
-    // auto altitude_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
-    //     gtsam::Vector1(0.01));
+    auto vel_gt_noise = gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(1e-6, 1e-6, 1e-6));
     auto ground_prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
         (gtsam::Vector6() << 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6).finished());
-    dio.cache_results.insert(E(0), gtsam::Rot3(dio.params.R_r_b));
+    cache_results.insert(E(0), gtsam::Rot3(params.R_r_b));
 
     gtsam::Values calibrate_result;
     nav_msgs::Path path;
     path.header.frame_id = "map";
 
-    for (uint i = 1; i <= dio.step; i++)
+    for (uint i = 1; i <= step; i++)
     {
-
         auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(
-            dio.params.R_r_b * dio.radar_cov_cache[i] * dio.params.R_r_b.transpose());
-        dio.offline_graph.add(VelocityPoseExtrinsicFactor(
-            V(i), X(i), E(0), dio.radar_velocity_cache[i], rv_noise));
+            params.R_r_b * radar_cov_cache[i] * params.R_r_b.transpose());
+        offline_graph.add(VelocityPoseExtrinsicFactor(
+            V(i), X(i), E(0), radar_velocity_cache[i], rv_noise));
 
-        double key_stamp = dio.key_frame_stamp[i];
+        double key_stamp = key_frame_stamp[i];
         auto it = std::lower_bound(odom_vio.begin(), odom_vio.end(), key_stamp);
 
-        if (it == odom_vio.begin() || it==odom_vio.end())
+        if (it == odom_vio.begin() || it == odom_vio.end())
             continue;
 
         gtsam::Pose3 T_t0 = (it - 1)->pose;
@@ -511,24 +532,63 @@ int main(int argc, char *argv[])
         auto T_g = T_t0.interpolateRt(T_t1, t);
         path.poses.push_back(toROSPoseStamped(T_g, path.header));
 
-        dio.offline_graph.addPrior(
+        offline_graph.addPrior(
             X(i), T_g, ground_prior_noise);
-    }
-    dio.pub_gt_path.publish(path);
 
-    calibrate_result = gtsam::LevenbergMarquardtOptimizer(dio.offline_graph, dio.cache_results).optimize();
+        // gtsam::Vector3 gv = T_g.rotation().matrix() * it->v;
+        // offline_graph.add(VelocityMeasurementFactor(V(i), gv, vel_gt_noise));
+    }
+    pub_gt_path.publish(path);
+
+    calibrate_result = gtsam::LevenbergMarquardtOptimizer(offline_graph, cache_results).optimize();
 
     gtsam::Rot3 extrinsic = calibrate_result.at<gtsam::Rot3>(E(0));
-    auto R_r_i = dio.params.R_i_b.transpose() * extrinsic.matrix();
+    auto R_r_i = params.R_i_b.transpose() * extrinsic.matrix();
     std::cout << "R_r_i: " << std::endl
               << R_r_i << std::endl;
 
     path.poses.clear();
-    for (uint i = 0; i < dio.step; i++)
+    for (uint i = 0; i < step; i++)
     {
         path.poses.push_back(toROSPoseStamped(calibrate_result.at<gtsam::Pose3>(X(i)), path.header));
     }
-    dio.pub_path.publish(path);
+    pub_path.publish(path);
+
+    return true;
+}
+
+int main(int argc, char *argv[])
+{
+    ros::init(argc, argv, "radar_inertial_extrinsic");
+    ros::NodeHandle nh;
+    DopplerIOex dio(&nh);
+
+    dynamic_reconfigure::Server<radar_odom::extrinsicConfig> server;
+    dynamic_reconfigure::Server<radar_odom::extrinsicConfig>::CallbackType f;
+    f = boost::bind(&DopplerIOex::cb_config, &dio, _1, _2);
+    server.setCallback(f);
+
+    ros::ServiceServer run_service = nh.advertiseService(
+        "run_bag", &DopplerIOex::trigger_bags, &dio);
+
+    ros::ServiceServer run_optimize = nh.advertiseService(
+        "run_optimize", &DopplerIOex::optimize, &dio);
+
+    std::string bag_folder;
+    ros::param::get("~bag_folder", bag_folder);
+
+    for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
+        dio.bags.emplace_back(entry.path().string());
+    std::sort(dio.bags.begin(), dio.bags.end());
+    dio.topics.push_back(dio.params.radar_topic);
+    dio.topics.push_back(dio.params.imu_topic);
+
+    std::string csv_path;
+    ros::param::get("~gt_path", csv_path);
+    dio.odom_vio = odom_csv(csv_path);
+    std::cout << "vio: " << dio.odom_vio.size() << std::endl;
+
+    ros::spin();
 
     return 0;
 }

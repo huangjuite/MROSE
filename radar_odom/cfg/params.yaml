@@ -38,7 +38,7 @@ radar0:
 radar1:
   T_r_i:
     - [1.0, 0.0, 0.0, 0.0]
-    - [0.0, 0.0, -1.0, -0.1]
+    - [0.0, 0.0, -1.0, 0.0]
     - [0.0, 1.0, 0.0, 0.0]
     - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar_points
@@ -48,10 +48,10 @@ radar1:
 
 radar2:
   T_r_i:
-    - [0.996767, -0.0747658, 0.0294202, 0.0]
-    - [0.0334319, 0.0529847, -0.998036, -0.1]
-    - [0.0730601, 0.995792, 0.0553129, 0.0]
-    - [0.0, 0.0, 0.0, 1.0]
+    - [0.997551,    0.0699428,  0.0, 0.0]
+    - [0.0,         0.0,        -1.0,  0.0]
+    - [-0.0699428,  0.997551,   0.0, 0.0]
+    - [0.0,         0.0,        0.0, 1.0]
   rostopic: /radar_points
   doppler_sigma: 0.05512325 # doppler uncertainty (m/s)
   azimuth_sigma: 0.0245436926 # azimuth uncertainty (1.41 degree)
@@ -59,7 +59,7 @@ radar2:
 
 odom:
   imu: imu0
-  radar: radar1
+  radar: radar2
   static_init_window: 2.0 # seconds
   static_init_threshold: 0.1
   optimization_window: 2.0 # seconds

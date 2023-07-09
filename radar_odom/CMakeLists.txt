@@ -39,6 +39,7 @@ add_service_files(
 
 generate_dynamic_reconfigure_options(
     cfg/mapping.cfg
+    cfg/extrinsic.cfg
 )
 
 generate_messages(
