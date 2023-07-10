@@ -43,6 +43,7 @@
 #include "AltitudeFactor.h"
 
 #include "RadarVelocityEstimatorCeresHCS.h"
+#include "RadarVelocityEstimatorCeres.h"
 #include "StaticInitializer.hpp"
 
 #include "types.h"
@@ -119,7 +120,8 @@ private:
     ros::ServiceServer calibrate_srv;
 
     // radar
-    std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
+    std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
+    // std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
     std::deque<sensor_msgs::PointCloud2::ConstPtr> radar_que;
 
     // imu settings
@@ -182,7 +184,8 @@ DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
     initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
 
     // velocity optimizer init
-    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
+    velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
+    // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
     velocity_estimator->set_inlier_thresh(params.doppler_std);
 
     // ros init
