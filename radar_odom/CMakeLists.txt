@@ -140,6 +140,10 @@ target_link_libraries(test_clustering ${PROJECT_NAME})
 # add_executable(radar_ndt_omp app/radar_ndt_omp.cpp)
 # target_link_libraries(radar_ndt_omp ${catkin_LIBRARIES} ${PROJECT_NAME} gtsam ndt_omp)
 
+add_executable(vo_ex app/extrinsicEstimation_velocity.cpp)
+add_dependencies(vo_ex ${catkin_EXPORTED_TARGETS})
+target_link_libraries(vo_ex ${PROJECT_NAME})
+
 add_executable(dio_ex app/extrinsicEstimation.cpp)
 add_dependencies(dio_ex ${catkin_EXPORTED_TARGETS})
 target_link_libraries(dio_ex ${PROJECT_NAME})
