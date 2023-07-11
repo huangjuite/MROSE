@@ -101,7 +101,6 @@ std::vector<rio::Odom> odom_csv(std::string path)
     return gt;
 }
 
-
 int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "radar_extrinsic");
@@ -111,9 +110,72 @@ int main(int argc, char *argv[])
 
     std::string csv_path;
     ros::param::get("~gt_path", csv_path);
-    auto vio_odom = odom_csv(csv_path);
+    auto odom_vio = odom_csv(csv_path);
 
-    ros::spin();
+    rplrio::Params params = rplrio::get_params(nh);
+
+    std::vector<std::string> bags;
+    std::vector<std::string> topics;
+    for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
+        bags.emplace_back(entry.path().string());
+    std::sort(bags.begin(), bags.end());
+    topics.push_back(params.radar_topic);
+
+    RadarVelocityEstimatorCeres v_opt;
+    std::cout.precision(20);
+    std::ofstream odom_file;
+    odom_file.open("/tmp/odom_tmp.csv");
+    odom_file << std::fixed << std::setprecision(15);
+    // odom_file << "stamp, vx, vy, vz, rx, ry, rz" << std::endl;
+
+    for (auto b : bags)
+    {
+        rosbag::Bag bag;
+        bag.open(b, rosbag::bagmode::Read);
+
+        rosbag::View view(bag, rosbag::TopicQuery(topics));
+
+        foreach (rosbag::MessageInstance const m, view)
+        {
+            sensor_msgs::PointCloud2::ConstPtr radar_msg = m.instantiate<sensor_msgs::PointCloud2>();
+            if (radar_msg != NULL)
+            {
+                pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
+                radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+                pcl::fromROSMsg(*radar_msg, *radar_pc);
+                double current_t = radar_msg->header.stamp.toSec();
+
+                auto it = std::lower_bound(odom_vio.begin(), odom_vio.end(), current_t);
+
+                if (it == odom_vio.begin() || it == odom_vio.end())
+                    continue;
+
+                double ratio = (current_t - (it - 1)->stamp) / (it->stamp - (it - 1)->stamp);
+                auto body_v = ratio * it->v + (1 - ratio) * (it - 1)->v;
+
+                std::cout << current_t << ", " << it->stamp << std::endl;
+
+                v_opt.set_initial_velocity(gtsam::Vector3::Identity());
+                gtsam::Vector3 measured_v = v_opt.optimize(radar_pc);
+                gtsam::Matrix3 radar_velocity_cov = v_opt.get_covariance(
+                    radar_pc, measured_v);
+
+                measured_v = params.R_r_b * measured_v;
+
+                odom_file << current_t << ", ";
+                odom_file << measured_v[0] << ", ";
+                odom_file << measured_v[1] << ", ";
+                odom_file << measured_v[2] << ", ";
+                odom_file << body_v[0] << ", ";
+                odom_file << body_v[1] << ", ";
+                odom_file << body_v[2] << std::endl;
+            }
+        }
+
+        odom_file.close();
+
+        bag.close();
+    }
 
     return 0;
 }
