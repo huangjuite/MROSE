@@ -1,7 +1,7 @@
 <launch>
 
-    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/flat_1687547791/rosbag" />
-    <arg name="gt_path" default="/home/rpl/Documents/RPL_radar/flat_1687547791/odom_vio.csv" />
+    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/frc_h_1687205888/rosbag" />
+    <arg name="gt_path" default="/home/rpl/Documents/RPL_radar/frc_h_1687205888/odom_vio.csv" />
 
     <rosparam file="$(find radar_odom)/cfg/params.yaml" />
     <node name="rio_extrinsic" pkg="radar_odom" type="vo_ex" output="screen">

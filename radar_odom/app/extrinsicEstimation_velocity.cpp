@@ -35,7 +35,6 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Marginals.h>
-#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
 #include "VelocityMeasurementFactor.h"
 #include "VelocityPoseMeasurementFactor.h"
@@ -101,8 +100,31 @@ std::vector<rio::Odom> odom_csv(std::string path)
     return gt;
 }
 
+class ExtrinsicFactor : public gtsam::NoiseModelFactor1<gtsam::Rot3>
+{
+private:
+    gtsam::Vector3 radar_velocity;
+    gtsam::Vector3 body_velocity;
+
+public:
+    ExtrinsicFactor(){};
+
+    ExtrinsicFactor(gtsam::Key rotKey, const gtsam::Vector3 &radar_v,
+                    const gtsam::Vector3 &body_v, const gtsam::SharedNoiseModel &model)
+        : gtsam::NoiseModelFactor1<gtsam::Rot3>(model, rotKey),
+          radar_velocity(radar_v), body_velocity(body_v){};
+
+    gtsam::Vector evaluateError(const gtsam::Rot3 &pose, boost::optional<gtsam::Matrix &> H = boost::none) const override
+    {
+        gtsam::Vector3 err = pose.rotate(radar_velocity, H) - body_velocity;
+        return err;
+    }
+};
+
 int main(int argc, char *argv[])
 {
+    std::cout << std::fixed << std::setprecision(6);
+
     ros::init(argc, argv, "radar_extrinsic");
     ros::NodeHandle nh;
     std::string bag_folder;
@@ -113,6 +135,8 @@ int main(int argc, char *argv[])
     auto odom_vio = odom_csv(csv_path);
 
     rplrio::Params params = rplrio::get_params(nh);
+    std::vector<Eigen::Vector3d> body_velocity, radar_velocity;
+    std::vector<double> stamps;
 
     std::vector<std::string> bags;
     std::vector<std::string> topics;
@@ -122,11 +146,12 @@ int main(int argc, char *argv[])
     topics.push_back(params.radar_topic);
 
     RadarVelocityEstimatorCeres v_opt;
-    std::cout.precision(20);
-    std::ofstream odom_file;
-    odom_file.open("/tmp/odom_tmp.csv");
-    odom_file << std::fixed << std::setprecision(15);
-    // odom_file << "stamp, vx, vy, vz, rx, ry, rz" << std::endl;
+    gtsam::NonlinearFactorGraph graph;
+    gtsam::Values init_values;
+    init_values.insert(0, gtsam::Rot3(params.R_r_b));
+    auto noise = gtsam::noiseModel::Robust::Create(
+        gtsam::noiseModel::mEstimator::Cauchy::Create(0.1),
+        gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(0.1, 0.1, 0.1)));
 
     for (auto b : bags)
     {
@@ -153,6 +178,7 @@ int main(int argc, char *argv[])
                 double ratio = (current_t - (it - 1)->stamp) / (it->stamp - (it - 1)->stamp);
                 auto body_v = ratio * it->v + (1 - ratio) * (it - 1)->v;
 
+                std::cout << "\033c";
                 std::cout << current_t << ", " << it->stamp << std::endl;
 
                 v_opt.set_initial_velocity(gtsam::Vector3::Identity());
@@ -160,22 +186,47 @@ int main(int argc, char *argv[])
                 gtsam::Matrix3 radar_velocity_cov = v_opt.get_covariance(
                     radar_pc, measured_v);
 
-                measured_v = params.R_r_b * measured_v;
+                stamps.emplace_back(current_t);
+                body_velocity.emplace_back(body_v);
+                radar_velocity.emplace_back(measured_v);
 
-                odom_file << current_t << ", ";
-                odom_file << measured_v[0] << ", ";
-                odom_file << measured_v[1] << ", ";
-                odom_file << measured_v[2] << ", ";
-                odom_file << body_v[0] << ", ";
-                odom_file << body_v[1] << ", ";
-                odom_file << body_v[2] << std::endl;
+                graph.add(ExtrinsicFactor(0, measured_v, body_v, noise));
             }
         }
 
-        odom_file.close();
-
         bag.close();
     }
+
+    gtsam::Values result = gtsam::LevenbergMarquardtOptimizer(
+                               graph, init_values)
+                               .optimize();
+    gtsam::Rot3 ex = result.at<gtsam::Rot3>(0);
+
+    ex.print("R_r_b");
+
+    std::ofstream odom_file;
+    odom_file.open("/tmp/odom_tmp.csv");
+    odom_file << std::fixed << std::setprecision(15);
+    // odom_file << "stamp, vx, vy, vz, rx, ry, rz" << std::endl;
+
+    for (uint i = 0; i < stamps.size(); i++)
+    {
+        gtsam::Vector3 calib_v = ex.matrix() * radar_velocity[i];
+        gtsam::Vector3 before = params.R_r_b * radar_velocity[i];
+
+        odom_file << stamps[i] << ", ";
+        odom_file << before[0] << ", ";
+        odom_file << before[1] << ", ";
+        odom_file << before[2] << ", ";
+        odom_file << body_velocity[i][0] << ", ";
+        odom_file << body_velocity[i][1] << ", ";
+        odom_file << body_velocity[i][2] << ", ";
+        odom_file << calib_v[0] << ", ";
+        odom_file << calib_v[1] << ", ";
+        odom_file << calib_v[2] << std::endl;
+    }
+
+    odom_file.close();
 
     return 0;
 }
