@@ -21,16 +21,13 @@
 #include <tf/tf.h>
 
 // GTSAM includes.
-#include <gtsam/inference/Symbol.h>
-#include <gtsam/navigation/ImuBias.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Pose2.h>
-#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
-#include <gtsam/nonlinear/GaussNewtonOptimizer.h>
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/Marginals.h>
+#include <gtsam/navigation/ImuBias.h>
 
 #include "types.h"
+#include "params.h"
+
 
 visualization_msgs::Marker velocityMarker(gtsam::Vector3 velocity, gtsam::Vector3 position = gtsam::Vector3(0, 0, 0),
                                           std::string frame_id = "radar", std::string ns = "radar_doppler")
@@ -284,6 +281,80 @@ void logdB_SNR(pcl::PointCloud<pcl::PointXYZI>::Ptr pc)
     {
         pc->points[i].intensity = log(pc->points[i].intensity);
     }
+}
+
+namespace rplrio
+{
+
+    Params get_params(ros::NodeHandle &nh)
+    {
+        Params param;
+
+        // odom
+        std::string radar_, imu_;
+        nh.getParam("/odom/imu", imu_);
+        nh.getParam("/odom/radar", radar_);
+        nh.getParam(radar_ + std::string("/rostopic"), param.radar_topic);
+        nh.getParam(imu_ + std::string("/rostopic"), param.imu_topic);
+
+        // imu
+        nh.getParam(imu_ + std::string("/accelerometer_noise_density"), param.acc_noise);
+        nh.getParam(imu_ + std::string("/accelerometer_random_walk"), param.acc_rw);
+        nh.getParam(imu_ + std::string("/gyroscope_noise_density"), param.gyro_noise);
+        nh.getParam(imu_ + std::string("/gyroscope_random_walk"), param.gyro_rw);
+        nh.getParam(imu_ + std::string("/gravity"), param.gravity);
+
+        XmlRpc::XmlRpcValue tf;
+        nh.getParam(imu_ + std::string("/T_i_b"), tf);
+        for (uint i = 0; i < tf.size(); i++)
+        {
+            for (uint j = 0; j < tf[i].size(); j++)
+            {
+                param.T_i_b(i, j) = tf[i][j];
+            }
+        }
+        param.R_i_b = param.T_i_b.block(0, 0, 3, 3);
+
+        // radar
+        nh.getParam(radar_ + std::string("/doppler_sigma"), param.doppler_std);
+        nh.getParam(radar_ + std::string("/azimuth_sigma"), param.azimuth_std);
+        nh.getParam(radar_ + std::string("/elevation_sigma"), param.elevation_std);
+        nh.getParam(radar_ + std::string("/T_r_i"), tf);
+        for (uint i = 0; i < tf.size(); i++)
+        {
+            for (uint j = 0; j < tf[i].size(); j++)
+            {
+                param.T_r_i(i, j) = tf[i][j];
+            }
+        }
+        param.T_r_b = param.T_i_b * param.T_r_i;
+        param.R_r_b = param.T_r_b.block(0, 0, 3, 3);
+
+        // initializer
+        nh.getParam("/odom/static_init_window", param.init_window);
+        nh.getParam("/odom/static_init_threshold", param.init_thres);
+        nh.getParam("/odom/optimization_window", param.lag);
+
+        // loop close
+        nh.getParam("/loop_close/enable_loop_close", param.enable_loop_close);
+        nh.getParam("/loop_close/loop_close_rate", param.loop_close_rate);
+        nh.getParam("/loop_close/loop_ignore", param.loop_ignore);
+        nh.getParam("/loop_close/key_frame_search", param.key_frame_search);
+        nh.getParam("/loop_close/loop_distance_thresh", param.loop_distance_thresh);
+        nh.getParam("/loop_close/process_voxel_size", param.process_voxel_size);
+        nh.getParam("/loop_close/ndt_voxel_size", param.ndt_voxel_size);
+        nh.getParam("/loop_close/ndt_thread", param.ndt_thread);
+        nh.getParam("/loop_close/snr_thresh", param.snr_thresh);
+
+        // mapping
+        nh.getParam("/mapping/map_snr_thresh", param.map_snr_thresh);
+        nh.getParam("/mapping/render_rate", param.render_rate);
+
+        return param;
+    }
+
+    
+
 }
 
 #endif

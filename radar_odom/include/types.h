@@ -3,6 +3,7 @@
 
 #include <Eigen/Eigen>
 #include <gtsam/geometry/Pose3.h>
+#include <pclradar/RadarPointType.h>
 
 namespace rio
 {
@@ -47,6 +48,16 @@ namespace rio
             return stamp < right;
         }
 
+    };
+
+    struct Radar{
+        pcl::PointCloud<pcl::PointXYZIS>::Ptr pc;
+        double stamp;
+
+        Radar(pcl::PointCloud<pcl::PointXYZIS>::Ptr p, double t){
+            stamp = t;
+            pc = p;
+        }
     };
 };
 

@@ -30,6 +30,8 @@ find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(octomap REQUIRED)
 
+# list(APPEND CMAKE_PREFIX_PATH "/home/rpl/package/libtorch")
+# find_package(Torch REQUIRED)
 
 
 add_service_files(
@@ -81,7 +83,9 @@ add_library(${PROJECT_NAME} SHARED
   src/LandmarkTracker.cpp
   src/StaticInitializer.cpp
   src/utils.cpp
+  src/params.cpp
   Scancontext/Scancontext.cpp
+  src/DIOManager.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -112,6 +116,8 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
+# add_executable(test_libtorch app/test_libtorch.cpp)
+# target_link_libraries(test_libtorch ${PROJECT_NAME} ${TORCH_LIBRARIES})
 
 add_executable(ImuFactorsExample app/ImuFactorsExample.cpp)
 target_link_libraries(ImuFactorsExample ${PROJECT_NAME})
