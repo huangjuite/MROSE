@@ -55,9 +55,9 @@ using gtsam::symbol_shorthand::E;
 using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
 using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
-std::vector<rio::Odom> odom_csv(std::string path)
+std::vector<rplrio::Odom> odom_csv(std::string path)
 {
-    std::vector<rio::Odom> gt;
+    std::vector<rplrio::Odom> gt;
 
     std::ifstream file;
     file.open(path, std::ios::in);
@@ -93,7 +93,7 @@ std::vector<rio::Odom> odom_csv(std::string path)
         gtsam::Pose3 pose = tf * gtsam::Pose3(gtsam::Rot3(v[6], v[3], v[4], v[5]),
                                               gtsam::Point3(v[0], v[1], v[2]));
 
-        gt.emplace_back(rio::Odom(stamp, seq, pose,
+        gt.emplace_back(rplrio::Odom(stamp, seq, pose,
                                   Eigen::Vector3d(v[7], v[8], v[9]),
                                   Eigen::Vector3d(v[10], v[11], v[12])));
     }
@@ -109,7 +109,7 @@ private:
     bool correct_now = false;
 
     bool initialized = false;
-    std::deque<std::shared_ptr<rio::IMU>> imu_que;
+    std::deque<std::shared_ptr<rplrio::IMU>> imu_que;
     std::shared_ptr<StaticInitializer> initializer;
 
     ros::NodeHandle *nh;
@@ -162,7 +162,7 @@ public:
     std::vector<gtsam::Matrix3> radar_cov_cache;
     std::map<uint, double> key_frame_stamp;
 
-    std::vector<rio::Odom> odom_vio;
+    std::vector<rplrio::Odom> odom_vio;
     std::vector<std::string> bags;
     std::vector<std::string> topics;
 
@@ -424,7 +424,7 @@ void DopplerIOex::feed_imu(const sensor_msgs::Imu::ConstPtr imu_msg)
     if (!initialized)
     {
         bool init_success = initializer->init_update(
-            std::make_shared<rio::IMU>(acc, omega, imu_t));
+            std::make_shared<rplrio::IMU>(acc, omega, imu_t));
         if (init_success)
         {
             initialized = true;
@@ -445,7 +445,7 @@ void DopplerIOex::feed_imu(const sensor_msgs::Imu::ConstPtr imu_msg)
         return;
     }
 
-    imu_que.emplace_back(std::make_shared<rio::IMU>(acc, omega, imu_t));
+    imu_que.emplace_back(std::make_shared<rplrio::IMU>(acc, omega, imu_t));
 }
 
 DopplerIOex::~DopplerIOex()

@@ -24,93 +24,36 @@
 #include <pcl/common/transforms.h>
 #include <pclradar/RadarPointType.h>
 
-// GTSAM includes.
-#include <gtsam/inference/Symbol.h>
-#include <gtsam/navigation/CombinedImuFactor.h>
-#include <gtsam/nonlinear/ISAM2.h>
-#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/Marginals.h>
-#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
-
-// #include "DopplerMeasurementFactor.h"
-// #include "VelocityMeasurementFactor.h"
-// #include "RadarVelocityEstimator.h"
-// #include "RadarVelocityEstimatorGNC.h"
-// #include "RadarVelocityEstimatorHCS.h"
-// #include "RadarVelocityEstimatorCelestial.h"
-#include "VelocityPoseMeasurementFactor.h"
-#include "RadarVelocityEstimatorCeres.h"
-#include "RadarVelocityEstimatorCeresHCS.h"
-#include "StaticInitializer.hpp"
-
+#include "DIOManager.h"
 #include "types.h"
 #include "utils.h"
 #include "params.h"
 
-using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
-using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
-using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
+
 class DopplerIO
 {
 private:
     rplrio::Params params;
-
-    gtsam::Rot3 tf_base2map;
-    double pre_imu_t = 0;
-    int step = 0;
-    int imu_count = 0;
-    bool correct_now = false;
-    bool initialized = false;
+    std::unique_ptr<rplrio::DIOManager> dio_manager;
 
     ros::NodeHandle *nh;
+    
     ros::Subscriber sub_radar;
     ros::Subscriber sub_imu;
+
     ros::Publisher pub_odom;
     ros::Publisher pub_v;
     ros::Publisher pub_twist;
     ros::Publisher pub_bias;
     ros::Publisher pub_radar;
     ros::Publisher pub_error;
+
     tf::TransformBroadcaster br;
     tf::TransformListener listener;
 
-    // radar
-    // RadarVelocityEstimator *velocity_estimator;
-    // std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
-    std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
-    // RadarVelocityEstimatorGNC *velocity_estimator;
-    // RadarVelocityEstimatorCelestial *velocity_estimator;
-    // RadarVelocityEstimatorHCS *velocity_estimator;
-    std::deque<sensor_msgs::PointCloud2::ConstPtr> radar_que;
-
-    // imu settings
-    std::shared_ptr<gtsam::PreintegrationType> preintegrated;
-    std::deque<std::shared_ptr<rio::IMU>> imu_que;
-    std::shared_ptr<StaticInitializer> initializer;
-
-    // states
-    gtsam::Values initial_values;
-    gtsam::NavState prev_state;
-    gtsam::NavState prop_state;
-    gtsam::imuBias::ConstantBias prev_bias;
-
-    // noise models
-    gtsam::noiseModel::Diagonal::shared_ptr pose_noise_model;
-    gtsam::noiseModel::Isotropic::shared_ptr velocity_noise_model;
-    gtsam::noiseModel::Isotropic::shared_ptr bias_noise_model;
-
-    // optimizer & graph
-    gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
-    std::unique_ptr<gtsam::IncrementalFixedLagSmoother> smootherISAM2;
-    std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
-
     void cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg);
     void cb_imu(const sensor_msgs::Imu::ConstPtr &imu);
-    void graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
-                    const Eigen::Vector3d &bias_gyro, const double &stamp);
-    void update();
-    void optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg);
+    void publish_all(const std::shared_ptr<const rplrio::Keyframe> keyframe);
 
 public:
     DopplerIO(ros::NodeHandle *nh);

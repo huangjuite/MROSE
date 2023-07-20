@@ -2,9 +2,12 @@
 #define TYPES_H
 
 #include <Eigen/Eigen>
+#include <pclradar/RadarPointType.h>
 #include <gtsam/geometry/Pose3.h>
+#include <gtsam/navigation/NavState.h>
+#include <gtsam/navigation/CombinedImuFactor.h>
 
-namespace rio
+namespace rplrio
 {
     struct IMU
     {
@@ -43,11 +46,38 @@ namespace rio
             a = av;
         }
 
-        bool operator<(double right){
+        bool operator<(double right)
+        {
             return stamp < right;
         }
-
     };
+
+    struct Radar
+    {
+        pcl::PointCloud<pcl::PointXYZIS>::Ptr pc;
+        double stamp;
+
+        Radar(pcl::PointCloud<pcl::PointXYZIS>::Ptr p, double t)
+        {
+            stamp = t;
+            pc = p;
+        }
+    };
+
+    struct Keyframe
+    {
+        double stamp;
+        uint seq;
+        gtsam::NavState state;
+        gtsam::Matrix pose_cov;
+
+        gtsam::imuBias::ConstantBias imu_bias;
+
+        pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_points;
+        gtsam::Vector3 radar_velocity;
+        gtsam::Matrix3 radar_velocity_cov;
+    };
+
 };
 
 #endif
