@@ -38,5 +38,5 @@ axs[1].plot(stamp, vb[:, 1] - eb[:, 1], label="after")
 axs[2].plot(stamp, vb[:, 2] - eb[:, 2], label="after")
 
 plt.legend()
-plt.savefig("/tmp/v_analysis.png", dpi=400, bbox_inches="tight")
+plt.savefig("/tmp/v_error.png", dpi=400, bbox_inches="tight")
 plt.show()
