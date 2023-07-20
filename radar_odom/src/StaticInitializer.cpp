@@ -18,10 +18,10 @@ Eigen::Vector3d StaticInitializer::get_bias_gyro()
     return bias_gyro_;
 }
 
-std::deque<std::shared_ptr<rio::IMU>> StaticInitializer::get_imu_queue()
+std::deque<std::shared_ptr<rplrio::IMU>> StaticInitializer::get_imu_queue()
 {
     size_t c_idx = imu_queue.size() / 2;
-    std::deque<std::shared_ptr<rio::IMU>> unintialized(imu_queue.begin() + c_idx, imu_queue.end());
+    std::deque<std::shared_ptr<rplrio::IMU>> unintialized(imu_queue.begin() + c_idx, imu_queue.end());
     return unintialized;
 }
 
@@ -49,7 +49,7 @@ Eigen::Matrix3d StaticInitializer::gram_schmidt(Eigen::Vector3d gravity)
     return R_MinI;
 }
 
-bool StaticInitializer::init_update(std::shared_ptr<rio::IMU> imu)
+bool StaticInitializer::init_update(std::shared_ptr<rplrio::IMU> imu)
 {
     imu_queue.emplace_back(imu);
     double latest_time = imu->stamp;
