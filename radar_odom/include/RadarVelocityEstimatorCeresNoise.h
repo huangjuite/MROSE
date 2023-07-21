@@ -35,9 +35,9 @@ public:
 
         if (jacobians != nullptr && jacobians[0] != nullptr)
         {
-            jacobians[0][0] = p_[0];
-            jacobians[0][1] = p_[1];
-            jacobians[0][2] = p_[2];
+            jacobians[0][0] = w_ * p_[0];
+            jacobians[0][1] = w_ * p_[1];
+            jacobians[0][2] = w_ * p_[2];
         }
 
         return true;
