@@ -37,6 +37,7 @@ find_package(octomap REQUIRED)
 add_service_files(
   FILES
   Registration.srv
+  Prediction.srv
 )
 
 generate_dynamic_reconfigure_options(
@@ -79,6 +80,7 @@ add_library(${PROJECT_NAME} SHARED
   src/RadarVelocityEstimatorCelestial.cpp
   src/RadarVelocityEstimatorCeres.cpp
   src/RadarVelocityEstimatorCeresHCS.cpp
+  src/RadarVelocityEstimatorCeresNoise.cpp
   src/LandmarkFactor.cpp
   src/LandmarkTracker.cpp
   src/StaticInitializer.cpp
@@ -136,6 +138,9 @@ target_link_libraries(velocityEstimationCelestial ${PROJECT_NAME})
 
 add_executable(test_clustering app/test_clustering.cpp )
 target_link_libraries(test_clustering ${PROJECT_NAME})
+
+add_executable(test_noise_prediction app/test_noise_prediction.cpp )
+target_link_libraries(test_noise_prediction ${PROJECT_NAME})
 
 # add_executable(radar_icp app/radar_icp.cpp)
 # target_link_libraries(radar_icp ${catkin_LIBRARIES} ${PROJECT_NAME} gtsam)

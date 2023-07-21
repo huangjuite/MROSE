@@ -10,17 +10,17 @@ vb = data[:, 4:7]
 eb = data[:, 7:10]
 
 fig, axs = plt.subplots(3, figsize=(10, 10))
-axs[0].plot(stamp, rb[:, 0], label="radar")
+axs[0].plot(stamp, rb[:, 0], label="cauchy")
 axs[0].plot(stamp, vb[:, 0], label="vio")
-axs[0].plot(stamp, eb[:, 0], label="calibrated")
+axs[0].plot(stamp, eb[:, 0], label="weighted")
 
-axs[1].plot(stamp, rb[:, 1], label="radar")
+axs[1].plot(stamp, rb[:, 1], label="cauchy")
 axs[1].plot(stamp, vb[:, 1], label="vio")
-axs[1].plot(stamp, eb[:, 1], label="calibrated")
+axs[1].plot(stamp, eb[:, 1], label="weighted")
 
-axs[2].plot(stamp, rb[:, 2], label="radar")
+axs[2].plot(stamp, rb[:, 2], label="cauchy")
 axs[2].plot(stamp, vb[:, 2], label="vio")
-axs[2].plot(stamp, eb[:, 2], label="calibrated")
+axs[2].plot(stamp, eb[:, 2], label="weighted")
 
 
 plt.legend()

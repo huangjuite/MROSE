@@ -271,6 +271,18 @@ void logdB_SNR(pcl::PointCloud<pcl::PointXYZIS>::Ptr pc)
     }
 }
 
+void logdB_SNR(pcl::PointCloud<pcl::PointXYZISW>::Ptr pc)
+{
+    /**
+     * @brief take log on the signal to noise ratio value
+     * @param pc pcl::PointCloud<pcl::PointXYZIS>::Ptr change SNR inline
+     */
+    for (size_t i = 0; i < pc->size(); i++)
+    {
+        pc->points[i].intensity = log(pc->points[i].intensity);
+    }
+}
+
 void logdB_SNR(pcl::PointCloud<pcl::PointXYZI>::Ptr pc)
 {
     /**
