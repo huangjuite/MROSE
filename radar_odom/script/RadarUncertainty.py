@@ -16,7 +16,7 @@ class PRService():
     def __init__(self) -> None:
         self.predict_service = rospy.Service(
             "radar_uncertainty", Prediction, self.cb_pr)
-        rospy.loginfo("uncertainty prediction service")
+        
 
         self.fields = [
             PointField('x', 0, PointField.FLOAT32, 1),
@@ -43,6 +43,7 @@ class PRService():
             map_location=self.device))
         self.model.eval()
         # self.model = torch.compile(self.model)
+        rospy.loginfo("uncertainty prediction service")
 
     def cb_pr(self, req: PredictionRequest):
         points = np.array(point_cloud2.read_points_list(req.input))
@@ -52,7 +53,7 @@ class PRService():
 
         sequence = torch.unsqueeze(torch.tensor(
             points, dtype=torch.float32, device=self.device), dim=1)
-        pad_mask = torch.ones((1, points.shape[0])) < 0
+        pad_mask = torch.ones((1, points.shape[0]), device=self.device) < 0
         
         weights = self.model(sequence, pad_mask)
         weights = torch.squeeze(weights, dim=1).detach().cpu().numpy()

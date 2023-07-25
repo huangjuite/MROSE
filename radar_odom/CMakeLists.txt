@@ -81,6 +81,7 @@ add_library(${PROJECT_NAME} SHARED
   src/RadarVelocityEstimatorCeres.cpp
   src/RadarVelocityEstimatorCeresHCS.cpp
   src/RadarVelocityEstimatorCeresNoise.cpp
+  src/RadarVelocityEstimatorEigenNoise.cpp
   src/LandmarkFactor.cpp
   src/LandmarkTracker.cpp
   src/StaticInitializer.cpp
