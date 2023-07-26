@@ -3,7 +3,7 @@
 RadarVelocityEstimatorCeres::RadarVelocityEstimatorCeres()
 {
     this->inlier_thresh = 0.1;
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    inlier_pc.reset(new pcl::PointCloud<solverPointType>);
 }
 
 void RadarVelocityEstimatorCeres::set_inlier_thresh(float thresh)
@@ -16,14 +16,14 @@ void RadarVelocityEstimatorCeres::set_initial_velocity(Eigen::Vector3d init_v)
     this->initial_v = init_v;
 }
 
-float RadarVelocityEstimatorCeres::doppler_projection(pcl::PointXYZIS p, Eigen::Vector3d v)
+float RadarVelocityEstimatorCeres::doppler_projection(solverPointType p, Eigen::Vector3d v)
 {
     Eigen::Vector3d unit_r(p.x, p.y, p.z);
     unit_r = -unit_r / unit_r.norm();
     return unit_r.dot(v);
 }
 
-Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc)
+Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<solverPointType>::ConstPtr radar_pc)
 {
     double v_est[3] = {initial_v[0], initial_v[1], initial_v[2]};
 
@@ -32,7 +32,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<pcl::Point
 
     problem.AddParameterBlock(v_est, 3);
 
-    for (pcl::PointXYZIS p : radar_pc->points)
+    for (solverPointType p : radar_pc->points)
     {
         Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
         // ceres::CostFunction *cost_function =
@@ -72,12 +72,12 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<pcl::Point
     return Eigen::Vector3d(v_est);
 }
 
-pcl::PointCloud<pcl::PointXYZIS>::Ptr RadarVelocityEstimatorCeres::get_inlier(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+pcl::PointCloud<solverPointType>::Ptr RadarVelocityEstimatorCeres::get_inlier(
+    pcl::PointCloud<solverPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
     // collect inliers
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    for (pcl::PointXYZIS p : radar_pc->points)
+    inlier_pc.reset(new pcl::PointCloud<solverPointType>);
+    for (solverPointType p : radar_pc->points)
     {
         float err = abs(doppler_projection(p, velocity) - p.speed);
         if (err < inlier_thresh)
@@ -90,7 +90,7 @@ pcl::PointCloud<pcl::PointXYZIS>::Ptr RadarVelocityEstimatorCeres::get_inlier(
 }
 
 Eigen::Matrix3d RadarVelocityEstimatorCeres::get_covariance(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+    pcl::PointCloud<solverPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
     return covariance_matrix;
 }

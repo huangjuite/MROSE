@@ -1,0 +1,23 @@
+<launch>
+
+    <!-- parameter -->
+    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" />
+
+    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
+    <arg name="info_plot" default="false" />
+
+    <!-- noise prediction -->
+    <node name="noise_predict" pkg="radar_odom" type="RadarUncertainty.py" output="screen" />
+
+    <!-- odometry -->
+    <node name="doppler_odom_bag" pkg="radar_odom" type="doppler_odom_bag" output="screen">
+        <param name="bag_folder" value="$(arg bag_folder)" />
+    </node>
+
+    <node if="$(arg info_plot)" pkg="plotjuggler" type="plotjuggler" name="plot"
+        args="-l $(find radar_odom)/cfg/info_vis.xml" />
+
+    <!-- pose graph -->
+    <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize" output="screen" />
+
+</launch>

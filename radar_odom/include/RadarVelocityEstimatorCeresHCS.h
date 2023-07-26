@@ -12,6 +12,8 @@
 
 #include "params.h"
 
+typedef pcl::PointXYZIS HCSPointType;
+
 class DopplerAngleCostFunctor
 {
 private:
@@ -103,24 +105,25 @@ public:
 class RadarVelocityEstimatorCeresHCS
 {
 private:
+
     rplrio::Params param;
 
     Eigen::Vector3d initial_v;
 
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr inlier_pc;
+    pcl::PointCloud<HCSPointType>::Ptr inlier_pc;
     float inlier_thresh;
 
-    float doppler_projection(pcl::PointXYZIS p, Eigen::Vector3d v);
+    float doppler_projection(HCSPointType p, Eigen::Vector3d v);
 
 public:
     RadarVelocityEstimatorCeresHCS(rplrio::Params &param);
     ~RadarVelocityEstimatorCeresHCS();
 
-    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
-    Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity) const;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr get_inlier(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
+    Eigen::Vector3d optimize(pcl::PointCloud<HCSPointType>::ConstPtr radar_pc);
+    Eigen::Matrix3d get_covariance(pcl::PointCloud<HCSPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity) const;
+    pcl::PointCloud<HCSPointType>::Ptr get_inlier(pcl::PointCloud<HCSPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity);
     void set_initial_velocity(Eigen::Vector3d init_v);
     void set_inlier_thresh(float thresh);
 
-    static Eigen::Vector2d toHCS(pcl::PointXYZIS &p);
+    static Eigen::Vector2d toHCS(HCSPointType &p);
 };

@@ -4,6 +4,8 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /radar_inlier1
+        - /radar_inlier1/Status1
         - /Odometry1/Covariance1/Position1
         - /loop_detect_map1
       Splitter Ratio: 0.5392857193946838
@@ -25,7 +27,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: left
+    SyncSource: map
 Preferences:
   PromptSaveOnExit: false
 Toolbars:
@@ -190,7 +192,7 @@ Visualization Manager:
         Min Value: -10
         Value: true
       Axis: Z
-      Channel Name: intensity
+      Channel Name: weight
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
@@ -397,7 +399,7 @@ Visualization Manager:
           Marker Topic: /loop_detected
           Name: loop_detected
           Namespaces:
-            {}
+            loop_detected: true
           Queue Size: 100
           Value: true
       Enabled: true
@@ -484,7 +486,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 10
+      Distance: 51.1760368347168
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -492,17 +494,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: 10.265762329101562
+        Y: 4.4419941902160645
+        Z: -5.433898448944092
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7853981852531433
+      Pitch: 1.5497963428497314
       Target Frame: map
-      Yaw: 0.7853981852531433
+      Yaw: 4.678604602813721
     Saved: ~
 Window Geometry:
   Displays:

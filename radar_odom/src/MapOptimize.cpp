@@ -135,10 +135,10 @@ void MapOptimize::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
 
     auto noise = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 1e-1, 1e-1, 1e-1, 2e-2, 2e-2, 2e-2).finished());
     graph->add(gtsam::BetweenFactor<gtsam::Pose3>(X(step - 1), X(step), last_pose.between(current_pose), noise));
-
+    
     // loop detect
     uint detect_point = (step > params.key_frame_search) ? step - params.key_frame_search : 0;
-    if (detect_point - last_loop_detect > params.loop_close_rate)
+    if (params.enable_loop_close && detect_point - last_loop_detect > params.loop_close_rate)
     {
         auto l = detect_loop(init_values, detect_point);
         if (l.second != -1)

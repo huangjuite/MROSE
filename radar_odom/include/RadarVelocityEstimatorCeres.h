@@ -9,6 +9,8 @@
 #include <Eigen/Dense>
 #include <ceres/ceres.h>
 
+typedef pcl::PointXYZIS solverPointType;
+
 class DopplerCostFunctor
 {
 private:
@@ -65,21 +67,21 @@ public:
 
 class RadarVelocityEstimatorCeres
 {
-private:
+private:    
     Eigen::Vector3d initial_v;
     Eigen::Matrix3d covariance_matrix;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr inlier_pc;
+    pcl::PointCloud<solverPointType>::Ptr inlier_pc;
     float inlier_thresh;
 
-    float doppler_projection(pcl::PointXYZIS p, Eigen::Vector3d v);
+    float doppler_projection(solverPointType p, Eigen::Vector3d v);
 
 public:
     RadarVelocityEstimatorCeres();
     ~RadarVelocityEstimatorCeres();
 
-    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
-    Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr get_inlier(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
+    Eigen::Vector3d optimize(pcl::PointCloud<solverPointType>::ConstPtr radar_pc);
+    Eigen::Matrix3d get_covariance(pcl::PointCloud<solverPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity);
+    pcl::PointCloud<solverPointType>::Ptr get_inlier(pcl::PointCloud<solverPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity);
     void set_initial_velocity(Eigen::Vector3d init_v);
     void set_inlier_thresh(float thresh);
 };

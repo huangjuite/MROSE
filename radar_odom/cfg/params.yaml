@@ -64,7 +64,7 @@ odom:
   optimization_window: 2.0 # seconds
 
 loop_close:
-  enable_loop_close: true
+  enable_loop_close: false
   loop_close_rate: 40 # frames
   loop_ignore: 100 # frames
   key_frame_search: 30 # frames

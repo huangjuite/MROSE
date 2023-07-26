@@ -1,6 +1,8 @@
 <launch>
 
-    <param name="/use_sim_time" value="true" />
+    <arg name="use_sim_time" default="true"/>
+
+    <param name="/use_sim_time" value="$(arg use_sim_time)" />
 
     <include file="$(find radar_odom)/launch/sensor_tf.launch" />
 
