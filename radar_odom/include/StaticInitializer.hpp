@@ -6,7 +6,7 @@
 #include <memory>
 #include <Eigen/Eigen>
 
-#include "types.h"
+#include "rplrio_types.h"
 
 class StaticInitializer
 {

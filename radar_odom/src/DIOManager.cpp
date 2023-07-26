@@ -3,12 +3,13 @@
 namespace rplrio
 {
 
-    DIOManager::DIOManager(rplrio::Params params)
+    template <class PointType>
+    DIOManager<PointType>::DIOManager(rplrio::Params params)
     {
         this->params = params;
-        velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
-
+        // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
         // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
+        velocity_estimator = std::make_unique<RadarVelocityEstimatorEigenNoise>();
 
         velocity_estimator->set_inlier_thresh(params.doppler_std);
 
@@ -22,8 +23,9 @@ namespace rplrio
         initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
     }
 
-    void DIOManager::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
-                                const Eigen::Vector3d &bias_gyro, const double &stamp)
+    template <class PointType>
+    void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
+                                           const Eigen::Vector3d &bias_gyro, const double &stamp)
     {
 
         // priors
@@ -58,7 +60,8 @@ namespace rplrio
         graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
     }
 
-    void DIOManager::update()
+    template <class PointType>
+    void DIOManager<PointType>::update()
     {
         // remove out of date radar measurements
         while (!radar_que.empty() &&
@@ -94,7 +97,9 @@ namespace rplrio
         update();
     }
 
-    std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const rplrio::Radar &radar)
+    template <class PointType>
+    std::shared_ptr<rplrio::Keyframe<PointType>> DIOManager<PointType>::optimize(
+        const DIORadar &radar)
     {
         double current_t = radar.stamp;
 
@@ -118,8 +123,7 @@ namespace rplrio
 
         velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
         gtsam::Vector3 measured_v = velocity_estimator->optimize(radar.pc);
-        pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_inlier =
-            velocity_estimator->get_inlier(radar.pc, measured_v);
+        auto radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
 
         // second inlier estimate
         // velocity_estimator->set_initial_velocity(measured_v);
@@ -158,7 +162,7 @@ namespace rplrio
         preintegrated->resetIntegrationAndSetBias(prev_bias);
 
         // key frame informations -----------------------------------------------------------------------------
-        auto key_frame = std::make_shared<rplrio::Keyframe>();
+        auto key_frame = std::make_shared<DIOKeyframe>();
         key_frame->stamp = current_t;
         key_frame->seq = step;
         key_frame->state = prev_state;
@@ -171,7 +175,8 @@ namespace rplrio
         return key_frame;
     }
 
-    void DIOManager::feed_imu(std::shared_ptr<rplrio::IMU> imu_data)
+    template <class PointType>
+    void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data)
     {
 
         if (!initialized)
@@ -203,7 +208,8 @@ namespace rplrio
         imu_que.emplace_back(imu_data);
     }
 
-    void DIOManager::feed_radar(std::shared_ptr<rplrio::Radar> radar)
+    template <class PointType>
+    void DIOManager<PointType>::feed_radar(std::shared_ptr<DIORadar> radar)
     {
         radar_que.emplace_back(radar);
 
@@ -219,13 +225,18 @@ namespace rplrio
         return;
     }
 
-    std::vector<std::shared_ptr<rplrio::Keyframe>> DIOManager::get_latest_states()
+    template <class PointType>
+    std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> DIOManager<PointType>::get_latest_states()
     {
         return latest_states;
     }
 
-    DIOManager::~DIOManager()
+    template <class PointType>
+    DIOManager<PointType>::~DIOManager()
     {
     }
+
+    // template class DIOManager<pcl::PointXYZIS>;
+    template class DIOManager<pcl::PointXYZISW>;
 
 }

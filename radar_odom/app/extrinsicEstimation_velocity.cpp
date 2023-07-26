@@ -45,7 +45,7 @@
 #include "RadarVelocityEstimatorCeres.h"
 #include "StaticInitializer.hpp"
 
-#include "types.h"
+#include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 

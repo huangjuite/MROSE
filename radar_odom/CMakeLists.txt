@@ -67,6 +67,9 @@ catkin_package(
 )
 
 add_library(${PROJECT_NAME} SHARED
+  src/rplrio_types.cpp
+  src/utils.cpp
+  src/params.cpp
   src/DopplerMeasurementFactor.cpp
   src/DopplerCelestialFactor.cpp
   src/DopplerCelestial2Factor.cpp
@@ -84,10 +87,8 @@ add_library(${PROJECT_NAME} SHARED
   src/RadarVelocityEstimatorEigenNoise.cpp
   src/LandmarkFactor.cpp
   src/LandmarkTracker.cpp
-  src/StaticInitializer.cpp
-  src/utils.cpp
-  src/params.cpp
   Scancontext/Scancontext.cpp
+  src/StaticInitializer.cpp
   src/DIOManager.cpp
 )
 

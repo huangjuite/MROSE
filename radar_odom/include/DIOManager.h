@@ -26,9 +26,10 @@
 #include "VelocityPoseMeasurementFactor.h"
 #include "RadarVelocityEstimatorCeres.h"
 #include "RadarVelocityEstimatorCeresHCS.h"
+#include "RadarVelocityEstimatorEigenNoise.h"
 #include "StaticInitializer.hpp"
 
-#include "types.h"
+#include "rplrio_types.h"
 #include "params.h"
 
 using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
@@ -37,9 +38,13 @@ using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
 namespace rplrio
 {
+    template <class PointType>
     class DIOManager
     {
     private:
+        typedef rplrio::Keyframe<PointType> DIOKeyframe;
+        typedef rplrio::Radar<PointType> DIORadar;
+
         rplrio::Params params;
 
         double pre_imu_t = 0;
@@ -49,9 +54,11 @@ namespace rplrio
         bool initialized = false;
 
         // radar
-        std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
+        // std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
         // std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
-        std::deque<std::shared_ptr<rplrio::Radar>> radar_que;
+        std::unique_ptr<RadarVelocityEstimatorEigenNoise> velocity_estimator;
+
+        std::deque<std::shared_ptr<DIORadar>> radar_que;
 
         // imu settings
         std::shared_ptr<gtsam::PreintegrationType> preintegrated;
@@ -63,24 +70,28 @@ namespace rplrio
         gtsam::NavState prev_state;
         gtsam::NavState prop_state;
         gtsam::imuBias::ConstantBias prev_bias;
-        std::vector<std::shared_ptr<rplrio::Keyframe>> latest_states;
+
+        std::vector<std::shared_ptr<DIOKeyframe>> latest_states;
 
         // optimizer & graph
         gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
         std::unique_ptr<gtsam::IncrementalFixedLagSmoother> smootherISAM2;
         std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
 
-                void graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
+        void graph_init(const Eigen::Quaterniond &rotation, const Eigen::Vector3d &bias_acc,
                         const Eigen::Vector3d &bias_gyro, const double &stamp);
         void update();
-        std::shared_ptr<rplrio::Keyframe> optimize(const rplrio::Radar &radar);
+
+        std::shared_ptr<rplrio::Keyframe<PointType>> optimize(const DIORadar &radar);
 
     public:
         DIOManager(rplrio::Params params);
         ~DIOManager();
 
-        void feed_radar(std::shared_ptr<rplrio::Radar> radar);
+        void feed_radar(std::shared_ptr<DIORadar> radar);
+
         void feed_imu(std::shared_ptr<rplrio::IMU> imu_data);
-        std::vector<std::shared_ptr<rplrio::Keyframe>> get_latest_states();
+
+        std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> get_latest_states();
     };
 }

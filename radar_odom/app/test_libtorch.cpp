@@ -21,7 +21,7 @@
 
 #include <torch/script.h>
 
-#include "types.h"
+#include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 

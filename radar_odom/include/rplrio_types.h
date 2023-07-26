@@ -52,18 +52,22 @@ namespace rplrio
         }
     };
 
+    template<class PointType>
     struct Radar
-    {
-        pcl::PointCloud<pcl::PointXYZIS>::Ptr pc;
+    {   
+        typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
+        myPcPtr pc;
+
         double stamp;
 
-        Radar(pcl::PointCloud<pcl::PointXYZIS>::Ptr p, double t)
+        Radar(myPcPtr p, double t)
         {
             stamp = t;
             pc = p;
         }
     };
 
+    template<class PointType>
     struct Keyframe
     {
         double stamp;
@@ -73,7 +77,8 @@ namespace rplrio
 
         gtsam::imuBias::ConstantBias imu_bias;
 
-        pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_points;
+        typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
+        myPcPtr radar_points;
         gtsam::Vector3 radar_velocity;
         gtsam::Matrix3 radar_velocity_cov;
     };

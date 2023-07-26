@@ -25,16 +25,17 @@
 #include <pclradar/RadarPointType.h>
 
 #include "DIOManager.h"
-#include "types.h"
+#include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 
+typedef pcl::PointXYZISW PointType;
 
 class DopplerIO
 {
 private:
     rplrio::Params params;
-    std::unique_ptr<rplrio::DIOManager> dio_manager;
+    std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
 
     ros::NodeHandle *nh;
     
@@ -53,7 +54,7 @@ private:
 
     void cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg);
     void cb_imu(const sensor_msgs::Imu::ConstPtr &imu);
-    void publish_all(const std::shared_ptr<const rplrio::Keyframe> keyframe);
+    void publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe);
 
 public:
     DopplerIO(ros::NodeHandle *nh);

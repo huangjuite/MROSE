@@ -34,7 +34,7 @@
 
 #include "radar_odom/Prediction.h"
 
-#include "types.h"
+#include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 

@@ -3,7 +3,7 @@
 DopplerIO::DopplerIO(ros::NodeHandle *nh)
 {
     params = rplrio::get_params(*nh);
-    dio_manager = std::make_unique<rplrio::DIOManager>(params);
+    dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(params);
 
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
@@ -16,7 +16,7 @@ DopplerIO::DopplerIO(ros::NodeHandle *nh)
     sub_imu = nh->subscribe(params.imu_topic, 1000, &DopplerIO::cb_imu, this);
 }
 
-void DopplerIO::publish_all(const std::shared_ptr<const rplrio::Keyframe> keyframe)
+void DopplerIO::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe)
 {
 
     nav_msgs::Odometry odom = toOdometry(keyframe->state.pose().matrix(), keyframe->pose_cov);
@@ -79,13 +79,13 @@ void DopplerIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
 
 void DopplerIO::cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg)
 {
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    pcl::PointCloud<PointType>::Ptr radar_pc;
+    radar_pc.reset(new pcl::PointCloud<PointType>);
 
     pcl::fromROSMsg(*pc_msg, *radar_pc);
     double radar_t = pc_msg->header.stamp.toSec();
 
-    dio_manager->feed_radar(std::make_shared<rplrio::Radar>(radar_pc, radar_t));
+    dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(radar_pc, radar_t));
 
     auto states = dio_manager->get_latest_states();
     for (auto kf : states){

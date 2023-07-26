@@ -25,7 +25,7 @@
 #include <gtsam/geometry/Pose2.h>
 #include <gtsam/navigation/ImuBias.h>
 
-#include "types.h"
+#include "rplrio_types.h"
 #include "params.h"
 
 
