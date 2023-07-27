@@ -1,35 +1,18 @@
 #include "RadarVelocityEstimatorCeresHCS.h"
 
-RadarVelocityEstimatorCeresHCS::RadarVelocityEstimatorCeresHCS(rplrio::Params &param)
+RadarVelocityEstimatorCeresHCS::RadarVelocityEstimatorCeresHCS(
+    rplrio::Params &param) : RadarVelocityEstimatorBase()
 {
     this->param = param;
-    this->inlier_thresh = 0.1;
-    inlier_pc.reset(new pcl::PointCloud<HCSPointType>);
 }
 
-void RadarVelocityEstimatorCeresHCS::set_inlier_thresh(float thresh)
-{
-    this->inlier_thresh = thresh;
-}
-
-void RadarVelocityEstimatorCeresHCS::set_initial_velocity(Eigen::Vector3d init_v)
-{
-    this->initial_v = init_v;
-}
-
-float RadarVelocityEstimatorCeresHCS::doppler_projection(HCSPointType p, Eigen::Vector3d v)
-{
-    Eigen::Vector3d unit_r(p.x, p.y, p.z);
-    unit_r = -unit_r / unit_r.norm();
-    return unit_r.dot(v);
-}
-
-Eigen::Vector2d RadarVelocityEstimatorCeresHCS::toHCS(HCSPointType &p)
+Eigen::Vector2d RadarVelocityEstimatorCeresHCS::toHCS(pcl::PointXYZIS &p)
 {
     return Eigen::Vector2d(atan2(p.y, p.x), atan2(p.z, sqrt(p.x * p.x + p.y * p.y)));
 }
 
-Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(pcl::PointCloud<HCSPointType>::ConstPtr radar_pc)
+Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
+    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc)
 {
     double *v_est = initial_v.data();
 
@@ -38,7 +21,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(pcl::PointCloud<HCSPoin
 
     problem.AddParameterBlock(v_est, 3);
 
-    for (HCSPointType p : radar_pc->points)
+    for (pcl::PointXYZIS p : radar_pc->points)
     {
         Eigen::Vector2d angles = toHCS(p);
         double *a = new double[2]{angles[0], angles[1]};
@@ -55,7 +38,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(pcl::PointCloud<HCSPoin
         // s[1] *= 4;
 
         double s[2] = {param.azimuth_std, param.elevation_std}; // {1.41 deg, 18 deg}
-        
+
         Eigen::Vector2d angle_sigma(s);
         Eigen::Matrix2d A_mat =
             (Eigen::Matrix2d() << 1 / angle_sigma[0], 0, 0, 1 / angle_sigma[1])
@@ -84,25 +67,8 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(pcl::PointCloud<HCSPoin
     return Eigen::Vector3d(v_est);
 }
 
-pcl::PointCloud<HCSPointType>::Ptr RadarVelocityEstimatorCeresHCS::get_inlier(
-    pcl::PointCloud<HCSPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity)
-{
-    // collect inliers
-    inlier_pc.reset(new pcl::PointCloud<HCSPointType>);
-    for (HCSPointType p : radar_pc->points)
-    {
-        float err = abs(doppler_projection(p, velocity) - p.speed);
-        if (err < inlier_thresh)
-        {
-            inlier_pc->push_back(p);
-        }
-    }
-
-    return inlier_pc;
-}
-
 Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
-    pcl::PointCloud<HCSPointType>::ConstPtr radar_pc, Eigen::Vector3d velocity) const
+    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
     double *v_est = velocity.data();
 
@@ -110,7 +76,7 @@ Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
 
     problem.AddParameterBlock(v_est, 3);
 
-    for (HCSPointType p : radar_pc->points)
+    for (pcl::PointXYZIS p : radar_pc->points)
     {
         Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
         ceres::CostFunction *cost_function =
@@ -132,8 +98,4 @@ Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
     // std::cout << covariance_matrix << std::endl;
 
     return covariance_matrix;
-}
-
-RadarVelocityEstimatorCeresHCS::~RadarVelocityEstimatorCeresHCS()
-{
 }

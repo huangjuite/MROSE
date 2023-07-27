@@ -3,7 +3,8 @@
 DopplerIO::DopplerIO(ros::NodeHandle *nh)
 {
     params = rplrio::get_params(*nh);
-    dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(params);
+    dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
+        params, std::make_shared<VestType>());
 
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);

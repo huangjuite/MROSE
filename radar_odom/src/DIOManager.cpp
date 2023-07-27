@@ -4,12 +4,11 @@ namespace rplrio
 {
 
     template <class PointType>
-    DIOManager<PointType>::DIOManager(rplrio::Params params)
+    DIOManager<PointType>::DIOManager(rplrio::Params params,
+                                      std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator)
     {
         this->params = params;
-        // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
-        // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
-        velocity_estimator = std::make_unique<RadarVelocityEstimatorEigenNoise>();
+        this->velocity_estimator = velocity_estimator;
 
         velocity_estimator->set_inlier_thresh(params.doppler_std);
 
@@ -236,7 +235,7 @@ namespace rplrio
     {
     }
 
-    // template class DIOManager<pcl::PointXYZIS>;
+    template class DIOManager<pcl::PointXYZIS>;
     template class DIOManager<pcl::PointXYZISW>;
 
 }

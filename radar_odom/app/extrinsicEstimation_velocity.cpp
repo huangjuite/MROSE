@@ -93,8 +93,8 @@ std::vector<rplrio::Odom> odom_csv(std::string path)
                                               gtsam::Point3(v[0], v[1], v[2]));
 
         gt.emplace_back(rplrio::Odom(stamp, seq, pose,
-                                  Eigen::Vector3d(v[7], v[8], v[9]),
-                                  Eigen::Vector3d(v[10], v[11], v[12])));
+                                     Eigen::Vector3d(v[7], v[8], v[9]),
+                                     Eigen::Vector3d(v[10], v[11], v[12])));
     }
 
     return gt;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
                 std::cout << "\033c";
                 std::cout << current_t << ", " << it->stamp << std::endl;
 
-                v_opt.set_initial_velocity(gtsam::Vector3::Identity());
+                v_opt.set_initial_velocity(Eigen::Vector3d(1, 0, 0));
                 gtsam::Vector3 measured_v = v_opt.optimize(radar_pc);
                 gtsam::Matrix3 radar_velocity_cov = v_opt.get_covariance(
                     radar_pc, measured_v);

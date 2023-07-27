@@ -25,11 +25,18 @@
 #include <pclradar/RadarPointType.h>
 
 #include "DIOManager.h"
+
+#include "RadarVelocityEstimatorCeres.h"
+#include "RadarVelocityEstimatorCeresHCS.h"
+#include "RadarVelocityEstimatorCeresWeighted.h"
+#include "RadarVelocityEstimatorEigenWeighted.h"
+
 #include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 
-typedef pcl::PointXYZISW PointType;
+typedef pcl::PointXYZIS PointType;
+typedef RadarVelocityEstimatorCeres VestType;
 
 class DopplerIO
 {

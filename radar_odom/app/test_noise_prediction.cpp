@@ -29,8 +29,8 @@
 #include <pclradar/RadarPointType.h>
 
 #include "RadarVelocityEstimatorCeres.h"
-#include "RadarVelocityEstimatorCeresNoise.h"
-#include "RadarVelocityEstimatorEigenNoise.h"
+#include "RadarVelocityEstimatorCeresWeighted.h"
+#include "RadarVelocityEstimatorEigenWeighted.h"
 
 #include "radar_odom/Prediction.h"
 
@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
     topics.push_back(params.radar_topic);
 
     RadarVelocityEstimatorCeres v_opt;
-    // RadarVelocityEstimatorCeresNoise v_opt_noise;
-    RadarVelocityEstimatorEigenNoise v_opt_noise;
+    // RadarVelocityEstimatorCeresWeighted v_opt_noise;
+    RadarVelocityEstimatorEigenWeighted v_opt_noise;
 
     std::cout << "input any to start:\n";
     std::string tmp;
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
                     pcl::PointCloud<pcl::PointXYZISW>::Ptr radar_pc_noise;
                     radar_pc_noise.reset(new pcl::PointCloud<pcl::PointXYZISW>);
                     pcl::fromROSMsg(req.response.output, *radar_pc_noise);
-                    v_opt_noise.set_initial_velocity(gtsam::Vector3::Identity());
+                    v_opt_noise.set_initial_velocity(Eigen::Vector3d(1, 0, 0));
                     gtsam::Vector3 measured_v_weighted = v_opt_noise.optimize(radar_pc_noise);
                     gtsam::Matrix3 radar_velocity_cov_weighted = v_opt_noise.get_covariance(
                         radar_pc_noise, measured_v_weighted);
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
                     pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
                     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
                     pcl::fromROSMsg(*radar_msg, *radar_pc);
-                    v_opt.set_initial_velocity(gtsam::Vector3::Identity());
+                    v_opt.set_initial_velocity(Eigen::Vector3d(1, 0, 0));
                     gtsam::Vector3 measured_v = v_opt.optimize(radar_pc);
                     gtsam::Matrix3 radar_velocity_cov = v_opt.get_covariance(
                         radar_pc, measured_v);

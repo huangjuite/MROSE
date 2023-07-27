@@ -29,11 +29,18 @@
 
 #include "radar_odom/Prediction.h"
 #include "DIOManager.h"
+
+#include "RadarVelocityEstimatorCeres.h"
+#include "RadarVelocityEstimatorCeresHCS.h"
+#include "RadarVelocityEstimatorCeresWeighted.h"
+#include "RadarVelocityEstimatorEigenWeighted.h"
+
 #include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 
 typedef pcl::PointXYZISW PointType;
+typedef RadarVelocityEstimatorEigenWeighted VestType;
 
 class DopplerIOBag
 {
@@ -67,7 +74,8 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 {
     params = rplrio::get_params(*nh);
     std::cout << params.acc_noise << std::endl;
-    dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(params);
+    dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
+        params, std::make_shared<VestType>());
 
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);

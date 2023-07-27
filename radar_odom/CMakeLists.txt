@@ -70,25 +70,33 @@ add_library(${PROJECT_NAME} SHARED
   src/rplrio_types.cpp
   src/utils.cpp
   src/params.cpp
+
   src/DopplerMeasurementFactor.cpp
   src/DopplerCelestialFactor.cpp
   src/DopplerCelestial2Factor.cpp
   src/DopplerPoseMeasurementFactor.cpp
+
   src/VelocityMeasurementFactor.cpp
   src/VelocityPoseMeasurementFactor.cpp
   src/VelocityPoseExtrinsicFactor.cpp
+
   src/RadarVelocityEstimator.cpp
   src/RadarVelocityEstimatorGNC.cpp
   src/RadarVelocityEstimatorHCS.cpp
   src/RadarVelocityEstimatorCelestial.cpp
+  
   src/RadarVelocityEstimatorCeres.cpp
   src/RadarVelocityEstimatorCeresHCS.cpp
-  src/RadarVelocityEstimatorCeresNoise.cpp
-  src/RadarVelocityEstimatorEigenNoise.cpp
+  src/RadarVelocityEstimatorCeresWeighted.cpp
+  src/RadarVelocityEstimatorEigenWeighted.cpp
+
   src/LandmarkFactor.cpp
   src/LandmarkTracker.cpp
+
   Scancontext/Scancontext.cpp
+
   src/StaticInitializer.cpp
+
   src/DIOManager.cpp
 )
 

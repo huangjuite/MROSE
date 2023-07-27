@@ -24,9 +24,7 @@
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
 #include "VelocityPoseMeasurementFactor.h"
-#include "RadarVelocityEstimatorCeres.h"
-#include "RadarVelocityEstimatorCeresHCS.h"
-#include "RadarVelocityEstimatorEigenNoise.h"
+#include "RadarVelocityEstimatorBase.h"
 #include "StaticInitializer.hpp"
 
 #include "rplrio_types.h"
@@ -54,9 +52,7 @@ namespace rplrio
         bool initialized = false;
 
         // radar
-        // std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
-        // std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
-        std::unique_ptr<RadarVelocityEstimatorEigenNoise> velocity_estimator;
+        std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
 
         std::deque<std::shared_ptr<DIORadar>> radar_que;
 
@@ -82,10 +78,11 @@ namespace rplrio
                         const Eigen::Vector3d &bias_gyro, const double &stamp);
         void update();
 
-        std::shared_ptr<rplrio::Keyframe<PointType>> optimize(const DIORadar &radar);
+        std::shared_ptr<DIOKeyframe> optimize(const DIORadar &radar);
 
     public:
-        DIOManager(rplrio::Params params);
+        DIOManager(rplrio::Params params,
+                   std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator);
         ~DIOManager();
 
         void feed_radar(std::shared_ptr<DIORadar> radar);

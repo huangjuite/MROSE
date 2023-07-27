@@ -1,29 +1,6 @@
-#include "RadarVelocityEstimatorCeresNoise.h"
+#include "RadarVelocityEstimatorCeresWeighted.h"
 
-RadarVelocityEstimatorCeresNoise::RadarVelocityEstimatorCeresNoise()
-{
-    this->inlier_thresh = 0.1;
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZISW>);
-}
-
-void RadarVelocityEstimatorCeresNoise::set_inlier_thresh(float thresh)
-{
-    this->inlier_thresh = thresh;
-}
-
-void RadarVelocityEstimatorCeresNoise::set_initial_velocity(Eigen::Vector3d init_v)
-{
-    this->initial_v = init_v;
-}
-
-float RadarVelocityEstimatorCeresNoise::doppler_projection(pcl::PointXYZISW p, Eigen::Vector3d v)
-{
-    Eigen::Vector3d unit_r(p.x, p.y, p.z);
-    unit_r = -unit_r / unit_r.norm();
-    return unit_r.dot(v);
-}
-
-Eigen::Vector3d RadarVelocityEstimatorCeresNoise::optimize(pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc)
+Eigen::Vector3d RadarVelocityEstimatorCeresWeighted::optimize(pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc)
 {
     double v_est[3] = {initial_v[0], initial_v[1], initial_v[2]};
 
@@ -35,7 +12,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresNoise::optimize(pcl::PointCloud<pcl::
     for (pcl::PointXYZISW p : radar_pc->points)
     {
         Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
-        DopplerCostFunctionNoise *cost_function = new DopplerCostFunctionNoise(pos, p.speed, p.weight);
+        DopplerCostFunctionWeighted *cost_function = new DopplerCostFunctionWeighted(pos, p.speed, p.weight);
         ceres::ResidualBlockId id = problem.AddResidualBlock(cost_function, nullptr, v_est);
         residual_ids.push_back(id);
     }
@@ -69,29 +46,8 @@ Eigen::Vector3d RadarVelocityEstimatorCeresNoise::optimize(pcl::PointCloud<pcl::
     return Eigen::Vector3d(v_est);
 }
 
-pcl::PointCloud<pcl::PointXYZISW>::Ptr RadarVelocityEstimatorCeresNoise::get_inlier(
-    pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc, Eigen::Vector3d velocity)
-{
-    // collect inliers
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZISW>);
-    for (pcl::PointXYZISW p : radar_pc->points)
-    {
-        float err = abs(doppler_projection(p, velocity) - p.speed);
-        if (err < inlier_thresh)
-        {
-            inlier_pc->push_back(p);
-        }
-    }
-
-    return inlier_pc;
-}
-
-Eigen::Matrix3d RadarVelocityEstimatorCeresNoise::get_covariance(
+Eigen::Matrix3d RadarVelocityEstimatorCeresWeighted::get_covariance(
     pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
     return covariance_matrix;
-}
-
-RadarVelocityEstimatorCeresNoise::~RadarVelocityEstimatorCeresNoise()
-{
 }
