@@ -68,7 +68,6 @@ catkin_package(
 
 add_library(${PROJECT_NAME} SHARED
   src/rplrio_types.cpp
-  src/utils.cpp
   src/params.cpp
 
   src/DopplerMeasurementFactor.cpp
@@ -92,6 +91,8 @@ add_library(${PROJECT_NAME} SHARED
 
   src/LandmarkFactor.cpp
   src/LandmarkTracker.cpp
+
+  src/MapOptimize.cpp
 
   Scancontext/Scancontext.cpp
 
@@ -188,8 +189,11 @@ target_link_libraries(doppler_odom_multi ${PROJECT_NAME})
 # add_dependencies(rio ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(rio ${PROJECT_NAME})
 
-add_executable(map_optimize src/MapOptimize.cpp)
+add_executable(map_optimize src/map_node.cpp)
 target_link_libraries(map_optimize ${PROJECT_NAME})
+
+add_executable(map_optimize_weighted src/map_node_weighted.cpp)
+target_link_libraries(map_optimize_weighted ${PROJECT_NAME})
 
 add_executable(radar_pose_graph src/RadarPoseGraph.cpp)
 add_dependencies(radar_pose_graph ${catkin_EXPORTED_TARGETS})

@@ -48,14 +48,18 @@ using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
 typedef message_filters::sync_policies::ExactTime<sensor_msgs::PointCloud2, nav_msgs::Odometry> MySyncPolicy;
 
+
+template <class PointT>
 class MapOptimize
 {
 private:
+    typedef typename pcl::PointCloud<PointT>::Ptr PclPtr;
+
     rplrio::Params params;
     uint step = 0;
     uint last_loop_detect = 0;
 
-    std::vector<pcl::PointCloud<pcl::PointXYZIS>::Ptr> points_cache;
+    std::vector<PclPtr> points_cache;
     std::vector<std::pair<int, int>> loop_cache;
     gtsam::Pose3 last_pose;
 
@@ -64,11 +68,11 @@ private:
     nav_msgs::Path path;
     visualization_msgs::Marker loop_marker;
 
-    pcl::VoxelGrid<pcl::PointXYZIS> voxel_filter;
-    pcl::PassThrough<pcl::PointXYZIS> intensity_filter;
-    pcl::VoxelGrid<pcl::PointXYZIS> map_voxel_filter;
-    pcl::PassThrough<pcl::PointXYZIS> map_snr_filter;
-    pclomp::NormalDistributionsTransform<pcl::PointXYZIS, pcl::PointXYZIS> ndt_omp;
+    pcl::VoxelGrid<PointT> voxel_filter;
+    pcl::PassThrough<PointT> intensity_filter;
+    pcl::VoxelGrid<PointT> map_voxel_filter;
+    pcl::PassThrough<PointT> map_snr_filter;
+    pclomp::NormalDistributionsTransform<PointT, PointT> ndt_omp;
 
     tf::TransformBroadcaster br;
     message_filters::Subscriber<sensor_msgs::PointCloud2> sub_radar;
@@ -82,11 +86,11 @@ private:
     // std::unique_ptr<gtsam::ISAM2> isam2;
 
     bool a_loop_closed = false;
-    pcl::PointCloud<pcl::PointXYZIS> global_map;
+    pcl::PointCloud<PointT> global_map;
     std::mutex global_map_mtx;
 
     std::pair<int, int> detect_loop(gtsam::Values &nodes, uint step);
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr build_submap(uint step, uint start, uint end);
+    PclPtr build_submap(uint step, uint start, uint end);
     void cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                  const nav_msgs::OdometryConstPtr odom);
     void publishMap();

@@ -1,6 +1,7 @@
 #include "MapOptimize.h"
 
-MapOptimize::MapOptimize(ros::NodeHandle *nh)
+template <class PointT>
+MapOptimize<PointT>::MapOptimize(ros::NodeHandle *nh)
 {
 
     params = rplrio::get_params(*nh);
@@ -59,7 +60,8 @@ MapOptimize::MapOptimize(ros::NodeHandle *nh)
     ROS_INFO("radar pose graph init");
 }
 
-std::pair<int, int> MapOptimize::detect_loop(gtsam::Values &nodes, uint step)
+template <class PointT>
+std::pair<int, int> MapOptimize<PointT>::detect_loop(gtsam::Values &nodes, uint step)
 {
     std::pair<int, int> close_pairs{step, -1};
 
@@ -83,15 +85,16 @@ std::pair<int, int> MapOptimize::detect_loop(gtsam::Values &nodes, uint step)
     return close_pairs;
 }
 
-pcl::PointCloud<pcl::PointXYZIS>::Ptr MapOptimize::build_submap(uint step, uint start, uint end)
+template <class PointT>
+typename pcl::PointCloud<PointT>::Ptr MapOptimize<PointT>::build_submap(uint step, uint start, uint end)
 {
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr smap(new pcl::PointCloud<pcl::PointXYZIS>);
+    PclPtr smap(new pcl::PointCloud<PointT>);
     smap->header.frame_id = "map";
     gtsam::Pose3 cp = init_values.at<gtsam::Pose3>(X(step));
     for (uint i = start; i <= end; i++)
     {
         gtsam::Pose3 t = cp * cp.between(init_values.at<gtsam::Pose3>(X(i)));
-        pcl::PointCloud<pcl::PointXYZIS> p;
+        pcl::PointCloud<PointT> p;
         pcl::transformPointCloud(*points_cache[i], p, t.matrix());
         *smap += p;
     }
@@ -104,10 +107,11 @@ pcl::PointCloud<pcl::PointXYZIS>::Ptr MapOptimize::build_submap(uint step, uint 
     return smap;
 }
 
-void MapOptimize::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
+template <class PointT>
+void MapOptimize<PointT>::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                           const nav_msgs::OdometryConstPtr odom)
 {
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc(new pcl::PointCloud<pcl::PointXYZIS>);
+    PclPtr radar_pc(new pcl::PointCloud<PointT>);
     fromROSMsg(*radar_msg, *radar_pc);
     logdB_SNR(radar_pc);
 
@@ -128,7 +132,7 @@ void MapOptimize::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
     tail_pose = tail_pose * last_pose.between(current_pose);
     path.poses.push_back(toROSPoseStamped(tail_pose, odom->header));
     init_values.insert(X(step), tail_pose);
-    pcl::PointCloud<pcl::PointXYZIS> p;
+    pcl::PointCloud<PointT> p;
     pcl::transformPointCloud(*radar_pc, p, current_pose.matrix());
     global_map += p;
     global_map_mtx.unlock();
@@ -147,13 +151,13 @@ void MapOptimize::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
             a_loop_closed = true;
 
             // build submap
-            pcl::PointCloud<pcl::PointXYZIS>::Ptr local_map =
+            PclPtr local_map =
                 build_submap(l.first, l.first - params.key_frame_search, l.first + params.key_frame_search);
-            pcl::PointCloud<pcl::PointXYZIS>::Ptr sub_map =
+            PclPtr sub_map =
                 build_submap(l.second, l.second - params.key_frame_search, l.second + params.key_frame_search);
 
             // find transform
-            pcl::PointCloud<pcl::PointXYZIS> aligned_map;
+            pcl::PointCloud<PointT> aligned_map;
             ndt_omp.setInputSource(local_map);
             ndt_omp.setInputTarget(sub_map);
             ndt_omp.align(aligned_map);
@@ -225,11 +229,13 @@ void MapOptimize::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
     last_pose = current_pose;
 }
 
-MapOptimize::~MapOptimize()
+template <class PointT>
+MapOptimize<PointT>::~MapOptimize()
 {
 }
 
-void MapOptimize::publishMap()
+template <class PointT>
+void MapOptimize<PointT>::publishMap()
 {
     if (a_loop_closed)
     {
@@ -239,7 +245,7 @@ void MapOptimize::publishMap()
         for (uint i = 1; i <= step; i++)
         {
             gtsam::Pose3 t = init_values.at<gtsam::Pose3>(X(i));
-            pcl::PointCloud<pcl::PointXYZIS> p;
+            pcl::PointCloud<PointT> p;
             pcl::transformPointCloud(*points_cache[i], p, t.matrix());
             global_map += p;
         }
@@ -252,7 +258,8 @@ void MapOptimize::publishMap()
     pub_map.publish(map_msg);
 }
 
-void MapOptimize::render_map()
+template <class PointT>
+void MapOptimize<PointT>::render_map()
 {
     ros::Rate rate(params.render_rate);
     while (ros::ok())
@@ -262,14 +269,5 @@ void MapOptimize::render_map()
     }
 }
 
-int main(int argc, char *argv[])
-{
-    ros::init(argc, argv, "radar_pose_graph");
-    ros::NodeHandle nh;
-    MapOptimize rpg(&nh);
-
-    std::thread map_thread(&MapOptimize::render_map, &rpg);
-
-    ros::spin();
-    return 0;
-}
+template class MapOptimize<pcl::PointXYZIS>;
+template class MapOptimize<pcl::PointXYZISW>;
