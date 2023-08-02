@@ -42,6 +42,9 @@
 typedef pcl::PointXYZISW PointType;
 typedef RadarVelocityEstimatorEigenWeighted VestType;
 
+// typedef pcl::PointXYZIS PointType;
+// typedef RadarVelocityEstimatorCeres VestType;
+
 class DopplerIOBag
 {
 private:
@@ -210,9 +213,11 @@ int main(int argc, char *argv[])
             sensor_msgs::PointCloud2::ConstPtr radar_msg = m.instantiate<sensor_msgs::PointCloud2>();
             if (radar_msg != NULL)
             {
+
+                // runner.cb_radar(*radar_msg);
+
                 radar_odom::Prediction req;
                 req.request.input = *radar_msg;
-
                 if (predict_noise.call(req))
                 {
                     runner.cb_radar(req.response.output);
