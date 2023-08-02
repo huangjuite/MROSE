@@ -10,7 +10,7 @@ namespace rplrio
         this->params = params;
         this->velocity_estimator = velocity_estimator;
 
-        velocity_estimator->set_inlier_thresh(params.doppler_std);
+        velocity_estimator->set_inlier_thresh(params.doppler_inlier_thresh);
 
         // optimizer init
         gtsam::ISAM2Params parameters;
@@ -132,9 +132,9 @@ namespace rplrio
             radar.pc, measured_v);
 
         // velocity pose measurement
-        measured_v = params.R_r_b * measured_v;
-        radar_velocity_cov = params.R_r_b * radar_velocity_cov * params.R_r_b.transpose();
-        pcl::transformPointCloud(*radar_inlier, *radar_inlier, params.T_r_b);
+        measured_v = radar.param.R_r_b * measured_v;
+        radar_velocity_cov = radar.param.R_r_b * radar_velocity_cov * radar.param.R_r_b.transpose();
+        pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_b);
 
         // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
         auto robust_rv_noise = gtsam::noiseModel::Robust::Create(
@@ -187,10 +187,6 @@ namespace rplrio
                 Eigen::Vector3d bias_a = initializer->get_bias_acc();
                 Eigen::Vector3d bias_g = initializer->get_bias_gyro();
                 Eigen::Quaterniond init_r = initializer->get_rotation();
-
-                // Eigen::Vector3d bias_a = Eigen::Vector3d::Zero();
-                // Eigen::Vector3d bias_g = Eigen::Vector3d::Zero();
-                // Eigen::Quaterniond init_r(1, 0, 0, 0);
 
                 pre_imu_t = initializer->get_first_stamp();
                 graph_init(init_r, bias_a, bias_g, pre_imu_t);

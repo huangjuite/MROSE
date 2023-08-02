@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
     for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
         bags.emplace_back(entry.path().string());
     std::sort(bags.begin(), bags.end());
-    topics.push_back(params.radar_topic);
+    topics.push_back(params.radars[params.radar_list[0]].topic);
     topics.push_back(params.imu_topic);
 
     std::cout << "input any to start:\n";

@@ -28,7 +28,6 @@
 #include "rplrio_types.h"
 #include "params.h"
 
-
 visualization_msgs::Marker velocityMarker(gtsam::Vector3 velocity, gtsam::Vector3 position = gtsam::Vector3(0, 0, 0),
                                           std::string frame_id = "radar", std::string ns = "radar_doppler")
 {
@@ -304,9 +303,7 @@ namespace rplrio
 
         // odom
         std::string radar_, imu_;
-        nh.getParam("/odom/imu", imu_);
-        nh.getParam("/odom/radar", radar_);
-        nh.getParam(radar_ + std::string("/rostopic"), param.radar_topic);
+        nh.getParam("/odom/imu", imu_);        
         nh.getParam(imu_ + std::string("/rostopic"), param.imu_topic);
 
         // imu
@@ -328,21 +325,29 @@ namespace rplrio
         param.R_i_b = param.T_i_b.block(0, 0, 3, 3);
 
         // radar
-        nh.getParam(radar_ + std::string("/doppler_sigma"), param.doppler_std);
-        nh.getParam(radar_ + std::string("/azimuth_sigma"), param.azimuth_std);
-        nh.getParam(radar_ + std::string("/elevation_sigma"), param.elevation_std);
-        nh.getParam(radar_ + std::string("/T_r_i"), tf);
-        for (uint i = 0; i < tf.size(); i++)
+        nh.getParam("/odom/radar_tmp", param.radar_list);
+        for (auto r : param.radar_list)
         {
-            for (uint j = 0; j < tf[i].size(); j++)
+            nh.getParam(radar_ + std::string("/rostopic"), param.radars[r].topic);
+            nh.getParam(r + std::string("/doppler_sigma"), param.radars[r].doppler_std);
+            nh.getParam(r + std::string("/azimuth_sigma"), param.radars[r].azimuth_std);
+            nh.getParam(r + std::string("/elevation_sigma"), param.radars[r].elevation_std);
+            nh.getParam(r + std::string("/T_r_i"), tf);
+            
+
+            for (uint i = 0; i < tf.size(); i++)
             {
-                param.T_r_i(i, j) = tf[i][j];
+                for (uint j = 0; j < tf[i].size(); j++)
+                {
+                    param.radars[r].T_r_i(i, j) = tf[i][j];
+                }
             }
+            param.radars[r].T_r_b = param.T_i_b * param.radars[r].T_r_i;
+            param.radars[r].R_r_b = param.radars[r].T_r_b.block(0, 0, 3, 3);
         }
-        param.T_r_b = param.T_i_b * param.T_r_i;
-        param.R_r_b = param.T_r_b.block(0, 0, 3, 3);
 
         // initializer
+        nh.getParam("/odom/doppler_inlier_thresh", param.doppler_inlier_thresh);
         nh.getParam("/odom/static_init_window", param.init_window);
         nh.getParam("/odom/static_init_threshold", param.init_thres);
         nh.getParam("/odom/optimization_window", param.lag);
@@ -364,8 +369,6 @@ namespace rplrio
 
         return param;
     }
-
-    
 
 }
 

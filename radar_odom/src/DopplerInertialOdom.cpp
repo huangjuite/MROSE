@@ -13,8 +13,10 @@ DopplerIO::DopplerIO(ros::NodeHandle *nh)
     pub_error = nh->advertise<geometry_msgs::Twist>("radar/error", 1);
     pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
     pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 1);
-    sub_radar = nh->subscribe(params.radar_topic, 1, &DopplerIO::cb_radar, this);
     sub_imu = nh->subscribe(params.imu_topic, 1000, &DopplerIO::cb_imu, this);
+
+    sub_radar = nh->subscribe(params.radars[params.radar_list[0]].topic,
+                              1, &DopplerIO::cb_radar, this);
 }
 
 void DopplerIO::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe)
@@ -89,7 +91,8 @@ void DopplerIO::cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg)
     dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(radar_pc, radar_t));
 
     auto states = dio_manager->get_latest_states();
-    for (auto kf : states){
+    for (auto kf : states)
+    {
         publish_all(kf);
     }
 }

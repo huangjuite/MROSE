@@ -43,7 +43,6 @@ private:
     // RadarVelocityEstimatorCeres v_estimator;
     std::shared_ptr<RadarVelocityEstimatorCeresHCS> v_estimator;
 
-
     void cb_radar(const sensor_msgs::PointCloud2 pc_msg);
 
 public:
@@ -55,15 +54,19 @@ VestimateCeres::VestimateCeres(NodeHandle *nh)
 {
 
     // radar init
+    auto radar_param = param.radars[param.radar_list[0]];
+
     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    v_estimator.reset(new RadarVelocityEstimatorCeresHCS(param));
-    v_estimator->set_inlier_thresh(param.doppler_std);
+    v_estimator.reset(new RadarVelocityEstimatorCeresHCS());
+    v_estimator->set_inlier_thresh(param.doppler_inlier_thresh);
+    v_estimator->set_uncertainty(
+        radar_param.doppler_std, radar_param.azimuth_std, radar_param.elevation_std);
 
     // ros init
     pub_twist = nh->advertise<geometry_msgs::TwistWithCovarianceStamped>("velocity", 1);
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity_marker", 1);
     pub_inlier = nh->advertise<sensor_msgs::PointCloud2>("inliers", 1);
-    sub_radar = nh->subscribe(param.radar_topic, 1, &VestimateCeres::cb_radar, this);
+    sub_radar = nh->subscribe(radar_param.topic, 1, &VestimateCeres::cb_radar, this);
 }
 
 void VestimateCeres::cb_radar(const sensor_msgs::PointCloud2 pc_msg)

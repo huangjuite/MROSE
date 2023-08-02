@@ -94,8 +94,8 @@ std::vector<rplrio::Odom> odom_csv(std::string path)
                                               gtsam::Point3(v[0], v[1], v[2]));
 
         gt.emplace_back(rplrio::Odom(stamp, seq, pose,
-                                  Eigen::Vector3d(v[7], v[8], v[9]),
-                                  Eigen::Vector3d(v[10], v[11], v[12])));
+                                     Eigen::Vector3d(v[7], v[8], v[9]),
+                                     Eigen::Vector3d(v[10], v[11], v[12])));
     }
 
     return gt;
@@ -154,6 +154,7 @@ public:
     ~DopplerIOex();
 
     rplrio::Params params;
+    rplrio::RadarParams radarParam;
 
     uint step = 0;
     gtsam::NonlinearFactorGraph offline_graph;
@@ -179,6 +180,7 @@ public:
 DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
 {
     params = rplrio::get_params(*nh);
+    radarParam = params.radars[params.radar_list[0]];
 
     // imu init
     initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
@@ -186,7 +188,7 @@ DopplerIOex::DopplerIOex(ros::NodeHandle *nh)
     // velocity optimizer init
     velocity_estimator = std::make_unique<RadarVelocityEstimatorCeres>();
     // velocity_estimator = std::make_unique<RadarVelocityEstimatorCeresHCS>(params);
-    velocity_estimator->set_inlier_thresh(params.doppler_std);
+    velocity_estimator->set_inlier_thresh(params.doppler_inlier_thresh);
 
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
@@ -330,8 +332,8 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     radar_cov_cache.emplace_back(radar_velocity_cov);
 
     // velocity pose measurement
-    measured_v = params.R_r_b * measured_v;
-    radar_velocity_cov = params.R_r_b * radar_velocity_cov * params.R_r_b.transpose();
+    measured_v = radarParam.R_r_b * measured_v;
+    radar_velocity_cov = radarParam.R_r_b * radar_velocity_cov * radarParam.R_r_b.transpose();
 
     // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
     auto robust_rv_noise = gtsam::noiseModel::Robust::Create(
@@ -492,8 +494,8 @@ void DopplerIOex::cb_config(radar_odom::extrinsicConfig &config, uint32_t level)
 
     gtsam::Rot3 R_r_i = gtsam::Rot3::Ypr(config.Rz, config.Ry, config.Rx);
 
-    params.R_r_b = params.R_i_b * R_r_i.matrix();
-    std::cout << params.R_r_b << std::endl;
+    radarParam.R_r_b = params.R_i_b * R_r_i.matrix();
+    std::cout << radarParam.R_r_b << std::endl;
 }
 
 bool DopplerIOex::trigger_bags(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep)
@@ -510,7 +512,7 @@ bool DopplerIOex::optimize(std_srvs::Trigger::Request &req, std_srvs::Trigger::R
     auto vel_gt_noise = gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(1e-6, 1e-6, 1e-6));
     auto ground_prior_noise = gtsam::noiseModel::Diagonal::Sigmas(
         (gtsam::Vector6() << 1e-6, 1e-6, 1e-6, 1e-6, 1e-6, 1e-6).finished());
-    cache_results.insert(E(0), gtsam::Rot3(params.R_r_b));
+    cache_results.insert(E(0), gtsam::Rot3(radarParam.R_r_b));
 
     gtsam::Values calibrate_result;
     nav_msgs::Path path;
@@ -519,7 +521,7 @@ bool DopplerIOex::optimize(std_srvs::Trigger::Request &req, std_srvs::Trigger::R
     for (uint i = 1; i <= step; i++)
     {
         auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(
-            params.R_r_b * radar_cov_cache[i] * params.R_r_b.transpose());
+            radarParam.R_r_b * radar_cov_cache[i] * radarParam.R_r_b.transpose());
         offline_graph.add(VelocityPoseExtrinsicFactor(
             V(i), X(i), E(0), radar_velocity_cache[i], rv_noise));
 
@@ -583,7 +585,7 @@ int main(int argc, char *argv[])
     for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
         dio.bags.emplace_back(entry.path().string());
     std::sort(dio.bags.begin(), dio.bags.end());
-    dio.topics.push_back(dio.params.radar_topic);
+    dio.topics.push_back(dio.radarParam.topic);
     dio.topics.push_back(dio.params.imu_topic);
 
     std::string csv_path;

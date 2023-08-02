@@ -143,12 +143,14 @@ int main(int argc, char *argv[])
     for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
         bags.emplace_back(entry.path().string());
     std::sort(bags.begin(), bags.end());
-    topics.push_back(params.radar_topic);
+
+    auto radarParam = params.radars[params.radar_list[0]];
+    topics.push_back(radarParam.topic);
 
     RadarVelocityEstimatorCeres v_opt;
     gtsam::NonlinearFactorGraph graph;
     gtsam::Values init_values;
-    init_values.insert(0, gtsam::Rot3(params.R_r_b));
+    init_values.insert(0, gtsam::Rot3(radarParam.R_r_b));
     auto noise = gtsam::noiseModel::Robust::Create(
         gtsam::noiseModel::mEstimator::Cauchy::Create(0.1),
         gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(0.1, 0.1, 0.1)));
@@ -212,7 +214,7 @@ int main(int argc, char *argv[])
     for (uint i = 0; i < stamps.size(); i++)
     {
         gtsam::Vector3 calib_v = ex.matrix() * radar_velocity[i];
-        gtsam::Vector3 before = params.R_r_b * radar_velocity[i];
+        gtsam::Vector3 before = radarParam.R_r_b * radar_velocity[i];
 
         odom_file << stamps[i] << ", ";
         odom_file << before[0] << ", ";

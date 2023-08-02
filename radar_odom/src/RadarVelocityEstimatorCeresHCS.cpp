@@ -1,9 +1,11 @@
 #include "RadarVelocityEstimatorCeresHCS.h"
 
-RadarVelocityEstimatorCeresHCS::RadarVelocityEstimatorCeresHCS(
-    rplrio::Params &param) : RadarVelocityEstimatorBase()
+void RadarVelocityEstimatorCeresHCS::set_uncertainty(
+    double doppler_std, double azimuth_std, double elevation_std)
 {
-    this->param = param;
+    this->doppler_std = doppler_std;
+    this->azimuth_std = azimuth_std;
+    this->elevation_std = elevation_std;
 }
 
 Eigen::Vector2d RadarVelocityEstimatorCeresHCS::toHCS(pcl::PointXYZIS &p)
@@ -28,7 +30,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
 
         problem.AddParameterBlock(a, 2);
 
-        DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.speed, param.doppler_std);
+        DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.speed, doppler_std);
 
         ceres::ResidualBlockId id = problem.AddResidualBlock(
             cost_function, new ceres::CauchyLoss(0.2), v_est, a);
@@ -37,7 +39,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
         // double s[2] = {2 * M_PI / 256.0, 2 * M_PI / 256.0};
         // s[1] *= 4;
 
-        double s[2] = {param.azimuth_std, param.elevation_std}; // {1.41 deg, 18 deg}
+        double s[2] = {azimuth_std, elevation_std}; // {1.41 deg, 18 deg}
 
         Eigen::Vector2d angle_sigma(s);
         Eigen::Matrix2d A_mat =
