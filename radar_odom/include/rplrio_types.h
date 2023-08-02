@@ -7,6 +7,8 @@
 #include <gtsam/navigation/NavState.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 
+#include "params.h"
+
 namespace rplrio
 {
     struct IMU
@@ -52,13 +54,13 @@ namespace rplrio
         }
     };
 
-    template<class PointType>
+    template <class PointType>
     struct Radar
-    {   
+    {
         typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
         myPcPtr pc;
-
         double stamp;
+        RadarParams param;
 
         Radar(myPcPtr p, double t)
         {
@@ -67,7 +69,7 @@ namespace rplrio
         }
     };
 
-    template<class PointType>
+    template <class PointType>
     struct Keyframe
     {
         double stamp;

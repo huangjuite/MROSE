@@ -129,7 +129,8 @@ int main(int argc, char *argv[])
     for (const auto &entry : std::filesystem::directory_iterator(bag_folder))
         bags.emplace_back(entry.path().string());
     std::sort(bags.begin(), bags.end());
-    topics.push_back(params.radar_topic);
+    auto radarParam = params.radars[params.radar_list[0]];
+    topics.push_back(radarParam.topic);
 
     RadarVelocityEstimatorCeres v_opt;
     // RadarVelocityEstimatorCeresWeighted v_opt_noise;
@@ -213,7 +214,7 @@ int main(int argc, char *argv[])
 
     for (uint i = 0; i < stamps.size(); i++)
     {
-        gtsam::Vector3 ceres = params.R_r_b * radar_velocity[i];
+        gtsam::Vector3 ceres = radarParam.R_r_b * radar_velocity[i];
         gtsam::Vector3 weighted = radar_velocity_weighted[i];
 
         odom_file << stamps[i] << ", ";

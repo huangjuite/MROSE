@@ -3,8 +3,6 @@
 #include <ceres/ceres.h>
 #include <ceres/normal_prior.h>
 
-#include "params.h"
-
 class DopplerAngleCostFunction : public ceres::SizedCostFunction<1, 3, 2>
 {
 private:
@@ -73,11 +71,12 @@ public:
 class RadarVelocityEstimatorCeresHCS : public RadarVelocityEstimatorBase<pcl::PointXYZIS>
 {
 private:
-    rplrio::Params param;
+    double doppler_std;
+    double azimuth_std;
+    double elevation_std;
 
 public:
-    RadarVelocityEstimatorCeresHCS(rplrio::Params &param);
-
+    void set_uncertainty(double doppler_std, double azimuth_std, double elevation_std);
     Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
     Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
     static Eigen::Vector2d toHCS(pcl::PointXYZIS &p);
