@@ -17,7 +17,7 @@ namespace rplrio
         parameters.relinearizeThreshold = 0.0;
         parameters.relinearizeSkip = 1;
         smootherISAM2 = std::make_unique<gtsam::IncrementalFixedLagSmoother>(params.lag, parameters);
-
+        
         // imu init
         initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
     }
@@ -68,7 +68,7 @@ namespace rplrio
         {
             radar_que.pop_front();
         }
-        if (radar_que.empty())
+        if (radar_que.size() <= 2) // delay radar frame to interpolate IMU
         {
             return;
         }
@@ -78,6 +78,7 @@ namespace rplrio
         radar_que.pop_front();
 
         // integrate imu measurements
+        std::shared_ptr<rplrio::IMU> last_imu;
         while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp)
         {
             auto imu_data = imu_que.front();
@@ -85,8 +86,16 @@ namespace rplrio
             preintegrated->integrateMeasurement(imu_data->acc, imu_data->gyro, dt);
             pre_imu_t = imu_data->stamp;
 
+            last_imu = imu_data;
             imu_que.pop_front();
         }
+
+        auto next_imu = imu_que.front();
+        rplrio::IMU interp;
+        bool interp_success = rplrio::IMU::interpolate(
+            interp, radar_stamp, *last_imu, *next_imu);
+        preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
+        pre_imu_t = interp.stamp;
 
         step++;
         auto keyframe = optimize(*radar_msg);

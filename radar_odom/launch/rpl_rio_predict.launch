@@ -1,7 +1,9 @@
 <launch>
 
     <!-- parameter -->
-    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" />
+    <!-- <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" /> -->
+    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/1690914085/rosbag" />
+
 
     <rosparam file="$(find radar_odom)/cfg/params.yaml" />
     <arg name="info_plot" default="false" />
@@ -18,6 +20,7 @@
         args="-l $(find radar_odom)/cfg/info_vis.xml" />
 
     <!-- pose graph -->
-    <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize_weighted" output="screen" />
+    <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize" output="screen" />
+    <!-- <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize_weighted" output="screen" /> -->
 
 </launch>

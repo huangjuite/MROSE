@@ -302,8 +302,8 @@ namespace rplrio
         Params param;
 
         // odom
-        std::string radar_, imu_;
-        nh.getParam("/odom/imu", imu_);        
+        std::string imu_;
+        nh.getParam("/odom/imu", imu_);
         nh.getParam(imu_ + std::string("/rostopic"), param.imu_topic);
 
         // imu
@@ -325,15 +325,14 @@ namespace rplrio
         param.R_i_b = param.T_i_b.block(0, 0, 3, 3);
 
         // radar
-        nh.getParam("/odom/radar_tmp", param.radar_list);
+        nh.getParam("/odom/radar", param.radar_list);
         for (auto r : param.radar_list)
         {
-            nh.getParam(radar_ + std::string("/rostopic"), param.radars[r].topic);
+            nh.getParam(r + std::string("/rostopic"), param.radars[r].topic);
             nh.getParam(r + std::string("/doppler_sigma"), param.radars[r].doppler_std);
             nh.getParam(r + std::string("/azimuth_sigma"), param.radars[r].azimuth_std);
             nh.getParam(r + std::string("/elevation_sigma"), param.radars[r].elevation_std);
             nh.getParam(r + std::string("/T_r_i"), tf);
-            
 
             for (uint i = 0; i < tf.size(); i++)
             {
@@ -369,6 +368,8 @@ namespace rplrio
 
         return param;
     }
+
+    
 
 }
 

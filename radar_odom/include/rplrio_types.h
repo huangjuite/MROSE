@@ -17,6 +17,7 @@ namespace rplrio
         Eigen::Vector3d gyro;
         double stamp;
 
+        IMU() {}
         IMU(Eigen::Vector3d a,
             Eigen::Vector3d g,
             double t)
@@ -24,6 +25,19 @@ namespace rplrio
             acc = a;
             gyro = g;
             stamp = t;
+        }
+
+        static bool interpolate(IMU &imu, double time, IMU imu1, IMU imu2)
+        {
+            if (time > imu2.stamp || time < imu1.stamp || imu1.stamp > imu2.stamp)
+                return false;
+
+            double ratio = (time - imu1.stamp) / (imu2.stamp - imu1.stamp);
+            imu.stamp = ratio * (imu2.stamp - imu1.stamp) + imu1.stamp;
+            imu.acc = ratio * (imu2.acc - imu1.acc) + imu1.acc;
+            imu.gyro = ratio * (imu2.gyro - imu1.gyro) + imu1.gyro;
+
+            return true;
         }
     };
 
@@ -62,10 +76,11 @@ namespace rplrio
         double stamp;
         RadarParams param;
 
-        Radar(myPcPtr p, double t)
+        Radar(myPcPtr p, double t, RadarParams params)
         {
             stamp = t;
             pc = p;
+            param = params;
         }
     };
 
