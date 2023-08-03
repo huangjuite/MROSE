@@ -33,7 +33,8 @@ Eigen::Matrix3d RadarVelocityEstimatorEigenWeighted::get_covariance(
 
     Eigen::MatrixXd P = Eigen::MatrixXd::Zero(n, 3);
     Eigen::MatrixXd d = Eigen::MatrixXd::Zero(n, 1);
-    Eigen::VectorXd residual = Eigen::VectorXd::Zero(n);
+    Eigen::MatrixXd residual = Eigen::MatrixXd::Zero(n, 1);
+
     double err = 0;
     for (size_t i = 0; i < n; i++)
     {
@@ -43,15 +44,19 @@ Eigen::Matrix3d RadarVelocityEstimatorEigenWeighted::get_covariance(
         P(i, 0) = pn[0];
         P(i, 1) = pn[1];
         P(i, 2) = pn[2];
-        d(i, 0) = p.weight * p.speed;
+        d(i, 0) = p.speed;
 
-        residual[i] = (pn.dot(velocity) - d(i, 0));
-        err += residual[i] * residual[i];
+        residual(i, 0) = pn.dot(velocity) - d(i, 0);
+        err += residual(i, 0) * residual(i, 0);
     }
 
-    double variance = err / n;
+    // Eigen::MatrixXd R = (P.transpose() * P).inverse() * P.transpose();
+    // Eigen::MatrixXd var = residual * residual.transpose() / n;
+    // Eigen::Matrix3d covariance_matrix = R * var * R.transpose();
+
     Eigen::Matrix3d covariance_matrix = (P.transpose() * P).inverse();
+
+    // Eigen::Matrix3d covariance_matrix = (P.transpose() * P).inverse();
 
     return covariance_matrix;
 }
-

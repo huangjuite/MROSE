@@ -6,15 +6,13 @@ class DopplerCostFunction : public ceres::SizedCostFunction<1, 3>
 {
 private:
     double d_;
-    double s_;
     Eigen::Vector3d p_;
 
 public:
-    DopplerCostFunction(Eigen::Vector3d pos, float doppler, double sigma)
+    DopplerCostFunction(Eigen::Vector3d pos, float doppler)
     {
         p_ = -pos / pos.norm();
         d_ = double(doppler);
-        s_ = sigma;
     };
 
     ~DopplerCostFunction(){};

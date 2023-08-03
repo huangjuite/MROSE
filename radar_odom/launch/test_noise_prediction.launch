@@ -6,11 +6,11 @@
     <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" />
     <arg name="gt_path" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/odom_vio.csv" />
 
-    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
+    <rosparam file="$(find radar_odom)/cfg/params_old.yaml" />
     
     <node name="noise_predict" pkg="radar_odom" type="RadarUncertainty.py" output="screen" />
     
-    <node name="rio_extrinsic" pkg="radar_odom" type="test_noise_prediction" output="screen">
+    <node name="test_noise_prediction" pkg="radar_odom" type="test_noise_prediction" output="screen">
         <param name="bag_folder" value="$(arg bag_folder)" />
         <param name="gt_path" value="$(arg gt_path)" />
     </node>

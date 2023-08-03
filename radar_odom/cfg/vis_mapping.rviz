@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Status1
+        - /Odometry1/Shape1
         - /Odometry1/Covariance1/Position1
         - /loop_detect_map1
       Splitter Ratio: 0.5392857193946838
@@ -228,16 +229,16 @@ Visualization Manager:
           Color: 204; 51; 204
           Scale: 1
           Value: true
-        Value: true
-      Enabled: false
+        Value: false
+      Enabled: true
       Keep: 1500
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Queue Size: 10
       Shape:
         Alpha: 1
-        Axes Length: 0.10000000149011612
-        Axes Radius: 0.029999999329447746
+        Axes Length: 0.30000001192092896
+        Axes Radius: 0.05999999865889549
         Color: 255; 25; 0
         Head Length: 0.10000000149011612
         Head Radius: 0.10000000149011612
@@ -246,7 +247,7 @@ Visualization Manager:
         Value: Axes
       Topic: /dopplerIO
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/Marker
       Enabled: false
       Marker Topic: /velocity
@@ -485,7 +486,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 79.669677734375
+      Distance: 81.25912475585938
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -493,17 +494,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -1.5655932426452637
-        Y: -9.024421691894531
-        Z: -4.555914402008057
+        X: 14.839168548583984
+        Y: -10.527059555053711
+        Z: 1.012286901473999
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7897970676422119
+      Pitch: 1.5697963237762451
       Target Frame: map
-      Yaw: 5.67855978012085
+      Yaw: 4.573571681976318
     Saved: ~
 Window Geometry:
   Displays:

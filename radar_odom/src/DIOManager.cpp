@@ -17,7 +17,7 @@ namespace rplrio
         parameters.relinearizeThreshold = 0.0;
         parameters.relinearizeSkip = 1;
         smootherISAM2 = std::make_unique<gtsam::IncrementalFixedLagSmoother>(params.lag, parameters);
-        
+
         // imu init
         initializer = std::make_unique<StaticInitializer>(params.init_window, params.init_thres);
     }
@@ -145,13 +145,13 @@ namespace rplrio
         radar_velocity_cov = radar.param.R_r_b * radar_velocity_cov * radar.param.R_r_b.transpose();
         pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_b);
 
-        // auto robust_rv_noise = noiseModel::Gaussian::Covariance(radar_velocity_cov);
-        auto robust_rv_noise = gtsam::noiseModel::Robust::Create(
+        // auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
+        auto rv_noise = gtsam::noiseModel::Robust::Create(
             gtsam::noiseModel::mEstimator::Huber::Create(1.345),
             gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov));
 
         graph->add(VelocityPoseMeasurementFactor(
-            V(step), X(step), measured_v, robust_rv_noise));
+            V(step), X(step), measured_v, rv_noise));
 
         // optimize ----------------------------------------------------------------------------
         smootherISAM2->update(*graph, initial_values, key_timestamps);
