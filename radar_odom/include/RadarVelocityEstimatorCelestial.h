@@ -13,8 +13,6 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Marginals.h>
 
-// custom factor
-// #include "DopplerCelestialFactor.h"
 #include "DopplerCelestial2Factor.h"
 
 using namespace gtsam;

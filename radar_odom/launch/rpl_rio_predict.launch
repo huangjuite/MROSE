@@ -1,11 +1,11 @@
 <launch>
 
     <!-- parameter -->
-    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" />
-    <rosparam file="$(find radar_odom)/cfg/params_old.yaml" />
+    <!-- <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" /> -->
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_old.yaml" /> -->
     
-    <!-- <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/1690914085/rosbag" /> -->
-    <!-- <rosparam file="$(find radar_odom)/cfg/params.yaml" /> -->
+    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/1690914085/rosbag" />
+    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
     
     <arg name="info_plot" default="false" />
 

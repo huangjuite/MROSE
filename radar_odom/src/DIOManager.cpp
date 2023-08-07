@@ -11,7 +11,7 @@ namespace rplrio
         this->velocity_estimator = velocity_estimator;
 
         velocity_estimator->set_inlier_thresh(params.doppler_inlier_thresh);
-
+        
         // optimizer init
         gtsam::ISAM2Params parameters;
         parameters.relinearizeThreshold = 0.0;

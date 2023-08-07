@@ -54,8 +54,6 @@ namespace rplrio
         bool initialized = false;
 
         // radar
-        std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
-
         std::deque<std::shared_ptr<DIORadar>> radar_que;
 
         // imu settings
@@ -92,5 +90,8 @@ namespace rplrio
         void feed_imu(std::shared_ptr<rplrio::IMU> imu_data);
 
         std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> get_latest_states();
+
+                std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
+
     };
 }

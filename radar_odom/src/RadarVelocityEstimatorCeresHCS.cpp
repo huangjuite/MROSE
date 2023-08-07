@@ -55,38 +55,10 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
     // options.minimizer_progress_to_stdout = true;
     ceres::Solver::Summary summary;
     Solve(options, &problem, &summary);
-
     // std::cout << summary.FullReport() << std::endl;
 
-    // ceres::Problem::EvaluateOptions eval_opt;
-    // eval_opt.residual_blocks = residual_ids;
-    // double total_cost = 0.0;
-    // std::vector<double> residuals;
-    // problem.Evaluate(eval_opt, &total_cost, &residuals, nullptr, nullptr);
 
-    // std::cout << residuals.size() << std::endl;
-
-    return Eigen::Vector3d(v_est);
-}
-
-Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
-{
-    double *v_est = velocity.data();
-
-    ceres::Problem problem;
-
-    problem.AddParameterBlock(v_est, 3);
-
-    for (pcl::PointXYZIS p : radar_pc->points)
-    {
-        Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
-        ceres::CostFunction *cost_function =
-            new ceres::AutoDiffCostFunction<DopplerResidual, 1, 3>(
-                new DopplerResidual(pos, p.speed));
-        problem.AddResidualBlock(cost_function, nullptr, v_est);
-    }
-
+    // pre compute covariance =====================================================
     ceres::Covariance::Options cov_opt;
     ceres::Covariance covariance(cov_opt);
 
@@ -95,9 +67,38 @@ Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
     covariance.Compute(covariance_blocks, &problem);
     double cov[3 * 3];
     covariance.GetCovarianceBlock(v_est, v_est, cov);
-    Eigen::Matrix3d covariance_matrix(cov);
+    covariance_matrix = Eigen::Matrix3d(cov);
 
-    // std::cout << covariance_matrix << std::endl;
+    return Eigen::Vector3d(v_est);
+}
+
+Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
+    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+{
+    // double *v_est = velocity.data();
+
+    // ceres::Problem problem;
+
+    // problem.AddParameterBlock(v_est, 3);
+
+    // for (pcl::PointXYZIS p : radar_pc->points)
+    // {
+    //     Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
+    //     ceres::CostFunction *cost_function =
+    //         new ceres::AutoDiffCostFunction<DopplerResidual, 1, 3>(
+    //             new DopplerResidual(pos, p.speed));
+    //     problem.AddResidualBlock(cost_function, nullptr, v_est);
+    // }
+
+    // ceres::Covariance::Options cov_opt;
+    // ceres::Covariance covariance(cov_opt);
+
+    // std::vector<std::pair<const double *, const double *>> covariance_blocks;
+    // covariance_blocks.push_back(std::make_pair(v_est, v_est));
+    // covariance.Compute(covariance_blocks, &problem);
+    // double cov[3 * 3];
+    // covariance.GetCovarianceBlock(v_est, v_est, cov);
+    // Eigen::Matrix3d covariance_matrix(cov);
 
     return covariance_matrix;
 }

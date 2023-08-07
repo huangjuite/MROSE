@@ -7,21 +7,21 @@
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <gtsam/geometry/Point3.h>
 
-using namespace std;
-using namespace gtsam;
-
-class DopplerCelestialFactor : public NoiseModelFactor1<Vector3>
+class DopplerCelestialFactor : public gtsam::NoiseModelFactor1<gtsam::Vector3>
 {
 private:
     double theta;
     double phi;
     double d;
+
 public:
-    DopplerCelestialFactor(Key j, double azimuth, double elevation, double doppler, const SharedNoiseModel &model);
+    DopplerCelestialFactor(
+        gtsam::Key j, double azimuth, double elevation, double doppler,
+        const gtsam::SharedNoiseModel &model);
 
     ~DopplerCelestialFactor();
 
-    Vector evaluateError(const gtsam::Vector3 &vel, boost::optional<gtsam::Matrix &> H) const;
+    gtsam::Vector evaluateError(const gtsam::Vector3 &vel, boost::optional<gtsam::Matrix &> H) const;
 };
 
 #endif

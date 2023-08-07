@@ -79,11 +79,7 @@ add_library(${PROJECT_NAME} SHARED
   src/VelocityPoseMeasurementFactor.cpp
   src/VelocityPoseExtrinsicFactor.cpp
 
-  src/RadarVelocityEstimator.cpp
-  src/RadarVelocityEstimatorGNC.cpp
-  src/RadarVelocityEstimatorHCS.cpp
-  src/RadarVelocityEstimatorCelestial.cpp
-  
+  src/RadarVelocityEstimatorGtsamHCS.cpp
   src/RadarVelocityEstimatorCeres.cpp
   src/RadarVelocityEstimatorCeresHCS.cpp
   src/RadarVelocityEstimatorCeresWeighted.cpp
@@ -132,21 +128,6 @@ target_link_libraries(${PROJECT_NAME}
 # add_executable(test_libtorch app/test_libtorch.cpp)
 # target_link_libraries(test_libtorch ${PROJECT_NAME} ${TORCH_LIBRARIES})
 
-add_executable(ImuFactorsExample app/ImuFactorsExample.cpp)
-target_link_libraries(ImuFactorsExample ${PROJECT_NAME})
-
-add_executable(ImuFactorsExample2 app/ImuFactorsExample2.cpp)
-target_link_libraries(ImuFactorsExample2 ${PROJECT_NAME})
-
-add_executable(velocityEstimation app/velocityEstimation.cpp)
-target_link_libraries(velocityEstimation ${PROJECT_NAME})
-
-add_executable(velocityEstimationCeres app/velocityEstimationCeres.cpp)
-target_link_libraries(velocityEstimationCeres ${PROJECT_NAME})
-
-add_executable(velocityEstimationCelestial app/velocityEstimationCelestial.cpp)
-target_link_libraries(velocityEstimationCelestial ${PROJECT_NAME})
-
 add_executable(test_clustering app/test_clustering.cpp )
 target_link_libraries(test_clustering ${PROJECT_NAME})
 
@@ -177,13 +158,13 @@ add_executable(doppler_odom src/DopplerInertialOdom.cpp)
 add_dependencies(doppler_odom ${catkin_EXPORTED_TARGETS})
 target_link_libraries(doppler_odom ${PROJECT_NAME})
 
-add_executable(doppler_landmark_odom src/DopplerInertialLandmarkOdom.cpp)
-add_dependencies(doppler_landmark_odom ${catkin_EXPORTED_TARGETS})
-target_link_libraries(doppler_landmark_odom ${PROJECT_NAME})
+# add_executable(doppler_landmark_odom src/DopplerInertialLandmarkOdom.cpp)
+# add_dependencies(doppler_landmark_odom ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(doppler_landmark_odom ${PROJECT_NAME})
 
-add_executable(doppler_odom_multi src/DopplerInertialOdomMulti.cpp)
-add_dependencies(doppler_odom_multi ${catkin_EXPORTED_TARGETS})
-target_link_libraries(doppler_odom_multi ${PROJECT_NAME})
+# add_executable(doppler_odom_multi src/DopplerInertialOdomMulti.cpp)
+# add_dependencies(doppler_odom_multi ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(doppler_odom_multi ${PROJECT_NAME})
 
 # add_executable(rio src/RadarInertialOdom.cpp)
 # add_dependencies(rio ${catkin_EXPORTED_TARGETS})

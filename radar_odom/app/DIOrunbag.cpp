@@ -34,16 +34,43 @@
 #include "RadarVelocityEstimatorCeresHCS.h"
 #include "RadarVelocityEstimatorCeresWeighted.h"
 #include "RadarVelocityEstimatorEigenWeighted.h"
+#include "RadarVelocityEstimatorGtsamHCS.h"
+
 
 #include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 
+// #define PREDICT
+// #define CERES_HCS
+// #define GTSAM_HCS
+
+
+#ifdef PREDICT
 typedef pcl::PointXYZISW PointType;
 typedef RadarVelocityEstimatorEigenWeighted VestType;
+#endif
 
-// typedef pcl::PointXYZIS PointType;
-// typedef RadarVelocityEstimatorCeres VestType;
+#ifndef PREDICT
+
+#ifndef CERES_HCS
+#ifndef GTSAM_HCS
+typedef pcl::PointXYZIS PointType;
+typedef RadarVelocityEstimatorCeres VestType;
+#endif
+#endif
+
+#ifdef CERES_HCS
+typedef pcl::PointXYZIS PointType;
+typedef RadarVelocityEstimatorCeresHCS VestType;
+#endif
+
+#ifdef GTSAM_HCS
+typedef pcl::PointXYZIS PointType;
+typedef RadarVelocityEstimatorGtsamHCS VestType;
+#endif
+
+#endif
 
 class DopplerIOBag
 {
@@ -78,6 +105,24 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
     params = rplrio::get_params(*nh);
     dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
         params, std::make_shared<VestType>());
+
+#ifdef CERES_HCS
+    // auto estimator = dynamic_cast<RadarVelocityEstimatorCeresHCS *>(dio_manager->velocity_estimator.get());
+    auto estimator = std::dynamic_pointer_cast<RadarVelocityEstimatorCeresHCS>(dio_manager->velocity_estimator);
+
+    auto radar_p = params.radars[params.radar_list[0]];
+    estimator->set_uncertainty(
+        radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
+#endif
+
+#ifdef GTSAM_HCS
+    // auto estimator = dynamic_cast<RadarVelocityEstimatorCeresHCS *>(dio_manager->velocity_estimator.get());
+    auto estimator = std::dynamic_pointer_cast<RadarVelocityEstimatorGtsamHCS>(dio_manager->velocity_estimator);
+
+    auto radar_p = params.radars[params.radar_list[0]];
+    estimator->set_uncertainty(
+        radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
+#endif
 
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
@@ -217,14 +262,18 @@ int main(int argc, char *argv[])
             sensor_msgs::PointCloud2::ConstPtr radar_msg = m.instantiate<sensor_msgs::PointCloud2>();
             if (radar_msg != NULL)
             {
-                // runner.cb_radar(*radar_msg);
+#ifndef PREDICT
+                runner.cb_radar(*radar_msg);
+#endif
 
+#ifdef PREDICT
                 radar_odom::Prediction req;
                 req.request.input = *radar_msg;
                 if (predict_noise.call(req))
                 {
                     runner.cb_radar(req.response.output);
                 }
+#endif
             }
 
             sensor_msgs::Imu::ConstPtr imu_msg = m.instantiate<sensor_msgs::Imu>();
