@@ -20,15 +20,15 @@ Eigen::Vector3d RadarVelocityEstimatorGtsamHCS::optimize(
     gtsam::Values initial;
     initial.insert(0, initial_v);
 
-    size_t size = 0;
+    size_t n = 0;
     for (pcl::PointXYZIS p : radar_pc->points)
     {
         gtsam::Vector2 cel = toCelestial(p);
-        auto dFactor = DopplerCelestial2Factor(0, C(size), p.speed, doppler_noise_model);
+        auto dFactor = DopplerCelestial2Factor(0, C(n), p.speed, doppler_noise_model);
         graph.add(dFactor);
-        graph.addPrior(C(size), cel, angle_noise_model);
-        initial.insert(C(size), cel);
-        size++;
+        graph.addPrior(C(n), cel, angle_noise_model);
+        initial.insert(C(n), cel);
+        n++;
     }
 
     // optimie
@@ -43,6 +43,9 @@ Eigen::Vector3d RadarVelocityEstimatorGtsamHCS::optimize(
 
     gtsam::Marginals marginals(graph, result);
     gtsam::Matrix covariance_matrix = marginals.marginalCovariance(0);
+
+    std::cout << v_est << std::endl;
+    std::cout << covariance_matrix << std::endl;
 
     return v_est;
 }

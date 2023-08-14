@@ -36,10 +36,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
             cost_function, new ceres::CauchyLoss(0.2), v_est, a);
         residual_ids.push_back(id);
 
-        // double s[2] = {2 * M_PI / 256.0, 2 * M_PI / 256.0};
-        // s[1] *= 4;
-
-        double s[2] = {azimuth_std, elevation_std}; // {1.41 deg, 18 deg}
+        double s[2] = {azimuth_std, elevation_std};
 
         Eigen::Vector2d angle_sigma(s);
         Eigen::Matrix2d A_mat =
@@ -50,6 +47,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
     }
 
     ceres::Solver::Options options;
+    options.num_threads = 8;
     options.linear_solver_type = ceres::LinearSolverType::SPARSE_NORMAL_CHOLESKY;
     options.max_num_iterations = 100;
     // options.minimizer_progress_to_stdout = true;
@@ -60,6 +58,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
 
     // pre compute covariance =====================================================
     ceres::Covariance::Options cov_opt;
+    cov_opt.num_threads = 8;
     ceres::Covariance covariance(cov_opt);
 
     std::vector<std::pair<const double *, const double *>> covariance_blocks;

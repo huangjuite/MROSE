@@ -36,15 +36,13 @@
 #include "RadarVelocityEstimatorEigenWeighted.h"
 #include "RadarVelocityEstimatorGtsamHCS.h"
 
-
 #include "rplrio_types.h"
 #include "utils.h"
 #include "params.h"
 
 // #define PREDICT
-// #define CERES_HCS
+#define CERES_HCS
 // #define GTSAM_HCS
-
 
 #ifdef PREDICT
 typedef pcl::PointXYZISW PointType;
@@ -107,7 +105,6 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
         params, std::make_shared<VestType>());
 
 #ifdef CERES_HCS
-    // auto estimator = dynamic_cast<RadarVelocityEstimatorCeresHCS *>(dio_manager->velocity_estimator.get());
     auto estimator = std::dynamic_pointer_cast<RadarVelocityEstimatorCeresHCS>(dio_manager->velocity_estimator);
 
     auto radar_p = params.radars[params.radar_list[0]];
@@ -116,7 +113,6 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 #endif
 
 #ifdef GTSAM_HCS
-    // auto estimator = dynamic_cast<RadarVelocityEstimatorCeresHCS *>(dio_manager->velocity_estimator.get());
     auto estimator = std::dynamic_pointer_cast<RadarVelocityEstimatorGtsamHCS>(dio_manager->velocity_estimator);
 
     auto radar_p = params.radars[params.radar_list[0]];
@@ -223,6 +219,8 @@ int main(int argc, char *argv[])
     ros::NodeHandle nh;
 
     DopplerIOBag runner(&nh);
+    ros::Publisher pub_img = nh.advertise<sensor_msgs::Image>("/camera/left/image_color", 1);
+    ;
     auto predict_noise = nh.serviceClient<radar_odom::Prediction>("radar_uncertainty");
 
     std::string bag_folder;
@@ -281,6 +279,12 @@ int main(int argc, char *argv[])
             {
                 runner.cb_imu(imu_msg);
             }
+
+            // sensor_msgs::Image::ConstPtr img_msg = m.instantiate<sensor_msgs::Image>();
+            // if (img_msg != NULL)
+            // {
+            //     pub_img.publish(imu_msg);
+            // }
         }
 
         bag.close();
