@@ -11,8 +11,8 @@ MapOptimize<PointT>::MapOptimize(ros::NodeHandle *nh)
     voxel_filter.setLeafSize(params.process_voxel_size,
                              params.process_voxel_size,
                              params.process_voxel_size);
-    intensity_filter.setFilterFieldName("intensity");
-    intensity_filter.setFilterLimits(params.snr_thresh, FLT_MAX);
+    snr_filter.setFilterFieldName("snr");
+    snr_filter.setFilterLimits(params.snr_thresh, FLT_MAX);
     ndt_omp.setResolution(params.ndt_voxel_size);
     ndt_omp.setNumThreads(params.ndt_thread);
     ndt_omp.setNeighborhoodSearchMethod(pclomp::DIRECT7);
@@ -101,8 +101,8 @@ typename pcl::PointCloud<PointT>::Ptr MapOptimize<PointT>::build_submap(uint ste
 
     voxel_filter.setInputCloud(smap);
     voxel_filter.filter(*smap);
-    intensity_filter.setInputCloud(smap);
-    intensity_filter.filter(*smap);
+    snr_filter.setInputCloud(smap);
+    snr_filter.filter(*smap);
 
     return smap;
 }
@@ -117,8 +117,8 @@ void MapOptimize<PointT>::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_m
 
     // voxel_filter.setInputCloud(radar_pc);
     // voxel_filter.filter(*radar_pc);
-    // intensity_filter.setInputCloud(radar_pc);
-    // intensity_filter.filter(*radar_pc);
+    // snr_filter.setInputCloud(radar_pc);
+    // snr_filter.filter(*radar_pc);
     
     points_cache.push_back(radar_pc);
 
@@ -269,5 +269,5 @@ void MapOptimize<PointT>::render_map()
     }
 }
 
-template class MapOptimize<pcl::PointXYZIS>;
-template class MapOptimize<pcl::PointXYZISW>;
+template class MapOptimize<pcl::PointXYZSD>;
+template class MapOptimize<pcl::PointXYZSDW>;

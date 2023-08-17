@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
             sensor_msgs::PointCloud2::ConstPtr radar_msg = m.instantiate<sensor_msgs::PointCloud2>();
             if (radar_msg != NULL)
             {
-                pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-                radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+                pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
+                radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
                 pcl::fromROSMsg(*radar_msg, *radar_pc);
                 double current_t = radar_msg->header.stamp.toSec();
 

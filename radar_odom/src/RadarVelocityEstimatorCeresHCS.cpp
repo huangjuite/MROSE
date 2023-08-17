@@ -8,13 +8,13 @@ void RadarVelocityEstimatorCeresHCS::set_uncertainty(
     this->elevation_std = elevation_std;
 }
 
-Eigen::Vector2d RadarVelocityEstimatorCeresHCS::toHCS(pcl::PointXYZIS &p)
+Eigen::Vector2d RadarVelocityEstimatorCeresHCS::toHCS(pcl::PointXYZSD &p)
 {
     return Eigen::Vector2d(atan2(p.y, p.x), atan2(p.z, sqrt(p.x * p.x + p.y * p.y)));
 }
 
 Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc)
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc)
 {
     double *v_est = initial_v.data();
 
@@ -23,14 +23,14 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
 
     problem.AddParameterBlock(v_est, 3);
 
-    for (pcl::PointXYZIS p : radar_pc->points)
+    for (pcl::PointXYZSD p : radar_pc->points)
     {
         Eigen::Vector2d angles = toHCS(p);
         double *a = new double[2]{angles[0], angles[1]};
 
         problem.AddParameterBlock(a, 2);
 
-        DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.speed, doppler_std);
+        DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.doppler, doppler_std);
 
         ceres::ResidualBlockId id = problem.AddResidualBlock(
             cost_function, new ceres::CauchyLoss(0.1), v_est, a);
@@ -72,7 +72,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
 }
 
 Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
     // double *v_est = velocity.data();
 
@@ -80,12 +80,12 @@ Eigen::Matrix3d RadarVelocityEstimatorCeresHCS::get_covariance(
 
     // problem.AddParameterBlock(v_est, 3);
 
-    // for (pcl::PointXYZIS p : radar_pc->points)
+    // for (pcl::PointXYZSD p : radar_pc->points)
     // {
     //     Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
     //     ceres::CostFunction *cost_function =
     //         new ceres::AutoDiffCostFunction<DopplerResidual, 1, 3>(
-    //             new DopplerResidual(pos, p.speed));
+    //             new DopplerResidual(pos, p.doppler));
     //     problem.AddResidualBlock(cost_function, nullptr, v_est);
     // }
 

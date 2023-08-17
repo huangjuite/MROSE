@@ -1,7 +1,7 @@
 #include "rplrio_types.h"
 
-template struct rplrio::Radar<pcl::PointXYZIS>;
-template struct rplrio::Radar<pcl::PointXYZISW>;
+template struct rplrio::Radar<pcl::PointXYZSD>;
+template struct rplrio::Radar<pcl::PointXYZSDW>;
 
-template struct rplrio::Keyframe<pcl::PointXYZIS>;
-template struct rplrio::Keyframe<pcl::PointXYZISW>;
+template struct rplrio::Keyframe<pcl::PointXYZSD>;
+template struct rplrio::Keyframe<pcl::PointXYZSDW>;

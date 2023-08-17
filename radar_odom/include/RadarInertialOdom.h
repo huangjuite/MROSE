@@ -112,10 +112,10 @@ private:
     tf::TransformBroadcaster br;
 
     // radar points
-    pclomp::NormalDistributionsTransform<pcl::PointXYZIS, pcl::PointXYZIS> ndt_omp;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr pre_pc;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr inlier_pc;
+    pclomp::NormalDistributionsTransform<pcl::PointXYZSD, pcl::PointXYZSD> ndt_omp;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr pre_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr inlier_pc;
 
     // imu settings
     ImuParam_ptr imu_param = imuParams();

@@ -46,7 +46,7 @@
 // #define GTSAM_HCS
 
 #ifdef PREDICT
-typedef pcl::PointXYZISW PointType;
+typedef pcl::PointXYZSDW PointType;
 typedef RadarVelocityEstimatorEigenWeighted VestType;
 #endif
 
@@ -54,18 +54,18 @@ typedef RadarVelocityEstimatorEigenWeighted VestType;
 
 #ifndef CERES_HCS
 #ifndef GTSAM_HCS
-typedef pcl::PointXYZIS PointType;
+typedef pcl::PointXYZSD PointType;
 typedef RadarVelocityEstimatorCeres VestType;
 #endif
 #endif
 
 #ifdef CERES_HCS
-typedef pcl::PointXYZIS PointType;
+typedef pcl::PointXYZSD PointType;
 typedef RadarVelocityEstimatorCeresHCS VestType;
 #endif
 
 #ifdef GTSAM_HCS
-typedef pcl::PointXYZIS PointType;
+typedef pcl::PointXYZSD PointType;
 typedef RadarVelocityEstimatorGtsamHCS VestType;
 #endif
 

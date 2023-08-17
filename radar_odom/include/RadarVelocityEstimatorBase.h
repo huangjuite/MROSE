@@ -48,7 +48,7 @@ public:
         PclPtr inlier_pc(new Pcl);
         for (auto p : radar_pc->points)
         {
-            float err = abs(doppler_projection(p, velocity) - p.speed);
+            float err = abs(doppler_projection(p, velocity) - p.doppler);
             if (err < inlier_thresh)
             {
                 inlier_pc->push_back(p);

@@ -19,19 +19,19 @@
 
 using gtsam::symbol_shorthand::C; // celestial coordinate
 
-class RadarVelocityEstimatorGtsamHCS : public RadarVelocityEstimatorBase<pcl::PointXYZIS>
+class RadarVelocityEstimatorGtsamHCS : public RadarVelocityEstimatorBase<pcl::PointXYZSD>
 {
 private:
     gtsam::SharedNoiseModel doppler_noise_model;
     gtsam::SharedNoiseModel angle_noise_model;
 
-    gtsam::Vector2 toCelestial(pcl::PointXYZIS &p);
+    gtsam::Vector2 toCelestial(pcl::PointXYZSD &p);
 
 public:
     void set_uncertainty(
         double doppler_std, double azimuth_std, double elevation_std);
 
-    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
+    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc);
     Eigen::Matrix3d get_covariance(
-        pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
+        pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Eigen::Vector3d velocity);
 };

@@ -11,8 +11,8 @@ bool enforceIntensitySimilarity(
 
 LandmarkTracker::LandmarkTracker(/* args */)
 {
-    intensity_filter.setFilterFieldName("intensity");
-    intensity_filter.setFilterLimits(3, FLT_MAX); // log dB
+    snr_filter.setFilterFieldName("intensity");
+    snr_filter.setFilterLimits(3, FLT_MAX); // log dB
 
     cec.setConditionFunction(&enforceIntensitySimilarity);
     cec.setClusterTolerance(0.08);
@@ -54,8 +54,8 @@ bool LandmarkTracker::update(gtsam::Pose3 pose, pcl::PointCloud<pcl::PointXYZI>:
     // cache.pop_front();
     cache.clear();
 
-    // intensity_filter.setInputCloud(segment);
-    // intensity_filter.filter(*segment);
+    // snr_filter.setInputCloud(segment);
+    // snr_filter.filter(*segment);
 
     // ec_tree->setInputCloud(segment);
     // vector<PointIndices> cluster_indices;

@@ -34,9 +34,9 @@ public:
     };
 };
 
-class RadarVelocityEstimatorCeres : public RadarVelocityEstimatorBase<pcl::PointXYZIS>
+class RadarVelocityEstimatorCeres : public RadarVelocityEstimatorBase<pcl::PointXYZSD>
 {
 public:
-    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
-    Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
+    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc);
+    Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Eigen::Vector3d velocity);
 };

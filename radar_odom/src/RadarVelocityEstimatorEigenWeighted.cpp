@@ -1,7 +1,7 @@
 #include "RadarVelocityEstimatorEigenWeighted.h"
 
 Eigen::Vector3d RadarVelocityEstimatorEigenWeighted::optimize(
-    pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc)
+    pcl::PointCloud<pcl::PointXYZSDW>::ConstPtr radar_pc)
 {
 
     size_t n = radar_pc->size();
@@ -17,7 +17,7 @@ Eigen::Vector3d RadarVelocityEstimatorEigenWeighted::optimize(
         P(i, 0) = pn[0];
         P(i, 1) = pn[1];
         P(i, 2) = pn[2];
-        d(i, 0) = p.weight * p.speed;
+        d(i, 0) = p.weight * p.doppler;
     }
 
     Eigen::Vector3d v_est = P.colPivHouseholderQr().solve(d);
@@ -26,7 +26,7 @@ Eigen::Vector3d RadarVelocityEstimatorEigenWeighted::optimize(
 }
 
 Eigen::Matrix3d RadarVelocityEstimatorEigenWeighted::get_covariance(
-    pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+    pcl::PointCloud<pcl::PointXYZSDW>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
 
     size_t n = radar_pc->size();
@@ -49,7 +49,7 @@ Eigen::Matrix3d RadarVelocityEstimatorEigenWeighted::get_covariance(
         P(i, 1) = pn[1];
         P(i, 2) = pn[2];
 
-        // d(i, 0) = p.speed;
+        // d(i, 0) = p.doppler;
         // residual(i, 0) = pn.dot(velocity) - d(i, 0);
         // err += residual(i, 0) * residual(i, 0);
 

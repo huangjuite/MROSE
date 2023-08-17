@@ -5,8 +5,8 @@ RadarPoseGraph::RadarPoseGraph(ros::NodeHandle *nh)
     // pcl init
     points_cache.push_back(nullptr); // align index with graph
     voxel_filter.setLeafSize(0.2, 0.2, 0.2);
-    intensity_filter.setFilterFieldName("intensity");
-    intensity_filter.setFilterLimits(50, FLT_MAX);
+    snr_filter.setFilterFieldName("snr");
+    snr_filter.setFilterLimits(50, FLT_MAX);
     ndt_omp.setResolution(1);
     ndt_omp.setNumThreads(8);
     ndt_omp.setNeighborhoodSearchMethod(pclomp::DIRECT7);
@@ -77,15 +77,15 @@ std::pair<int, int> RadarPoseGraph::detect_loop(gtsam::Values &nodes, uint step)
     return close_pairs;
 }
 
-pcl::PointCloud<pcl::PointXYZIS>::Ptr RadarPoseGraph::build_submap(uint step, uint start, uint end)
+pcl::PointCloud<pcl::PointXYZSD>::Ptr RadarPoseGraph::build_submap(uint step, uint start, uint end)
 {
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr smap(new pcl::PointCloud<pcl::PointXYZIS>);
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr smap(new pcl::PointCloud<pcl::PointXYZSD>);
     smap->header.frame_id = "map";
     gtsam::Pose3 cp = init_values.at<gtsam::Pose3>(X(step));
     for (uint i = start; i <= end; i++)
     {
         gtsam::Pose3 t = cp * cp.between(init_values.at<gtsam::Pose3>(X(i)));
-        pcl::PointCloud<pcl::PointXYZIS> p;
+        pcl::PointCloud<pcl::PointXYZSD> p;
         pcl::transformPointCloud(*points_cache[i], p, t.matrix());
         *smap += p;
     }
@@ -101,12 +101,12 @@ void RadarPoseGraph::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
 {
     step++;
 
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc(new pcl::PointCloud<pcl::PointXYZIS>);
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc(new pcl::PointCloud<pcl::PointXYZSD>);
     fromROSMsg(*radar_msg, *radar_pc);
     voxel_filter.setInputCloud(radar_pc);
     voxel_filter.filter(*radar_pc);
-    intensity_filter.setInputCloud(radar_pc);
-    intensity_filter.filter(*radar_pc);
+    snr_filter.setInputCloud(radar_pc);
+    snr_filter.filter(*radar_pc);
     points_cache.push_back(radar_pc);
 
     gtsam::Pose3 current_pose(gtsam::Rot3(odom->pose.pose.orientation.w, odom->pose.pose.orientation.x,
@@ -130,13 +130,13 @@ void RadarPoseGraph::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
             last_loop_detect = detect_point;
 
             // build submap
-            pcl::PointCloud<pcl::PointXYZIS>::Ptr local_map =
+            pcl::PointCloud<pcl::PointXYZSD>::Ptr local_map =
                 build_submap(l.first, l.first - key_frame_search, l.first + key_frame_search);
-            pcl::PointCloud<pcl::PointXYZIS>::Ptr sub_map =
+            pcl::PointCloud<pcl::PointXYZSD>::Ptr sub_map =
                 build_submap(l.second, l.second - key_frame_search, l.second + key_frame_search);
 
             // find transform
-            pcl::PointCloud<pcl::PointXYZIS> aligned_map;
+            pcl::PointCloud<pcl::PointXYZSD> aligned_map;
             ndt_omp.setInputSource(local_map);
             ndt_omp.setInputTarget(sub_map);
             ndt_omp.align(aligned_map);

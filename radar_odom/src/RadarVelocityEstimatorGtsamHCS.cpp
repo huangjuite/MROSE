@@ -8,23 +8,23 @@ void RadarVelocityEstimatorGtsamHCS::set_uncertainty(
         gtsam::Vector2(azimuth_std, elevation_std));
 }
 
-gtsam::Vector2 RadarVelocityEstimatorGtsamHCS::toCelestial(pcl::PointXYZIS &p)
+gtsam::Vector2 RadarVelocityEstimatorGtsamHCS::toCelestial(pcl::PointXYZSD &p)
 {
     return gtsam::Vector2(atan2(p.y, p.x), atan2(p.z, sqrt(p.x * p.x + p.y * p.y)));
 }
 
 Eigen::Vector3d RadarVelocityEstimatorGtsamHCS::optimize(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc)
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc)
 {
     gtsam::NonlinearFactorGraph graph;
     gtsam::Values initial;
     initial.insert(0, initial_v);
 
     size_t n = 0;
-    for (pcl::PointXYZIS p : radar_pc->points)
+    for (pcl::PointXYZSD p : radar_pc->points)
     {
         gtsam::Vector2 cel = toCelestial(p);
-        auto dFactor = DopplerCelestial2Factor(0, C(n), p.speed, doppler_noise_model);
+        auto dFactor = DopplerCelestial2Factor(0, C(n), p.doppler, doppler_noise_model);
         graph.add(dFactor);
         graph.addPrior(C(n), cel, angle_noise_model);
         initial.insert(C(n), cel);
@@ -51,7 +51,7 @@ Eigen::Vector3d RadarVelocityEstimatorGtsamHCS::optimize(
 }
 
 Eigen::Matrix3d RadarVelocityEstimatorGtsamHCS::get_covariance(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
 
     return covariance_matrix;

@@ -240,7 +240,7 @@ namespace rplrio
     {
     }
 
-    template class DIOManager<pcl::PointXYZIS>;
-    template class DIOManager<pcl::PointXYZISW>;
+    template class DIOManager<pcl::PointXYZSD>;
+    template class DIOManager<pcl::PointXYZSDW>;
 
 }

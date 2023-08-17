@@ -37,7 +37,7 @@ private:
     gtsam::Pose3 previous_pose;
 
     deque<pair<gtsam::Pose3, pcl::PointCloud<pcl::PointXYZI>>> cache;
-    pcl::PassThrough<pcl::PointXYZI> intensity_filter;
+    pcl::PassThrough<pcl::PointXYZI> snr_filter;
 
     // pcl::search::KdTree<pcl::PointXYZI>::Ptr ec_tree;
     // EuclideanClusterExtraction<PointXYZI> ec;

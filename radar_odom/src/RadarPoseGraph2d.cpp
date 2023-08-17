@@ -15,8 +15,8 @@ RadarPoseGraph2d::RadarPoseGraph2d(NodeHandle *nh)
     // pcl init
     points_cache.push_back(nullptr); // align index with graph
     voxel_filter.setLeafSize(process_voxel_size, process_voxel_size, process_voxel_size);
-    intensity_filter.setFilterFieldName("intensity");
-    intensity_filter.setFilterLimits(snr_thresh, FLT_MAX);
+    snr_filter.setFilterFieldName("snr");
+    snr_filter.setFilterLimits(snr_thresh, FLT_MAX);
     // x_filter.setFilterFieldName("x");
     // x_filter.setFilterLimits(0, 8);
     // y_filter.setFilterFieldName("y");
@@ -88,9 +88,9 @@ pair<int, int> RadarPoseGraph2d::detect_loop(Values &nodes, uint step)
     return close_pairs;
 }
 
-PointCloud<PointXYZIS>::Ptr RadarPoseGraph2d::build_submap(uint origin_frame, uint start, uint end)
+PointCloud<PointXYZSD>::Ptr RadarPoseGraph2d::build_submap(uint origin_frame, uint start, uint end)
 {
-    PointCloud<PointXYZIS>::Ptr smap(new PointCloud<PointXYZIS>);
+    PointCloud<PointXYZSD>::Ptr smap(new PointCloud<PointXYZSD>);
     smap->header.frame_id = "map";
     Pose2 cp = init_values.at<Pose2>(X(origin_frame));
 
@@ -98,7 +98,7 @@ PointCloud<PointXYZIS>::Ptr RadarPoseGraph2d::build_submap(uint origin_frame, ui
     {
         Pose2 t2 = cp * cp.between(init_values.at<Pose2>(X(i)));
         Pose3 t = toPose3(t2);
-        PointCloud<PointXYZIS> p;
+        PointCloud<PointXYZSD> p;
         transformPointCloud(*points_cache[i], p, t.matrix());
         *smap += p;
     }
@@ -114,14 +114,14 @@ void RadarPoseGraph2d::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
 {
     step++;
 
-    PointCloud<PointXYZIS> tmp_pc;
-    PointCloud<PointXYZIS>::Ptr radar_pc(new PointCloud<PointXYZIS>);
+    PointCloud<PointXYZSD> tmp_pc;
+    PointCloud<PointXYZSD>::Ptr radar_pc(new PointCloud<PointXYZSD>);
     fromROSMsg(*radar_msg, tmp_pc);
     for (auto p : tmp_pc.points)
     {
         if (norm3(Point3(p.x, p.y, p.z)) < max_range)
         {
-            p.intensity = log(p.intensity);
+            p.snr = log(p.snr);
             radar_pc->points.push_back(p);
         }
     }
@@ -129,8 +129,8 @@ void RadarPoseGraph2d::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
     fromROSMsg(*radar_msg, *radar_pc);
     voxel_filter.setInputCloud(radar_pc);
     voxel_filter.filter(*radar_pc);
-    intensity_filter.setInputCloud(radar_pc);
-    intensity_filter.filter(*radar_pc);
+    snr_filter.setInputCloud(radar_pc);
+    snr_filter.filter(*radar_pc);
     points_cache.push_back(radar_pc);
 
     Pose3 cp3 = toPose3(*odom);
@@ -156,9 +156,9 @@ void RadarPoseGraph2d::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
         {
 
             // build submap
-            PointCloud<PointXYZIS>::Ptr local_map =
+            PointCloud<PointXYZSD>::Ptr local_map =
                 build_submap(l.first, l.first - key_frame_search, l.first + key_frame_search);
-            PointCloud<PointXYZIS>::Ptr sub_map =
+            PointCloud<PointXYZSD>::Ptr sub_map =
                 build_submap(l.second, l.second - key_frame_search, l.second + key_frame_search);
 
             // find transform
@@ -172,7 +172,7 @@ void RadarPoseGraph2d::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
             if (abs(bt.y()) > abs(bt.x()))
                 init_guess.block(0, 3, 3, 1) = Eigen::Vector3f(trans.x(), trans.y(), 0);
 
-            PointCloud<PointXYZIS> aligned_map;
+            PointCloud<PointXYZSD> aligned_map;
             pcl::transformPointCloud(*local_map, *local_map, init_guess);
             ndt_omp.setInputSource(local_map);
             ndt_omp.setInputTarget(sub_map);

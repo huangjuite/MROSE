@@ -69,7 +69,7 @@ private:
     visualization_msgs::Marker loop_marker;
 
     pcl::VoxelGrid<PointT> voxel_filter;
-    pcl::PassThrough<PointT> intensity_filter;
+    pcl::PassThrough<PointT> snr_filter;
     pcl::VoxelGrid<PointT> map_voxel_filter;
     pcl::PassThrough<PointT> map_snr_filter;
     pclomp::NormalDistributionsTransform<PointT, PointT> ndt_omp;

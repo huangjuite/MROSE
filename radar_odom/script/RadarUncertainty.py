@@ -22,8 +22,8 @@ class PRService():
             PointField('x', 0, PointField.FLOAT32, 1),
             PointField('y', 4, PointField.FLOAT32, 1),
             PointField('z', 8, PointField.FLOAT32, 1),
-            PointField('intensity', 12, PointField.FLOAT32, 1),
-            PointField('speed', 16, PointField.FLOAT32, 1),
+            PointField('snr', 12, PointField.FLOAT32, 1),
+            PointField('doppler', 16, PointField.FLOAT32, 1),
             PointField('weight', 20, PointField.FLOAT32, 1),
         ]
 

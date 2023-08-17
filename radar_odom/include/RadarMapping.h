@@ -46,8 +46,8 @@ private:
     float process_voxel_size = 0.2;
     float map_voxel_size = 0;
     float snr_thresh = 50;
-    map<uint, pcl::PointCloud<PointXYZIS>::Ptr> cache;
-    pcl::PointCloud<PointXYZIS>::Ptr full_map;
+    map<uint, pcl::PointCloud<PointXYZSD>::Ptr> cache;
+    pcl::PointCloud<PointXYZSD>::Ptr full_map;
     Pose3 last_pose;
 
     Publisher pub_map;
@@ -62,11 +62,11 @@ private:
     dynamic_reconfigure::Server<radar_odom::mappingConfig> server;
     dynamic_reconfigure::Server<radar_odom::mappingConfig>::CallbackType f;
 
-    VoxelGrid<PointXYZIS> voxel_filter;
-    VoxelGrid<PointXYZIS> map_voxel_filter;
-    PassThrough<PointXYZIS> intensity_filter;
-    PassThrough<PointXYZIS> x_filter;
-    PassThrough<PointXYZIS> y_filter;
+    VoxelGrid<PointXYZSD> voxel_filter;
+    VoxelGrid<PointXYZSD> map_voxel_filter;
+    PassThrough<PointXYZSD> snr_filter;
+    PassThrough<PointXYZSD> x_filter;
+    PassThrough<PointXYZSD> y_filter;
 
     void cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                  const nav_msgs::PathConstPtr path);

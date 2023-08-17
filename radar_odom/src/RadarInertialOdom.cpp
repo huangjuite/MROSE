@@ -3,9 +3,9 @@
 RadarIO::RadarIO(NodeHandle *nh)
 {
     // radar init
-    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    pre_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    pre_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
     ndt_omp.setResolution(1.5);
     ndt_omp.setNumThreads(8);
     ndt_omp.setNeighborhoodSearchMethod(pclomp::DIRECT7);
@@ -114,7 +114,7 @@ void RadarIO::cb_radar(const sensor_msgs::PointCloud2 pc_msg)
         auto t1 = ros::WallTime::now();
         ndt_omp.setInputSource(inlier_pc);
         ndt_omp.setInputTarget(pre_pc);
-        pcl::PointCloud<pcl::PointXYZIS> result_pc;
+        pcl::PointCloud<pcl::PointXYZSD> result_pc;
         ndt_omp.align(result_pc);
         Eigen::Matrix4f tf = ndt_omp.getFinalTransformation();
         auto t2 = ros::WallTime::now();

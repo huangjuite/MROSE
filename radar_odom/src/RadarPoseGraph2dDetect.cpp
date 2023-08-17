@@ -14,8 +14,8 @@ RadarPoseGraph2dDetect::RadarPoseGraph2dDetect(NodeHandle *nh)
     // pcl init
     points_cache.push_back(nullptr); // align index with graph
     voxel_filter.setLeafSize(process_voxel_size, process_voxel_size, process_voxel_size);
-    intensity_filter.setFilterFieldName("intensity");
-    intensity_filter.setFilterLimits(snr_thresh, FLT_MAX);
+    snr_filter.setFilterFieldName("snr");
+    snr_filter.setFilterLimits(snr_thresh, FLT_MAX);
 
     // gtsam init
     graph = new NonlinearFactorGraph();
@@ -83,9 +83,9 @@ pair<int, int> RadarPoseGraph2dDetect::detect_loop(Values &nodes, uint step)
     return close_pairs;
 }
 
-PointCloud<PointXYZIS>::Ptr RadarPoseGraph2dDetect::build_submap(uint origin_frame, uint start, uint end)
+PointCloud<PointXYZSD>::Ptr RadarPoseGraph2dDetect::build_submap(uint origin_frame, uint start, uint end)
 {
-    PointCloud<PointXYZIS>::Ptr smap(new PointCloud<PointXYZIS>);
+    PointCloud<PointXYZSD>::Ptr smap(new PointCloud<PointXYZSD>);
     smap->header.frame_id = "map";
     Pose2 cp = init_values.at<Pose2>(X(origin_frame));
 
@@ -93,7 +93,7 @@ PointCloud<PointXYZIS>::Ptr RadarPoseGraph2dDetect::build_submap(uint origin_fra
     {
         Pose2 t2 = cp.between(init_values.at<Pose2>(X(i)));
         Pose3 t = toPose3(t2);
-        PointCloud<PointXYZIS> p;
+        PointCloud<PointXYZSD> p;
         transformPointCloud(*points_cache[i], p, t.matrix());
         *smap += p;
     }
@@ -109,12 +109,12 @@ void RadarPoseGraph2dDetect::cb_node(const sensor_msgs::PointCloud2ConstPtr rada
 {
     step++;
 
-    PointCloud<PointXYZIS>::Ptr radar_pc(new PointCloud<PointXYZIS>);
+    PointCloud<PointXYZSD>::Ptr radar_pc(new PointCloud<PointXYZSD>);
     fromROSMsg(*radar_msg, *radar_pc);
     logdB_SNR(radar_pc);
 
-    intensity_filter.setInputCloud(radar_pc);
-    intensity_filter.filter(*radar_pc);
+    snr_filter.setInputCloud(radar_pc);
+    snr_filter.filter(*radar_pc);
     points_cache.push_back(radar_pc);
 
     Pose3 cp3 = toPose3(*odom);
@@ -135,7 +135,7 @@ void RadarPoseGraph2dDetect::cb_node(const sensor_msgs::PointCloud2ConstPtr rada
     // uint end = step;
     // uint start = max(0, int(step - 20));
     // printf("build submap %d, %d\n", start, end);
-    // PointCloud<PointXYZIS>::Ptr local_map =
+    // PointCloud<PointXYZSD>::Ptr local_map =
     //     build_submap(center, start, end);
 
     // scManager.makeAndSaveScancontextAndKeys(*local_map);
@@ -164,7 +164,7 @@ void RadarPoseGraph2dDetect::cb_node(const sensor_msgs::PointCloud2ConstPtr rada
         last_loop_detect = detect_point;
         printf("build submap %d, %d\n", detect_point - sc_frames, detect_point + sc_frames);
 
-        PointCloud<PointXYZIS>::Ptr local_map =
+        PointCloud<PointXYZSD>::Ptr local_map =
             build_submap(detect_point, detect_point - sc_frames, detect_point + sc_frames);
 
         // sensor_msgs::PointCloud2 local_pc_msg;
@@ -202,9 +202,9 @@ void RadarPoseGraph2dDetect::cb_node(const sensor_msgs::PointCloud2ConstPtr rada
         //     if (l.second != -1)
         //     {
         //         // build submap
-        //         PointCloud<PointXYZIS> aligned_map;
+        //         PointCloud<PointXYZSD> aligned_map;
         //
-        //         PointCloud<PointXYZIS>::Ptr sub_map =
+        //         PointCloud<PointXYZSD>::Ptr sub_map =
         //             build_submap(l.second, l.second - key_frame_search, l.second + key_frame_search);
 
         //         // find transform

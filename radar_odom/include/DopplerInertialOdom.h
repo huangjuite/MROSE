@@ -35,7 +35,7 @@
 #include "utils.h"
 #include "params.h"
 
-typedef pcl::PointXYZIS PointType;
+typedef pcl::PointXYZSD PointType;
 typedef RadarVelocityEstimatorCeres VestType;
 
 class DopplerIO

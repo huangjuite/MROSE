@@ -235,17 +235,17 @@ geometry_msgs::PoseStamped toROSPoseStamped(const gtsam::Pose2 gtsam_pose, std_m
     return pose_stamped;
 }
 
-pcl::PointCloud<pcl::PointXYZIS> from_xrio_type(pcl::PointCloud<pcl::PointXYZSNV> &radar_xrio)
+pcl::PointCloud<pcl::PointXYZSD> from_xrio_type(pcl::PointCloud<pcl::PointXYZSNV> &radar_xrio)
 {
-    pcl::PointCloud<pcl::PointXYZIS> radar_rpl;
+    pcl::PointCloud<pcl::PointXYZSD> radar_rpl;
     radar_rpl.resize(radar_xrio.size());
     for (size_t i = 0; i < radar_xrio.points.size(); i++)
     {
         radar_rpl.points[i].x = radar_xrio.points[i].x;
         radar_rpl.points[i].y = radar_xrio.points[i].y;
         radar_rpl.points[i].z = radar_xrio.points[i].z;
-        radar_rpl.points[i].intensity = radar_xrio.points[i].snr_db;
-        radar_rpl.points[i].speed = radar_xrio.points[i].v_doppler_mps;
+        radar_rpl.points[i].snr = radar_xrio.points[i].snr_db;
+        radar_rpl.points[i].doppler = radar_xrio.points[i].v_doppler_mps;
     }
 
     return radar_rpl;
@@ -258,27 +258,27 @@ Eigen::Matrix4f toMatrix(tf::StampedTransform tf_ros)
     return gtsam::Pose3(gtsam::Rot3(q.w(), q.x(), q.y(), q.z()), gtsam::Point3(p.x(), p.y(), p.z())).matrix().cast<float>();
 }
 
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZIS>::Ptr pc)
+void logdB_SNR(pcl::PointCloud<pcl::PointXYZSD>::Ptr pc)
 {
     /**
      * @brief take log on the signal to noise ratio value
-     * @param pc pcl::PointCloud<pcl::PointXYZIS>::Ptr change SNR inline
+     * @param pc pcl::PointCloud<pcl::PointXYZSD>::Ptr change SNR inline
      */
     for (size_t i = 0; i < pc->size(); i++)
     {
-        pc->points[i].intensity = log(pc->points[i].intensity);
+        pc->points[i].snr = log(pc->points[i].snr);
     }
 }
 
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZISW>::Ptr pc)
+void logdB_SNR(pcl::PointCloud<pcl::PointXYZSDW>::Ptr pc)
 {
     /**
      * @brief take log on the signal to noise ratio value
-     * @param pc pcl::PointCloud<pcl::PointXYZIS>::Ptr change SNR inline
+     * @param pc pcl::PointCloud<pcl::PointXYZSD>::Ptr change SNR inline
      */
     for (size_t i = 0; i < pc->size(); i++)
     {
-        pc->points[i].intensity = log(pc->points[i].intensity);
+        pc->points[i].snr = log(pc->points[i].snr);
     }
 }
 

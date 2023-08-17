@@ -4,7 +4,7 @@ RadarVelocityEstimator::RadarVelocityEstimator(SharedNoiseModel doppler_noiseMod
 {
     this->doppler_noise_model = doppler_noiseModel;
     this->inlier_thresh = 0.1;
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
 }
 
 void RadarVelocityEstimator::set_inlier_thresh(float thresh)
@@ -22,20 +22,20 @@ void RadarVelocityEstimator::set_prior_noise_model(SharedNoiseModel noise_model)
     this->prior_noise_model = noise_model;
 }
 
-float RadarVelocityEstimator::doppler_projection(pcl::PointXYZIS p, Vector3 v)
+float RadarVelocityEstimator::doppler_projection(pcl::PointXYZSD p, Vector3 v)
 {
     Vector3 unit_r(p.x, p.y, p.z);
     unit_r = -unit_r / unit_r.norm();
     return unit_r.dot(v);
 }
 
-Vector3 RadarVelocityEstimator::optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc)
+Vector3 RadarVelocityEstimator::optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc)
 {
     NonlinearFactorGraph graph;
 
-    for (pcl::PointXYZIS p : radar_pc->points)
+    for (pcl::PointXYZSD p : radar_pc->points)
     {
-        auto dFactor = DopplerMeasurementFactor(0, p.x, p.y, p.z, p.speed, doppler_noise_model);
+        auto dFactor = DopplerMeasurementFactor(0, p.x, p.y, p.z, p.doppler, doppler_noise_model);
         graph.add(dFactor);
     }
 
@@ -50,14 +50,14 @@ Vector3 RadarVelocityEstimator::optimize(pcl::PointCloud<pcl::PointXYZIS>::Const
     return v_est;
 }
 
-pcl::PointCloud<pcl::PointXYZIS>::Ptr RadarVelocityEstimator::get_inlier(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Vector3 velocity)
+pcl::PointCloud<pcl::PointXYZSD>::Ptr RadarVelocityEstimator::get_inlier(
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Vector3 velocity)
 {
     // collect inliers
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    for (pcl::PointXYZIS p : radar_pc->points)
+    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    for (pcl::PointXYZSD p : radar_pc->points)
     {
-        float err = abs(doppler_projection(p, velocity) - p.speed);
+        float err = abs(doppler_projection(p, velocity) - p.doppler);
         if (err < inlier_thresh)
         {
             inlier_pc->push_back(p);
@@ -68,13 +68,13 @@ pcl::PointCloud<pcl::PointXYZIS>::Ptr RadarVelocityEstimator::get_inlier(
 }
 
 Matrix RadarVelocityEstimator::get_covariance(
-    pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Vector3 velocity)
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Vector3 velocity)
 {
     NonlinearFactorGraph graph;
 
-    for (pcl::PointXYZIS p : radar_pc->points)
+    for (pcl::PointXYZSD p : radar_pc->points)
     {
-        auto dFactor = DopplerMeasurementFactor(0, p.x, p.y, p.z, p.speed, nullptr);
+        auto dFactor = DopplerMeasurementFactor(0, p.x, p.y, p.z, p.doppler, nullptr);
         graph.add(dFactor);
     }
 

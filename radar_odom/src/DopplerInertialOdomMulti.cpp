@@ -3,7 +3,7 @@
 DopplerIOMulti::DopplerIOMulti(NodeHandle *nh)
 {
     // radar init
-    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
 
     // priors
     Pose3 prior_pose(Rot3::Quaternion(1, 0, 0, 0), Point3(0, 0, 0));
@@ -148,7 +148,7 @@ void DopplerIOMulti::cb_radar(const sensor_msgs::PointCloud2ConstPtr pc_msg_cent
     // local radar velocity
     velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
     Vector3 measured_v = velocity_estimator->optimize(radar_pc);
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_inlier =
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_inlier =
         velocity_estimator->get_inlier(radar_pc, measured_v);
     Matrix radar_velocity_cov = velocity_estimator->get_covariance(
         radar_inlier, measured_v);

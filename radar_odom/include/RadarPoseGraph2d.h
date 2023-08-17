@@ -67,7 +67,7 @@ private:
 
     uint step = 0;
     uint last_loop_detect = 0;
-    vector<pcl::PointCloud<PointXYZIS>::Ptr> points_cache;
+    vector<pcl::PointCloud<PointXYZSD>::Ptr> points_cache;
     vector<pair<int, int>> loop_cache;
     Pose2 last_pose;
 
@@ -77,11 +77,11 @@ private:
     nav_msgs::Path path;
     visualization_msgs::Marker loop_marker;
 
-    VoxelGrid<PointXYZIS> voxel_filter;
-    PassThrough<PointXYZIS> intensity_filter;
-    PassThrough<PointXYZIS> x_filter;
-    PassThrough<PointXYZIS> y_filter;
-    pclomp::NormalDistributionsTransform<PointXYZIS, PointXYZIS> ndt_omp;
+    VoxelGrid<PointXYZSD> voxel_filter;
+    PassThrough<PointXYZSD> snr_filter;
+    PassThrough<PointXYZSD> x_filter;
+    PassThrough<PointXYZSD> y_filter;
+    pclomp::NormalDistributionsTransform<PointXYZSD, PointXYZSD> ndt_omp;
 
     tf::TransformBroadcaster br;
     message_filters::Subscriber<sensor_msgs::PointCloud2> sub_radar;
@@ -95,7 +95,7 @@ private:
     ISAM2 *isam2;
 
     pair<int, int> detect_loop(Values &nodes, uint step);
-    PointCloud<PointXYZIS>::Ptr build_submap(uint origin_frame, uint start, uint end);
+    PointCloud<PointXYZSD>::Ptr build_submap(uint origin_frame, uint start, uint end);
     void cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                  const nav_msgs::OdometryConstPtr odom);
 

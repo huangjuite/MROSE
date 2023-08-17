@@ -59,8 +59,8 @@ private:
     float process_voxel_size = 0.2;
     float map_voxel_size = 0;
     float snr_thresh = 50;
-    map<uint, pcl::PointCloud<PointXYZIS>::Ptr> cache;
-    pcl::PointCloud<PointXYZIS>::Ptr full_map;
+    map<uint, pcl::PointCloud<PointXYZSD>::Ptr> cache;
+    pcl::PointCloud<PointXYZSD>::Ptr full_map;
     Pose3 last_pose;
 
     Publisher pub_map, m_mapPub, m_markerPub;
@@ -75,11 +75,11 @@ private:
     dynamic_reconfigure::Server<radar_odom::mappingConfig> server;
     dynamic_reconfigure::Server<radar_odom::mappingConfig>::CallbackType f;
 
-    VoxelGrid<PointXYZIS> voxel_filter;
-    VoxelGrid<PointXYZIS> map_voxel_filter;
-    PassThrough<PointXYZIS> intensity_filter;
-    PassThrough<PointXYZIS> x_filter;
-    PassThrough<PointXYZIS> y_filter;
+    VoxelGrid<PointXYZSD> voxel_filter;
+    VoxelGrid<PointXYZSD> map_voxel_filter;
+    PassThrough<PointXYZSD> snr_filter;
+    PassThrough<PointXYZSD> x_filter;
+    PassThrough<PointXYZSD> y_filter;
 
     OcTreeT *m_octree;
     octomap::KeyRay m_keyRay; // temp storage for ray casting
@@ -106,7 +106,7 @@ private:
     void update_map();
     void cb_config(radar_odom::mappingConfig &config, uint32_t level);
     void cb_loop(const visualization_msgs::Marker loop);
-    void insert_scan(const pcl::PointCloud<pcl::PointXYZIS>::ConstPtr map_part,
+    void insert_scan(const pcl::PointCloud<pcl::PointXYZSD>::ConstPtr map_part,
                      const octomath::Vector3 sensorOrigin);
     void reset_octree_map();
     void handlePreNodeTraversal(const ros::Time &rostime);

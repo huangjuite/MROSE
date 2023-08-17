@@ -56,7 +56,7 @@ private:
     const uint key_frame_search = 20; // step
     const double loop_distance_thresh = 0.5;
     bool enable_loop_close = true;
-    std::vector<pcl::PointCloud<pcl::PointXYZIS>::Ptr> points_cache;
+    std::vector<pcl::PointCloud<pcl::PointXYZSD>::Ptr> points_cache;
     std::vector<std::pair<int, int>> loop_cache;
     gtsam::Pose3 last_pose;
 
@@ -66,9 +66,9 @@ private:
     nav_msgs::Path path;
     visualization_msgs::Marker loop_marker;
 
-    pcl::VoxelGrid<pcl::PointXYZIS> voxel_filter;
-    pcl::PassThrough<pcl::PointXYZIS> intensity_filter;
-    pclomp::NormalDistributionsTransform<pcl::PointXYZIS, pcl::PointXYZIS> ndt_omp;
+    pcl::VoxelGrid<pcl::PointXYZSD> voxel_filter;
+    pcl::PassThrough<pcl::PointXYZSD> snr_filter;
+    pclomp::NormalDistributionsTransform<pcl::PointXYZSD, pcl::PointXYZSD> ndt_omp;
 
     tf::TransformBroadcaster br;
     message_filters::Subscriber<sensor_msgs::PointCloud2> sub_radar;
@@ -82,7 +82,7 @@ private:
     // std::unique_ptr<gtsam::ISAM2> isam2;
 
     std::pair<int, int> detect_loop(gtsam::Values &nodes, uint step);
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr build_submap(uint step, uint start, uint end);
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr build_submap(uint step, uint start, uint end);
     void cb_node(const sensor_msgs::PointCloud2ConstPtr radar_msg,
                  const nav_msgs::OdometryConstPtr odom);
 

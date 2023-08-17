@@ -135,7 +135,7 @@ private:
     RadarVelocityEstimator *velocity_estimator;
     // RadarVelocityEstimatorCelestial *velocity_estimator;
     // RadarVelocityEstimatorHCS *velocity_estimator;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
     LandmarkTracker tracker;
 
     // imu settings

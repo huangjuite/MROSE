@@ -25,18 +25,18 @@ private:
     SharedNoiseModel prior_noise_model;
     Vector3 initial_v;
     Matrix covariance_matrix;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr inlier_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr inlier_pc;
     float inlier_thresh;
 
-    float doppler_projection(pcl::PointXYZIS p, Vector3 v);
+    float doppler_projection(pcl::PointXYZSD p, Vector3 v);
 
 public:
     RadarVelocityEstimator(SharedNoiseModel doppler_noiseModel);
     ~RadarVelocityEstimator();
 
-    gtsam::Vector3 optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
-    Matrix get_covariance(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Vector3 velocity);
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr get_inlier(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Vector3 velocity);
+    gtsam::Vector3 optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc);
+    Matrix get_covariance(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Vector3 velocity);
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr get_inlier(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Vector3 velocity);
     void set_prior_noise_model(SharedNoiseModel noise_model);
     void set_initial_velocity(Vector3 init_v);
     void set_inlier_thresh(float thresh);

@@ -1,6 +1,6 @@
 #include "RadarVelocityEstimatorCeresWeighted.h"
 
-Eigen::Vector3d RadarVelocityEstimatorCeresWeighted::optimize(pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc)
+Eigen::Vector3d RadarVelocityEstimatorCeresWeighted::optimize(pcl::PointCloud<pcl::PointXYZSDW>::ConstPtr radar_pc)
 {
     double v_est[3] = {initial_v[0], initial_v[1], initial_v[2]};
 
@@ -9,10 +9,10 @@ Eigen::Vector3d RadarVelocityEstimatorCeresWeighted::optimize(pcl::PointCloud<pc
 
     problem.AddParameterBlock(v_est, 3);
 
-    for (pcl::PointXYZISW p : radar_pc->points)
+    for (pcl::PointXYZSDW p : radar_pc->points)
     {
         Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
-        DopplerCostFunctionWeighted *cost_function = new DopplerCostFunctionWeighted(pos, p.speed, p.weight);
+        DopplerCostFunctionWeighted *cost_function = new DopplerCostFunctionWeighted(pos, p.doppler, p.weight);
         ceres::ResidualBlockId id = problem.AddResidualBlock(cost_function, nullptr, v_est);
         residual_ids.push_back(id);
     }
@@ -47,7 +47,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresWeighted::optimize(pcl::PointCloud<pc
 }
 
 Eigen::Matrix3d RadarVelocityEstimatorCeresWeighted::get_covariance(
-    pcl::PointCloud<pcl::PointXYZISW>::ConstPtr radar_pc, Eigen::Vector3d velocity)
+    pcl::PointCloud<pcl::PointXYZSDW>::ConstPtr radar_pc, Eigen::Vector3d velocity)
 {
     return covariance_matrix;
 }

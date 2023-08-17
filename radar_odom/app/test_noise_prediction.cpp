@@ -172,8 +172,8 @@ int main(int argc, char *argv[])
                     // std::cout << "\033c";
                     std::cout << current_t << ", " << ratio << std::endl;
 
-                    pcl::PointCloud<pcl::PointXYZISW>::Ptr radar_pc_noise;
-                    radar_pc_noise.reset(new pcl::PointCloud<pcl::PointXYZISW>);
+                    pcl::PointCloud<pcl::PointXYZSDW>::Ptr radar_pc_noise;
+                    radar_pc_noise.reset(new pcl::PointCloud<pcl::PointXYZSDW>);
                     pcl::fromROSMsg(req.response.output, *radar_pc_noise);
                     v_opt_noise.set_initial_velocity(Eigen::Vector3d(1, 0, 0));
                     gtsam::Vector3 measured_v_weighted = v_opt_noise.optimize(radar_pc_noise);
@@ -184,8 +184,8 @@ int main(int argc, char *argv[])
                     // measured_v_weighted[1] = radar_velocity_cov_weighted(1,1);
                     // measured_v_weighted[2] = radar_velocity_cov_weighted(2,2);
 
-                    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-                    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+                    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
+                    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
                     pcl::fromROSMsg(*radar_msg, *radar_pc);
                     v_opt.set_initial_velocity(Eigen::Vector3d(1, 0, 0));
                     gtsam::Vector3 measured_v = v_opt.optimize(radar_pc);

@@ -38,13 +38,13 @@ private:
 
     noiseModel::Robust::shared_ptr robustNoise;
 
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr pre_pc;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr inlier_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr pre_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr inlier_pc;
     sensor_msgs::PointCloud2 inliers_msg;
 
     Eigen::Matrix4f global_pose;
-    pcl::IterativeClosestPoint<pcl::PointXYZIS, pcl::PointXYZIS> icp;
+    pcl::IterativeClosestPoint<pcl::PointXYZSD, pcl::PointXYZSD> icp;
 
     void cb_radar(const sensor_msgs::PointCloud2 pc_msg);
 
@@ -56,9 +56,9 @@ public:
 ScanMatch::ScanMatch(NodeHandle *nh)
 {
     // radar init
-    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    pre_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    pre_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
 
     // icp init
     global_pose = Eigen::Matrix4f::Identity();
@@ -104,7 +104,7 @@ void ScanMatch::cb_radar(const sensor_msgs::PointCloud2 pc_msg)
     icp.setInputSource(inlier_pc);
     icp.setInputTarget(pre_pc);
 
-    pcl::PointCloud<pcl::PointXYZIS> result_pc;
+    pcl::PointCloud<pcl::PointXYZSD> result_pc;
     icp.align(result_pc);
     Eigen::Matrix4f tf = icp.getFinalTransformation();
     cout << "==========================" << endl;

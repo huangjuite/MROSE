@@ -71,7 +71,7 @@ public:
     }
 };
 
-class RadarVelocityEstimatorCeresHCS : public RadarVelocityEstimatorBase<pcl::PointXYZIS>
+class RadarVelocityEstimatorCeresHCS : public RadarVelocityEstimatorBase<pcl::PointXYZSD>
 {
 private:
     double doppler_std;
@@ -80,7 +80,7 @@ private:
 
 public:
     void set_uncertainty(double doppler_std, double azimuth_std, double elevation_std);
-    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc);
-    Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZIS>::ConstPtr radar_pc, Eigen::Vector3d velocity);
-    static Eigen::Vector2d toHCS(pcl::PointXYZIS &p);
+    Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc);
+    Eigen::Matrix3d get_covariance(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Eigen::Vector3d velocity);
+    static Eigen::Vector2d toHCS(pcl::PointXYZSD &p);
 };

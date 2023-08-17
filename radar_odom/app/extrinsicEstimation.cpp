@@ -289,8 +289,8 @@ void DopplerIOex::update()
 
 void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
 {
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
+    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
 
     pcl::fromROSMsg(*radar_msg, *radar_pc);
     double current_t = radar_msg->header.stamp.toSec();
@@ -318,7 +318,7 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
 
     velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
     gtsam::Vector3 measured_v = velocity_estimator->optimize(radar_pc);
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_inlier =
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_inlier =
         velocity_estimator->get_inlier(radar_pc, measured_v);
 
     // second inlier estimate

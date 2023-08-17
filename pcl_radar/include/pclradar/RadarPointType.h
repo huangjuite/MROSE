@@ -8,19 +8,19 @@
 
 namespace pcl
 {
-    struct PointXYZIS
+    struct PointXYZSD
     {
         PCL_ADD_POINT4D;
-        float intensity;
-        float speed;
+        float snr;
+        float doppler;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
     } EIGEN_ALIGN16;
 
-    struct PointXYZISW
+    struct PointXYZSDW
     {
         PCL_ADD_POINT4D;
-        float intensity;
-        float speed;
+        float snr;
+        float doppler;
         float weight;
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
     } EIGEN_ALIGN16;
@@ -36,12 +36,12 @@ namespace pcl
 }
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(
-    pcl::PointXYZIS,
-    (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(float, speed, speed))
+    pcl::PointXYZSD,
+    (float, x, x)(float, y, y)(float, z, z)(float, snr, snr)(float, doppler, doppler))
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(
-    pcl::PointXYZISW,
-    (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(float, speed, speed)(float, weight, weight))
+    pcl::PointXYZSDW,
+    (float, x, x)(float, y, y)(float, z, z)(float, snr, snr)(float, doppler, doppler)(float, weight, weight))
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(
     pcl::PointXYZSNV,

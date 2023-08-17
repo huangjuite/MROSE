@@ -40,15 +40,15 @@ private:
 
     noiseModel::Robust::shared_ptr robustNoise;
 
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr pre_pc;
-    pcl::PointCloud<pcl::PointXYZIS>::Ptr inlier_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr pre_pc;
+    pcl::PointCloud<pcl::PointXYZSD>::Ptr inlier_pc;
     sensor_msgs::PointCloud2 inliers_msg;
 
-    pcl::VoxelGrid<pcl::PointXYZIS> voxel_filter;
+    pcl::VoxelGrid<pcl::PointXYZSD> voxel_filter;
 
     Eigen::Matrix4f global_pose;
-    pclomp::NormalDistributionsTransform<pcl::PointXYZIS, pcl::PointXYZIS> ndt_omp;
+    pclomp::NormalDistributionsTransform<pcl::PointXYZSD, pcl::PointXYZSD> ndt_omp;
 
     void cb_radar(const sensor_msgs::PointCloud2 pc_msg);
 
@@ -60,9 +60,9 @@ public:
 ScanMatch::ScanMatch(NodeHandle *nh)
 {
     // radar init
-    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    pre_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
-    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
+    radar_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    pre_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
+    inlier_pc.reset(new pcl::PointCloud<pcl::PointXYZSD>);
 
     // ndt init
     global_pose = Eigen::Matrix4f::Identity();
@@ -114,7 +114,7 @@ void ScanMatch::cb_radar(const sensor_msgs::PointCloud2 pc_msg)
     ndt_omp.setInputSource(inlier_pc);
     ndt_omp.setInputTarget(pre_pc);
 
-    pcl::PointCloud<pcl::PointXYZIS> result_pc;
+    pcl::PointCloud<pcl::PointXYZSD> result_pc;
     ndt_omp.align(result_pc);
     Eigen::Matrix4f tf = ndt_omp.getFinalTransformation();
     cout << "==========================" << endl;
