@@ -4,6 +4,7 @@
 #include <vector>
 #include <filesystem>
 #include <memory>
+#include <signal.h>
 #include <boost/foreach.hpp>
 #define foreach BOOST_FOREACH
 
@@ -41,7 +42,7 @@
 #include "params.h"
 
 // #define PREDICT
-#define CERES_HCS
+// #define CERES_HCS
 // #define GTSAM_HCS
 
 #ifdef PREDICT
@@ -75,6 +76,7 @@ class DopplerIOBag
 private:
     rplrio::Params params;
     std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
+    std::string save_path = "/tmp/log_rio.csv";
 
     ros::NodeHandle *nh;
 
@@ -96,10 +98,17 @@ public:
 
     void cb_radar(const sensor_msgs::PointCloud2 &pc_msg);
     void cb_imu(const sensor_msgs::Imu::ConstPtr &imu);
+
+    std::ofstream log_file;
 };
 
 DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 {
+    ros::param::get("~save_path", save_path);
+    log_file.open(save_path);
+    log_file << std::fixed << std::setprecision(15);
+    log_file << "stamp, px, py, pz, rx, ry, rz, rw" << std::endl;
+
     params = rplrio::get_params(*nh);
     dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
         params, std::make_shared<VestType>());
@@ -131,6 +140,16 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 
 void DopplerIOBag::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe)
 {
+    auto p = keyframe->state.pose();
+    log_file << keyframe->stamp << ", "
+             << p.translation().x() << ", "
+             << p.translation().y() << ", "
+             << p.translation().z() << ", "
+             << p.rotation().quaternion().x() << ", "
+             << p.rotation().quaternion().y() << ", "
+             << p.rotation().quaternion().z() << ", "
+             << p.rotation().quaternion().w() << std::endl;
+
     auto current_time = ros::Time::now();
     nav_msgs::Odometry odom = toOdometry(keyframe->state.pose().matrix(), keyframe->pose_cov);
     odom.header.stamp = current_time;
@@ -220,12 +239,10 @@ int main(int argc, char *argv[])
 
     DopplerIOBag runner(&nh);
     ros::Publisher pub_img = nh.advertise<sensor_msgs::Image>("/camera/left/image_color", 1);
-    ;
     auto predict_noise = nh.serviceClient<radar_odom::Prediction>("radar_uncertainty");
 
     std::string bag_folder;
     ros::param::get("~bag_folder", bag_folder);
-    std::cout << bag_folder << std::endl;
 
     rplrio::Params params = rplrio::get_params(nh);
     std::vector<Eigen::Vector3d> body_velocity, radar_velocity;
@@ -242,6 +259,7 @@ int main(int argc, char *argv[])
         topics.push_back(params.radars[r].topic);
     }
     topics.push_back(params.imu_topic);
+    topics.push_back("/camera/left/image_color");
 
     std::cout << "input any to start:\n";
     std::string tmp;
@@ -272,23 +290,28 @@ int main(int argc, char *argv[])
                     runner.cb_radar(req.response.output);
                 }
 #endif
+                continue;
             }
 
             sensor_msgs::Imu::ConstPtr imu_msg = m.instantiate<sensor_msgs::Imu>();
             if (imu_msg != NULL)
             {
                 runner.cb_imu(imu_msg);
+                continue;
             }
 
-            // sensor_msgs::Image::ConstPtr img_msg = m.instantiate<sensor_msgs::Image>();
-            // if (img_msg != NULL)
-            // {
-            //     pub_img.publish(imu_msg);
-            // }
+            sensor_msgs::Image::ConstPtr img_msg = m.instantiate<sensor_msgs::Image>();
+            if (img_msg != NULL && m.getTopic() == "/camera/left/image_color")
+            {
+                pub_img.publish(img_msg);
+                continue;
+            }
         }
 
         bag.close();
     }
+
+    runner.log_file.close();
 
     return 0;
 }

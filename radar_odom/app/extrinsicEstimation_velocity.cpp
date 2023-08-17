@@ -148,6 +148,11 @@ int main(int argc, char *argv[])
     topics.push_back(radarParam.topic);
 
     RadarVelocityEstimatorCeres v_opt;
+    // RadarVelocityEstimatorCeresHCS v_opt;
+    // auto radar_p = params.radars[params.radar_list[0]];
+    // v_opt.set_uncertainty(
+    //     radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
+
     gtsam::NonlinearFactorGraph graph;
     gtsam::Values init_values;
     init_values.insert(0, gtsam::Rot3(radarParam.R_r_b));

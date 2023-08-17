@@ -31,9 +31,9 @@ public:
 
         if (jacobians != nullptr && jacobians[0] != nullptr)
         {
-            jacobians[0][0] = x;
-            jacobians[0][1] = y;
-            jacobians[0][2] = z;
+            jacobians[0][0] = x / s_;
+            jacobians[0][1] = y / s_;
+            jacobians[0][2] = z / s_;
         }
 
         if (jacobians != nullptr && jacobians[1] != nullptr)
@@ -42,6 +42,9 @@ public:
                               ceres::cos(phi) * ceres::cos(theta) * v[1];
             jacobians[1][1] = -ceres::sin(phi) * (ceres::cos(theta) * v[0] + ceres::sin(theta) * v[1]) +
                               ceres::cos(phi) * v[2];
+
+            jacobians[1][0] /= s_;
+            jacobians[1][1] /= s_;
         }
 
         return true;

@@ -180,9 +180,9 @@ int main(int argc, char *argv[])
                     gtsam::Matrix3 radar_velocity_cov_weighted = v_opt_noise.get_covariance(
                         radar_pc_noise, measured_v_weighted);
 
-                    measured_v_weighted[0] = radar_velocity_cov_weighted(0,0);
-                    measured_v_weighted[1] = radar_velocity_cov_weighted(1,1);
-                    measured_v_weighted[2] = radar_velocity_cov_weighted(2,2);
+                    // measured_v_weighted[0] = radar_velocity_cov_weighted(0,0);
+                    // measured_v_weighted[1] = radar_velocity_cov_weighted(1,1);
+                    // measured_v_weighted[2] = radar_velocity_cov_weighted(2,2);
 
                     pcl::PointCloud<pcl::PointXYZIS>::Ptr radar_pc;
                     radar_pc.reset(new pcl::PointCloud<pcl::PointXYZIS>);
@@ -192,9 +192,9 @@ int main(int argc, char *argv[])
                     gtsam::Matrix3 radar_velocity_cov = v_opt.get_covariance(
                         radar_pc, measured_v);
 
-                    measured_v[0] = radar_velocity_cov(0,0);
-                    measured_v[1] = radar_velocity_cov(1,1);
-                    measured_v[2] = radar_velocity_cov(2,2);
+                    // measured_v[0] = radar_velocity_cov(0,0);
+                    // measured_v[1] = radar_velocity_cov(1,1);
+                    // measured_v[2] = radar_velocity_cov(2,2);
 
                     stamps.emplace_back(current_t);
                     body_velocity.emplace_back(body_v);

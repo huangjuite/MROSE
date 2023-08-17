@@ -124,7 +124,7 @@ void MapOptimize<PointT>::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_m
 
     gtsam::Pose3 current_pose(gtsam::Rot3(odom->pose.pose.orientation.w, odom->pose.pose.orientation.x,
                                           odom->pose.pose.orientation.y, odom->pose.pose.orientation.z),
-                              gtsam::Point3(odom->pose.pose.position.x, odom->pose.pose.position.y, 0));
+                              gtsam::Point3(odom->pose.pose.position.x, odom->pose.pose.position.y, odom->pose.pose.position.z));
 
     global_map_mtx.lock();
     step++;
@@ -171,7 +171,7 @@ void MapOptimize<PointT>::cb_node(const sensor_msgs::PointCloud2ConstPtr radar_m
                 // loop close on 2d only
                 gtsam::Pose3 t(tf.cast<double>());
                 gtsam::Pose3 tf3(gtsam::Rot3::Yaw(t.rotation().yaw()),
-                                 gtsam::Point3(t.translation().x(), t.translation().y(), 0));
+                                 gtsam::Point3(t.translation().x(), t.translation().y(),  t.translation().z()));
                 gtsam::Pose3 correct_tf = tf3 * init_values.at<gtsam::Pose3>(X(l.first));
                 gtsam::Pose3 between_tf = correct_tf.between(init_values.at<gtsam::Pose3>(X(l.second)));
                 graph->add(gtsam::BetweenFactor<gtsam::Pose3>(X(l.first), X(l.second),

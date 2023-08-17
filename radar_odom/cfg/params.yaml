@@ -31,14 +31,22 @@ radar0:
   #   - [0.0, 0.0, 1.0, -0.1]
   #   - [0.0, 0.0, 0.0, 1.0]
   T_r_i:
-    - [0.997607, 0.065174, 0.023099, 0.0]
-    - [-0.064482, 0.997483, -0.029501, -0.11715]
-    - [-0.024964, 0.027941, 0.999298, -0.1]
+    - [0.999336, 0.035371, -0.008824, 0.0]
+    - [-0.035253, 0.999291, 0.013183, -0.11715]
+    - [0.009284, -0.012864, 0.999874, -0.1]
     - [0.0, 0.0, 0.0, 1.0]
+  # T_r_i:
+    # - [0.999231, 0.035328, -0.017062, 0.0]
+    # - [-0.035249, 0.999366, 0.004922, -0.11715]
+    # - [0.017225, -0.004318, 0.999842, -0.1]
+    # - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar0/points
   doppler_sigma: 0.12 # doppler uncertainty (m/s)
-  azimuth_sigma: 0.0245436926 # azimuth uncertainty (1.41 degree)
-  elevation_sigma: 0.314159 # elevation uncertainty (18 degree)
+  azimuth_sigma: 0.12 # azimuth uncertainty (1.41 degree)
+  elevation_sigma: 0.12 # elevation uncertainty (18 degree)
+  # azimuth_sigma: 0.0490873852 # azimuth uncertainty (2.82 degree)
+  # elevation_sigma: 0.62831853 # elevation uncertainty (36 degree)
+
 
 radar1:
   # T_r_i:
@@ -47,17 +55,24 @@ radar1:
   #   - [0.0, -1.0, 0.0, 0.0]
   #   - [0.0, 0.0, 0.0, 1.0]
   T_r_i:
-    - [0.998014, 0.053324, 0.033550, 0.0]
-    - [0.031689, -0.035360, 0.998872, 0.0]
-    - [0.054450, -0.997951, -0.033600, 0.0]
+    - [0.998276, 0.058655, 0.002239, 0.0]
+    - [0.000281, -0.042936, 0.999078, 0.0]
+    - [0.058697, -0.997355, -0.042878, 0.0]
     - [0.0, 0.0, 0.0, 1.0]
+  # T_r_i:
+  #   - [0.998941, 0.045811, -0.004287, 0.0]
+  #   - [0.005593, -0.028434, 0.999580, 0.0]
+  #   - [0.045670, -0.998546, -0.028659, 0.0]
+  #   - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar1/points
-  doppler_sigma: 0.05512325 # doppler uncertainty (m/s)
-  azimuth_sigma: 0.0245436926 # azimuth uncertainty (1.41 degree)
-  elevation_sigma: 0.314159 # elevation uncertainty (18 degree)
+  doppler_sigma: 0.12 # doppler uncertainty (m/s)
+  azimuth_sigma: 0.12 # azimuth uncertainty (1.41 degree)
+  elevation_sigma: 0.12 # elevation uncertainty (18 degree)
+  # azimuth_sigma: 0.0490873852 # azimuth uncertainty (2.82 degree)
+  # elevation_sigma: 0.62831853 # elevation uncertainty (36 degree)
 
 odom:
-  imu: imu0
+  imu: imu1
   radar: [radar0, radar1]
   doppler_inlier_thresh: 0.05512325
   static_init_window: 2.0 # seconds

@@ -33,7 +33,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
         DopplerAngleCostFunction *cost_function = new DopplerAngleCostFunction(p.speed, doppler_std);
 
         ceres::ResidualBlockId id = problem.AddResidualBlock(
-            cost_function, new ceres::CauchyLoss(0.2), v_est, a);
+            cost_function, new ceres::CauchyLoss(0.1), v_est, a);
         residual_ids.push_back(id);
 
         double s[2] = {azimuth_std, elevation_std};
@@ -49,7 +49,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeresHCS::optimize(
     ceres::Solver::Options options;
     options.num_threads = 8;
     options.linear_solver_type = ceres::LinearSolverType::SPARSE_NORMAL_CHOLESKY;
-    options.max_num_iterations = 100;
+    // options.max_num_iterations = 100;
     // options.minimizer_progress_to_stdout = true;
     ceres::Solver::Summary summary;
     Solve(options, &problem, &summary);

@@ -48,8 +48,8 @@ namespace rplrio
 
         // prior noise model
         auto pose_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
-            (gtsam::Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
-        auto velocity_noise_model = gtsam::noiseModel::Isotropic::Sigma(3, 1e-2); // m/s
+            (gtsam::Vector(6) << 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3).finished()); // rad,rad,rad,m, m, m
+        auto velocity_noise_model = gtsam::noiseModel::Isotropic::Sigma(3, 1e-1); // m/s
         auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
 
         // Add all prior
@@ -147,7 +147,7 @@ namespace rplrio
 
         // auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
         auto rv_noise = gtsam::noiseModel::Robust::Create(
-            gtsam::noiseModel::mEstimator::Huber::Create(1.345),
+            gtsam::noiseModel::mEstimator::Huber::Create(0.5),
             gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov));
 
         graph->add(VelocityPoseMeasurementFactor(

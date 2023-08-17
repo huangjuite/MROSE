@@ -1,0 +1,41 @@
+<launch>
+
+    <!-- parameter -->
+    <!-- <arg name="bag_folder"
+    default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" /> -->
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_old.yaml" /> -->
+    
+    <!-- 1692139480 -->
+    <arg name="sequence" default="1692145970_frc"/>
+    
+    <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/$(arg sequence)/rosbag" />
+    <arg name="gt_path" default="/home/rpl/Documents/RPL_radar/$(arg sequence)/odom_vio.csv" />
+
+    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
+
+
+    <arg name="info_plot" default="false" />
+
+    <!-- noise prediction -->
+    <node name="noise_predict" pkg="radar_odom" type="RadarUncertainty.py" output="screen" />
+
+    <!-- odometry -->
+    <node name="doppler_odom_bag" pkg="radar_odom" type="doppler_odom_bag" output="screen">
+        <param name="bag_folder" value="$(arg bag_folder)" />
+        <param name="save_path" value="/tmp/log_rio_mono.csv" />
+    </node>
+
+    <node name="pub_gt" pkg="radar_odom" type="publish_gt" output="screen">
+        <param name="gt_path" value="$(arg gt_path)" />
+    </node>
+
+
+    <node if="$(arg info_plot)" pkg="plotjuggler" type="plotjuggler" name="plot"
+        args="-l $(find radar_odom)/cfg/info_vis.xml" />
+
+    <!-- pose graph -->
+    <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize" output="screen" />
+    <!-- <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize_weighted" output="screen"
+    /> -->
+
+</launch>

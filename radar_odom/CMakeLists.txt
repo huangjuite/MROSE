@@ -146,6 +146,12 @@ target_link_libraries(doppler_odom_bag ${PROJECT_NAME})
 # add_executable(radar_ndt_omp app/radar_ndt_omp.cpp)
 # target_link_libraries(radar_ndt_omp ${catkin_LIBRARIES} ${PROJECT_NAME} gtsam ndt_omp)
 
+add_executable(publish_gt app/pub_gt_path.cpp)
+target_link_libraries(publish_gt ${PROJECT_NAME})
+
+add_executable(covariance_analysis app/covariance_analysis.cpp)
+target_link_libraries(covariance_analysis ${PROJECT_NAME})
+
 add_executable(vo_ex app/extrinsicEstimation_velocity.cpp)
 add_dependencies(vo_ex ${catkin_EXPORTED_TARGETS})
 target_link_libraries(vo_ex ${PROJECT_NAME})
