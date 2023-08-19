@@ -190,7 +190,7 @@ Visualization Manager:
         Min Value: -10
         Value: true
       Axis: Z
-      Channel Name: speed
+      Channel Name: doppler
       Class: rviz/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
@@ -510,7 +510,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 50.98860168457031
+      Distance: 42.86698532104492
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -518,17 +518,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 1.8918159008026123
-        Y: 2.9545955657958984
-        Z: 4.959829807281494
+        X: 8.169801712036133
+        Y: 3.969911575317383
+        Z: 7.125168323516846
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.09479732066392899
+      Pitch: 0.02479737251996994
       Target Frame: base
-      Yaw: 4.62492561340332
+      Yaw: 5.464005947113037
     Saved: ~
 Window Geometry:
   Displays:

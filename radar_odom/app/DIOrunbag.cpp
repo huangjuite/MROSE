@@ -107,7 +107,7 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
     ros::param::get("~save_path", save_path);
     log_file.open(save_path);
     log_file << std::fixed << std::setprecision(15);
-    log_file << "stamp, px, py, pz, rx, ry, rz, rw" << std::endl;
+    log_file << "stamp,tx,ty,tz,qx,qy,qz,qw" << std::endl;
 
     params = rplrio::get_params(*nh);
     dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
@@ -130,12 +130,12 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 #endif
 
     // ros init
-    pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 1);
-    pub_twist = nh->advertise<geometry_msgs::TwistWithCovarianceStamped>("radar/velocity", 1);
-    pub_bias = nh->advertise<geometry_msgs::Twist>("radar/bias", 1);
-    pub_error = nh->advertise<geometry_msgs::Twist>("radar/error", 1);
-    pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
-    pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 1);
+    pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 10);
+    pub_twist = nh->advertise<geometry_msgs::TwistWithCovarianceStamped>("radar/velocity", 10);
+    pub_bias = nh->advertise<geometry_msgs::Twist>("radar/bias", 10);
+    pub_error = nh->advertise<geometry_msgs::Twist>("radar/error", 10);
+    pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 10);
+    pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 10);
 }
 
 void DopplerIOBag::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe)
@@ -205,6 +205,8 @@ void DopplerIOBag::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
                                            imu_msg->angular_velocity.y,
                                            imu_msg->angular_velocity.z)
                                               .finished();
+    
+    std::cout << imu_msg->header.frame_id << ", " << imu_t << std::endl;
 
     dio_manager->feed_imu(std::make_shared<rplrio::IMU>(acc, omega, imu_t));
 }
@@ -216,6 +218,8 @@ void DopplerIOBag::cb_radar(const sensor_msgs::PointCloud2 &pc_msg)
 
     pcl::fromROSMsg(pc_msg, *radar_pc);
     double radar_t = pc_msg.header.stamp.toSec();
+
+    std::cout << pc_msg.header.frame_id << ", " << radar_t << std::endl;
 
     dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
         radar_pc, radar_t, params.radars[pc_msg.header.frame_id]));
@@ -306,6 +310,8 @@ int main(int argc, char *argv[])
                 pub_img.publish(img_msg);
                 continue;
             }
+
+            ros::Duration(0.001).sleep();
         }
 
         bag.close();

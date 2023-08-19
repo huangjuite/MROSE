@@ -4,12 +4,16 @@
     <!-- <arg name="bag_folder"
     default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" /> -->
     <!-- <rosparam file="$(find radar_odom)/cfg/params_old.yaml" /> -->
+
+    <!-- <arg name="sequence" default="1692139890_nsh_atrium" /> -->
+    <arg name="sequence" default="1692311541_ghc_ramp" />
+    <!-- <arg name="sequence" default="1692312182_nsh_4th" /> -->
     
-    <!-- 1692139480 -->
-    <arg name="sequence" default="1692145970_frc"/>
-    
+    <!-- <arg name="save_log" default="/tmp/odom_rio.csv" /> -->
+    <arg name="save_log" default="/home/rpl/Documents/RPL_radar/$(arg sequence)/odom_rio.csv" />
     <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/$(arg sequence)/rosbag" />
-    <arg name="gt_path" default="/home/rpl/Documents/RPL_radar/$(arg sequence)/odom_vio.csv" />
+    <arg name="gt_path"
+        default="/home/rpl/Documents/RPL_radar/$(arg sequence)/ground_truth/odom_vio.csv" />
 
     <rosparam file="$(find radar_odom)/cfg/params.yaml" />
 
@@ -22,7 +26,7 @@
     <!-- odometry -->
     <node name="doppler_odom_bag" pkg="radar_odom" type="doppler_odom_bag" output="screen">
         <param name="bag_folder" value="$(arg bag_folder)" />
-        <param name="save_path" value="/tmp/log_rio_mono.csv" />
+        <param name="save_path" value="$(arg save_log)" />
     </node>
 
     <node name="pub_gt" pkg="radar_odom" type="publish_gt" output="screen">
