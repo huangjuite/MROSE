@@ -29,15 +29,11 @@ for rt in rio_stamp:
     idxs.append(idx)
 
 
-def to_se3(pos, quaternion):
-    se3 = 
-
-matched = gt.iloc[idxs][[" tx",
-                         " ty", " tz", " qx", " qy", " qz", " qw"]]
+matched = gt.iloc[idxs][["stamp", " tx", " ty", " tz", " qx", " qy", " qz", " qw"]]
 
 matched.to_csv(rio_file.parent.__str__() +
-               '/eval_gt.csv', header=False, index=False, sep=" ")
+               '/eval_gt.txt', header=False, index=False, sep=" ")
 
-rio = rio[[" px"," py", " pz", " rx", " ry", " rz", " rw"]]
+rio = rio[["stamp", "tx", "ty", "tz", "qx", "qy", "qz", "qw"]]
 rio.to_csv(rio_file.parent.__str__() +
-               '/eval_rio.csv', header=False, index=False, sep=" ")
+               '/eval_rio.txt', header=False, index=False, sep=" ")

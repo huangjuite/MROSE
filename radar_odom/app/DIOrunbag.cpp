@@ -140,15 +140,6 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 
 void DopplerIOBag::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe)
 {
-    auto p = keyframe->state.pose();
-    log_file << keyframe->stamp << ", "
-             << p.translation().x() << ", "
-             << p.translation().y() << ", "
-             << p.translation().z() << ", "
-             << p.rotation().quaternion().x() << ", "
-             << p.rotation().quaternion().y() << ", "
-             << p.rotation().quaternion().z() << ", "
-             << p.rotation().quaternion().w() << std::endl;
 
     auto current_time = ros::Time::now();
     nav_msgs::Odometry odom = toOdometry(keyframe->state.pose().matrix(), keyframe->pose_cov);
@@ -156,6 +147,15 @@ void DopplerIOBag::publish_all(const std::shared_ptr<const rplrio::Keyframe<Poin
     odom.header.seq = keyframe->seq;
     odom.header.frame_id = "map";
     pub_odom.publish(odom);
+
+    log_file << keyframe->stamp << ", "
+             << odom.pose.pose.position.x << ", "
+             << odom.pose.pose.position.y << ", "
+             << odom.pose.pose.position.z << ", "
+             << odom.pose.pose.orientation.x << ", "
+             << odom.pose.pose.orientation.y << ", "
+             << odom.pose.pose.orientation.z << ", "
+             << odom.pose.pose.orientation.w << std::endl;
 
     sensor_msgs::PointCloud2 inlier_msg;
     pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
@@ -205,7 +205,7 @@ void DopplerIOBag::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
                                            imu_msg->angular_velocity.y,
                                            imu_msg->angular_velocity.z)
                                               .finished();
-    
+
     std::cout << imu_msg->header.frame_id << ", " << imu_t << std::endl;
 
     dio_manager->feed_imu(std::make_shared<rplrio::IMU>(acc, omega, imu_t));
