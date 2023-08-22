@@ -1,0 +1,77 @@
+imu1:
+  T_i_b:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  accelerometer_noise_density: 0.0021228729869763063
+  accelerometer_random_walk: 9.865802854378535e-05
+  gyroscope_noise_density: 0.00016730892911503262
+  gyroscope_random_walk: 7.396238607333077e-06
+  rostopic: /razor_imu
+  gravity: 9.80126
+
+radar0:
+  # T_r_i:
+  #   - [1.0, 0.0, 0.0, 0.0]
+  #   - [0.0, 1.0, 0.0, -0.11715]
+  #   - [0.0, 0.0, 1.0, -0.1]
+  #   - [0.0, 0.0, 0.0, 1.0]
+  # T_r_i:
+  #   - [0.999336, 0.035371, -0.008824, 0.0]
+  #   - [-0.035253, 0.999291, 0.013183, -0.11715]
+  #   - [0.009284, -0.012864, 0.999874, -0.1]
+  #   - [0.0, 0.0, 0.0, 1.0]
+  T_r_i:
+    - [0.997984, 0.0393536, 0.0497923, 0.0]
+    - [-0.039116, 0.999218, -0.00573752, -0.11715]
+    - [-0.0499792, 0.00377827, 0.998743, -0.1]
+    - [0.0, 0.0, 0.0, 1.0]
+  rostopic: /radar0/points
+  doppler_sigma: 0.12 # doppler uncertainty (m/s)
+  azimuth_sigma: 0.0244346 # azimuth uncertainty (1.4 degree)
+  elevation_sigma: 0.314159 # elevation uncertainty (18 degree)
+
+radar1:
+  # T_r_i:
+  #   - [1.0, 0.0, 0.0, 0.0]
+  #   - [0.0, 0.0, 1.0, 0.0]
+  #   - [0.0, -1.0, 0.0, 0.0]
+  #   - [0.0, 0.0, 0.0, 1.0]
+  # T_r_i:
+  #   - [0.998276, 0.058655, 0.002239, 0.0]
+  #   - [0.000281, -0.042936, 0.999078, 0.0]
+  #   - [0.058697, -0.997355, -0.042878, 0.0]
+  #   - [0.0, 0.0, 0.0, 1.0]
+  T_r_i:
+    - [0.998197, 0.058047, -0.0152997, 0.0]
+    - [0.020565, -0.0912237, 0.995618, 0.0]
+    - [0.056397, -0.994137, -0.0922529, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  rostopic: /radar1/points
+  doppler_sigma: 0.12 # doppler uncertainty (m/s)
+  azimuth_sigma: 0.0244346 # azimuth uncertainty (1.4 degree)
+  elevation_sigma: 0.314159 # elevation uncertainty (18 degree)
+
+odom:
+  imu: imu1
+  radar: [radar0, radar1]
+  doppler_inlier_thresh: 0.12
+  static_init_window: 2.0 # seconds
+  static_init_threshold: 0.2
+  optimization_window: 5.0 # seconds
+
+loop_close:
+  enable_loop_close: false
+  loop_close_rate: 40 # frames
+  loop_ignore: 100 # frames
+  key_frame_search: 30 # frames
+  loop_distance_thresh: 2 # meters
+  snr_thresh: 1.6 # log dB
+  process_voxel_size: 0.2 # meters
+  ndt_voxel_size: 0.5 # meters
+  ndt_thread: 8
+
+mapping:
+  render_rate: 1.0 # Hz
+  map_snr_thresh: 1.6 # log dB

@@ -105,6 +105,7 @@ public:
 DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
 {
     ros::param::get("~save_path", save_path);
+    std::cout << save_path << std::endl;
     log_file.open(save_path);
     log_file << std::fixed << std::setprecision(15);
     log_file << "stamp,tx,ty,tz,qx,qy,qz,qw" << std::endl;
@@ -206,7 +207,7 @@ void DopplerIOBag::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
                                            imu_msg->angular_velocity.z)
                                               .finished();
 
-    std::cout << imu_msg->header.frame_id << ", " << imu_t << std::endl;
+    // std::cout << imu_msg->header.frame_id << ", " << imu_t << std::endl;
 
     dio_manager->feed_imu(std::make_shared<rplrio::IMU>(acc, omega, imu_t));
 }
@@ -219,7 +220,7 @@ void DopplerIOBag::cb_radar(const sensor_msgs::PointCloud2 &pc_msg)
     pcl::fromROSMsg(pc_msg, *radar_pc);
     double radar_t = pc_msg.header.stamp.toSec();
 
-    std::cout << pc_msg.header.frame_id << ", " << radar_t << std::endl;
+    // std::cout << pc_msg.header.frame_id << ", " << radar_t << std::endl;
 
     dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
         radar_pc, radar_t, params.radars[pc_msg.header.frame_id]));

@@ -147,7 +147,7 @@ namespace rplrio
 
         // auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
         auto rv_noise = gtsam::noiseModel::Robust::Create(
-            gtsam::noiseModel::mEstimator::Huber::Create(1),
+            gtsam::noiseModel::mEstimator::Huber::Create(0.5),
             gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov));
 
         graph->add(VelocityPoseMeasurementFactor(

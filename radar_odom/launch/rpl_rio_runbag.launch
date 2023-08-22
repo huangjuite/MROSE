@@ -5,19 +5,25 @@
     default="/home/rpl/Documents/RPL_radar/nsh4_h_trimed_1687287495/rosbag" /> -->
     <!-- <rosparam file="$(find radar_odom)/cfg/params_old.yaml" /> -->
 
-    <!-- <arg name="data_root" default="/home/rpl/Documents/RPL_radar/" /> -->
-    <arg name="data_root" default="/media/rpl/teamgroup/RPL_radar" />
+    <arg name="data_root" default="/home/rpl/Documents/RPL_radar" />
+    <!-- <arg name="data_root" default="/media/rpl/teamgroup/RPL_radar" /> -->
 
-    <!-- <arg name="sequence" default="1692139890_nsh_atrium" /> -->
-    <arg name="sequence" default="1692311541_ghc_ramp" />
+    <arg name="sequence" default="1692139890_nsh_atrium" />
+    <!-- <arg name="sequence" default="1692311541_ghc_ramp" /> -->
     <!-- <arg name="sequence" default="1692312182_nsh_4th" /> -->
+    <!-- <arg name="sequence" default="1692145970_frc" /> -->
+    <!-- <arg name="sequence" default="1692308112_frc_2nd" /> -->
+    <!-- <arg name="sequence" default="1692381008" /> -->
+    
+    
 
     <!-- <arg name="save_log" default="/tmp/odom_rio.csv" /> -->
     <arg name="save_log" default="$(arg data_root)/$(arg sequence)/odom_rio.csv" />
     <arg name="bag_folder" default="$(arg data_root)/$(arg sequence)/rosbag" />
     <arg name="gt_path" default="$(arg data_root)/$(arg sequence)/ground_truth/odom_vio.csv" />
 
-    <rosparam file="$(find radar_odom)/cfg/params.yaml" />
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" /> -->
+    <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" />
 
 
     <arg name="info_plot" default="false" />

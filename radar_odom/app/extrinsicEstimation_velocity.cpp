@@ -146,25 +146,28 @@ int main(int argc, char *argv[])
 
     auto radarParam = params.radars[params.radar_list[0]];
     topics.push_back(radarParam.topic);
+    std::cout << radarParam.topic << std::endl;
 
-    RadarVelocityEstimatorCeres v_opt;
-    // RadarVelocityEstimatorCeresHCS v_opt;
-    // auto radar_p = params.radars[params.radar_list[0]];
-    // v_opt.set_uncertainty(
-    //     radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
+    // RadarVelocityEstimatorCeres v_opt;
+    RadarVelocityEstimatorCeresHCS v_opt;
+    auto radar_p = params.radars[params.radar_list[0]];
+    v_opt.set_uncertainty(
+        radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
 
     gtsam::NonlinearFactorGraph graph;
     gtsam::Values init_values;
     init_values.insert(0, gtsam::Rot3(radarParam.R_r_b));
-    auto noise = gtsam::noiseModel::Robust::Create(
-        gtsam::noiseModel::mEstimator::Cauchy::Create(0.1),
-        gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(0.1, 0.1, 0.1)));
+
+    // auto noise = gtsam::noiseModel::Robust::Create(
+    //     gtsam::noiseModel::mEstimator::Cauchy::Create(0.1),
+    //     gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(0.1, 0.1, 0.1)));
+
+    auto noise = gtsam::noiseModel::Diagonal::Sigmas(gtsam::Vector3(0.1, 0.1, 0.1));
 
     for (auto b : bags)
     {
         rosbag::Bag bag;
         bag.open(b, rosbag::bagmode::Read);
-
         rosbag::View view(bag, rosbag::TopicQuery(topics));
 
         foreach (rosbag::MessageInstance const m, view)
@@ -197,6 +200,7 @@ int main(int argc, char *argv[])
                 body_velocity.emplace_back(body_v);
                 radar_velocity.emplace_back(measured_v);
 
+                // auto noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
                 graph.add(ExtrinsicFactor(0, measured_v, body_v, noise));
             }
         }
