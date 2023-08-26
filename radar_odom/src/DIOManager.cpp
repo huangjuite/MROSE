@@ -90,12 +90,12 @@ namespace rplrio
             imu_que.pop_front();
         }
 
-        auto next_imu = imu_que.front();
-        rplrio::IMU interp;
-        bool interp_success = rplrio::IMU::interpolate(
-            interp, radar_stamp, *last_imu, *next_imu);
-        preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
-        pre_imu_t = interp.stamp;
+        // auto next_imu = imu_que.front();
+        // rplrio::IMU interp;
+        // bool interp_success = rplrio::IMU::interpolate(
+        //     interp, radar_stamp, *last_imu, *next_imu);
+        // preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
+        // pre_imu_t = interp.stamp;
 
         step++;
         auto keyframe = optimize(*radar_msg);

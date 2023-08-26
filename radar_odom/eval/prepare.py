@@ -14,8 +14,8 @@ args = parser.parse_args()
 
 rio_file = Path(args.rio_file)
 gt_file = Path(args.gt_file)
-assert rio_file.exists(), "rio file foler misssing"
-assert gt_file.exists(), "ground truth file foler misssing"
+assert rio_file.exists(), "rio file misssing"
+assert gt_file.exists(), "ground truth file misssing"
 
 rio = pd.read_csv(rio_file)
 gt = pd.read_csv(gt_file, skiprows=1, header=None, delimiter=" ")

@@ -1,7 +1,7 @@
 <launch>
 
-    <!-- <arg name="seq" default="1692139890_nsh_atrium"/> -->
-    <arg name="seq" default="1692311541_ghc_ramp" />
+    <arg name="seq" default="1692139890_nsh_atrium"/>
+    <!-- <arg name="seq" default="1692311541_ghc_ramp" /> -->
 
 
     <arg name="bag_folder"
@@ -9,8 +9,8 @@
     <arg name="gt_path"
         default="/home/rpl/Documents/RPL_radar/$(arg seq)/ground_truth/odom_vio.csv" />
 
-    <!-- <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" /> -->
-    <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" />
+    <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" />
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" /> -->
 
     <node name="rio_extrinsic" pkg="radar_odom" type="dio_ex" output="screen">
         <param name="bag_folder" value="$(arg bag_folder)" />
