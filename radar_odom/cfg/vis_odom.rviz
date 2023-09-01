@@ -215,7 +215,7 @@ Visualization Manager:
       Marker Topic: /velocity
       Name: velocity
       Namespaces:
-        velocity: true
+        {}
       Queue Size: 100
       Value: true
     - Angle Tolerance: 0.10000000149011612
@@ -288,13 +288,13 @@ Visualization Manager:
     - Alpha: 0.699999988079071
       Buffer Length: 1
       Class: rviz/Path
-      Color: 239; 41; 41
+      Color: 138; 226; 52
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
       Line Style: Billboards
-      Line Width: 0.10000000149011612
+      Line Width: 0.05000000074505806
       Name: gt_Path
       Offset:
         X: 0
@@ -306,7 +306,7 @@ Visualization Manager:
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
-      Topic: /gt_odom
+      Topic: /gt_path
       Unreliable: false
       Value: true
   Enabled: true
@@ -337,7 +337,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 28.122447967529297
+      Distance: 14.377766609191895
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -345,17 +345,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 10.173666954040527
-        Y: -3.9230892658233643
-        Z: 2.250336170196533
+        X: 1.966538906097412
+        Y: 1.6428054571151733
+        Z: 0.7029215097427368
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.10039758682250977
+      Pitch: -0.029602766036987305
       Target Frame: <Fixed Frame>
-      Yaw: 2.829030990600586
+      Yaw: 4.062216281890869
     Saved: ~
 Window Geometry:
   Displays:

@@ -13,18 +13,16 @@
     <!-- <arg name="sequence" default="1692312182_nsh_4th" /> -->
     <!-- <arg name="sequence" default="1692145970_frc" /> -->
     <!-- <arg name="sequence" default="1692308112_frc_2nd" /> -->
-    <!-- <arg name="sequence" default="1692381008" /> -->
-    
-    
+    <!-- <arg name="sequence" default="1692923792_ghc_stair" /> -->
+    <!-- <arg name="sequence" default="1692923153" /> -->
+
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" /> -->
+    <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" />
 
     <!-- <arg name="save_log" default="/tmp/odom_rio.csv" /> -->
     <arg name="save_log" default="$(arg data_root)/$(arg sequence)/odom_rio.csv" />
     <arg name="bag_folder" default="$(arg data_root)/$(arg sequence)/rosbag" />
     <arg name="gt_path" default="$(arg data_root)/$(arg sequence)/ground_truth/odom_vio.csv" />
-
-    <!-- <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" /> -->
-    <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" />
-
 
     <arg name="info_plot" default="false" />
 

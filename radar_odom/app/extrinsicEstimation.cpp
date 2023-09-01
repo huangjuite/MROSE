@@ -122,6 +122,7 @@ private:
     // radar
     // std::unique_ptr<RadarVelocityEstimatorCeres> velocity_estimator;
     std::unique_ptr<RadarVelocityEstimatorCeresHCS> velocity_estimator;
+    bool use_r0 = true, use_r1 = true;
 
     std::deque<sensor_msgs::PointCloud2::ConstPtr> radar_que;
     std::map<int, std::string> step_radar;
@@ -265,7 +266,7 @@ void DopplerIOex::update()
     {
         radar_que.pop_front();
     }
-    if (radar_que.empty())
+    if (radar_que.empty()) // delay radar frame to interpolate IMU
     {
         return;
     }
@@ -275,6 +276,7 @@ void DopplerIOex::update()
     radar_que.pop_front();
 
     // integrate imu measurements
+    std::shared_ptr<rplrio::IMU> last_imu;
     while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp)
     {
         auto imu_data = imu_que.front();
@@ -282,8 +284,19 @@ void DopplerIOex::update()
         preintegrated->integrateMeasurement(imu_data->acc, imu_data->gyro, dt);
         pre_imu_t = imu_data->stamp;
 
+        last_imu = imu_data;
         imu_que.pop_front();
     }
+
+    // auto next_imu = imu_que.front();
+    // rplrio::IMU interp;
+    // bool interp_success = rplrio::IMU::interpolate(
+    //     interp, radar_stamp, *last_imu, *next_imu);
+    // if (interp_success)
+    // {
+    //     preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
+    //     pre_imu_t = interp.stamp;
+    // }
 
     step++;
     optimize(radar_msg);
@@ -406,6 +419,16 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
 
 void DopplerIOex::feed_radar(const sensor_msgs::PointCloud2::ConstPtr pc_msg)
 {
+    if (pc_msg->header.frame_id == "radar0" && !use_r0)
+    {
+        return;
+    }
+
+    if (pc_msg->header.frame_id == "radar1" && !use_r1)
+    {
+        return;
+    }
+
     radar_que.emplace_back(pc_msg);
 
     if (!initialized)
@@ -503,9 +526,14 @@ void DopplerIOex::cb_config(radar_odom::extrinsicConfig &config, uint32_t level)
     gtsam::Rot3 R_r0_i = gtsam::Rot3::Ypr(config.R0z, config.R0y, config.R0x);
     gtsam::Rot3 R_r1_i = gtsam::Rot3::Ypr(config.R1z, config.R1y, config.R1x);
 
+    use_r0 = config.use_r0;
+    use_r1 = config.use_r1;
+
     params.radars["radar0"].R_r_b = params.R_i_b * R_r0_i.matrix();
     params.radars["radar1"].R_r_b = params.R_i_b * R_r1_i.matrix();
+
     std::cout << params.radars["radar0"].R_r_b << std::endl;
+    std::cout << "==========================" << std::endl;
     std::cout << params.radars["radar1"].R_r_b << std::endl;
 }
 

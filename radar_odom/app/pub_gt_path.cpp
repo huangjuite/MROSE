@@ -49,11 +49,6 @@
 #include "utils.h"
 #include "params.h"
 
-using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
-using gtsam::symbol_shorthand::E;
-using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
-using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
-
 std::vector<rplrio::Odom> odom_vio;
 ros::Publisher pub_path;
 nav_msgs::Path path;

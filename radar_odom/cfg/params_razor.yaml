@@ -18,9 +18,9 @@ radar0:
   #   - [0.0, 0.0, 1.0, -0.1]
   #   - [0.0, 0.0, 0.0, 1.0]
   # T_r_i:
-  #   - [0.999336, 0.035371, -0.008824, 0.0]
-  #   - [-0.035253, 0.999291, 0.013183, -0.11715]
-  #   - [0.009284, -0.012864, 0.999874, -0.1]
+  #   - [0.999233, 0.0391647, -0.000148161, 0.0]
+  #   - [-0.0391649, 0.999226, -0.0037801, -0.11715]
+  #   - [0.0, 0.003783, 0.999993, -0.1]
   #   - [0.0, 0.0, 0.0, 1.0]
   T_r_i:
     - [0.997984, 0.0393536, 0.0497923, 0.0]
@@ -28,7 +28,7 @@ radar0:
     - [-0.0499792, 0.00377827, 0.998743, -0.1]
     - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar0/points
-  doppler_sigma: 0.12 # doppler uncertainty (m/s)
+  doppler_sigma: 0.124 # doppler uncertainty (m/s)
   azimuth_sigma: 0.0244346 # azimuth uncertainty (1.4 degree)
   elevation_sigma: 0.314159 # elevation uncertainty (18 degree)
 
@@ -39,9 +39,9 @@ radar1:
   #   - [0.0, -1.0, 0.0, 0.0]
   #   - [0.0, 0.0, 0.0, 1.0]
   # T_r_i:
-  #   - [0.998276, 0.058655, 0.002239, 0.0]
-  #   - [0.000281, -0.042936, 0.999078, 0.0]
-  #   - [0.058697, -0.997355, -0.042878, 0.0]
+  #   - [0.998776, 0.0466861, -0.0163539, 0.0]
+  #   - [0.0205769, -0.0914578, 0.995596, 0.0]
+  #   - [0.0449848, -0.994714, -0.0923064, 0.0]
   #   - [0.0, 0.0, 0.0, 1.0]
   T_r_i:
     - [0.998197, 0.058047, -0.0152997, 0.0]
@@ -49,17 +49,19 @@ radar1:
     - [0.056397, -0.994137, -0.0922529, 0.0]
     - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar1/points
-  doppler_sigma: 0.12 # doppler uncertainty (m/s)
+  doppler_sigma: 0.124 # doppler uncertainty (m/s)
   azimuth_sigma: 0.0244346 # azimuth uncertainty (1.4 degree)
   elevation_sigma: 0.314159 # elevation uncertainty (18 degree)
 
 odom:
   imu: imu1
   radar: [radar0, radar1]
-  doppler_inlier_thresh: 0.12
+  doppler_inlier_thresh: 0.124
   static_init_window: 2.0 # seconds
   static_init_threshold: 0.2
   optimization_window: 5.0 # seconds
+  bv_use_huber: true
+  bv_huber_k: 0.1
 
 loop_close:
   enable_loop_close: false

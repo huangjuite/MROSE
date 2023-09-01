@@ -11,7 +11,7 @@ namespace rplrio
         this->velocity_estimator = velocity_estimator;
 
         velocity_estimator->set_inlier_thresh(params.doppler_inlier_thresh);
-        
+
         // optimizer init
         gtsam::ISAM2Params parameters;
         parameters.relinearizeThreshold = 0.0;
@@ -90,12 +90,15 @@ namespace rplrio
             imu_que.pop_front();
         }
 
-        // auto next_imu = imu_que.front();
-        // rplrio::IMU interp;
-        // bool interp_success = rplrio::IMU::interpolate(
-        //     interp, radar_stamp, *last_imu, *next_imu);
-        // preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
-        // pre_imu_t = interp.stamp;
+        auto next_imu = imu_que.front();
+        rplrio::IMU interp;
+        bool interp_success = rplrio::IMU::interpolate(
+            interp, radar_stamp, *last_imu, *next_imu);
+        if (interp_success)
+        {
+            preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
+            pre_imu_t = interp.stamp;
+        }
 
         step++;
         auto keyframe = optimize(*radar_msg);
@@ -145,10 +148,17 @@ namespace rplrio
         radar_velocity_cov = radar.param.R_r_b * radar_velocity_cov * radar.param.R_r_b.transpose();
         pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_b);
 
-        // auto rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
-        auto rv_noise = gtsam::noiseModel::Robust::Create(
-            gtsam::noiseModel::mEstimator::Huber::Create(0.5),
-            gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov));
+        gtsam::noiseModel::Base::shared_ptr rv_noise;
+        if (params.bv_use_huber)
+        {
+            rv_noise = gtsam::noiseModel::Robust::Create(
+                gtsam::noiseModel::mEstimator::Huber::Create(params.bv_huber_k),
+                gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov));
+        }
+        else
+        {
+            rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
+        }
 
         graph->add(VelocityPoseMeasurementFactor(
             V(step), X(step), measured_v, rv_noise));

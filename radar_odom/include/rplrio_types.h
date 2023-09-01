@@ -32,6 +32,9 @@ namespace rplrio
             if (time > imu2.stamp || time < imu1.stamp || imu1.stamp > imu2.stamp)
                 return false;
 
+            if (abs(time - imu1.stamp) < 1e-6 || abs(time - imu2.stamp) < 1e-6)
+                return false;
+
             double ratio = (time - imu1.stamp) / (imu2.stamp - imu1.stamp);
             imu.stamp = ratio * (imu2.stamp - imu1.stamp) + imu1.stamp;
             imu.acc = ratio * (imu2.acc - imu1.acc) + imu1.acc;

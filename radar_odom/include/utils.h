@@ -300,13 +300,10 @@ namespace rplrio
     Params get_params(ros::NodeHandle &nh)
     {
         Params param;
-
-        // odom
+        // imu
         std::string imu_;
         nh.getParam("/odom/imu", imu_);
         nh.getParam(imu_ + std::string("/rostopic"), param.imu_topic);
-
-        // imu
         nh.getParam(imu_ + std::string("/accelerometer_noise_density"), param.acc_noise);
         nh.getParam(imu_ + std::string("/accelerometer_random_walk"), param.acc_rw);
         nh.getParam(imu_ + std::string("/gyroscope_noise_density"), param.gyro_noise);
@@ -345,11 +342,15 @@ namespace rplrio
             param.radars[r].R_r_b = param.radars[r].T_r_b.block(0, 0, 3, 3);
         }
 
+        // odom
+        nh.getParam("/odom/optimization_window", param.lag);
+        nh.getParam("/odom/bv_use_huber", param.bv_use_huber);
+        nh.getParam("/odom/bv_huber_k", param.bv_huber_k);
+
         // initializer
         nh.getParam("/odom/doppler_inlier_thresh", param.doppler_inlier_thresh);
         nh.getParam("/odom/static_init_window", param.init_window);
         nh.getParam("/odom/static_init_threshold", param.init_thres);
-        nh.getParam("/odom/optimization_window", param.lag);
 
         // loop close
         nh.getParam("/loop_close/enable_loop_close", param.enable_loop_close);
@@ -368,8 +369,6 @@ namespace rplrio
 
         return param;
     }
-
-    
 
 }
 

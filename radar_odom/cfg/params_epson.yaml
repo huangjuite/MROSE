@@ -23,9 +23,7 @@ radar0:
     - [-0.0627905, -0.308407, 0.94918, -0.1]
     - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar0/points
-  doppler_sigma: 0.12 # doppler uncertainty (m/s)
-  # azimuth_sigma: 0.12 # azimuth uncertainty (1.41 degree)
-  # elevation_sigma: 0.12 # elevation uncertainty (18 degree)
+  doppler_sigma: 0.124 # doppler uncertainty (m/s)
   azimuth_sigma: 0.0490873852 # azimuth uncertainty (2.82 degree)
   elevation_sigma: 0.062831853 # elevation uncertainty (36 degree)
 
@@ -41,19 +39,19 @@ radar1:
     - [0.0, -0.968583, 0.24869, -0.1]
     - [0.0, 0.0, 0.0, 1.0]
   rostopic: /radar1/points
-  doppler_sigma: 0.12 # doppler uncertainty (m/s)
-  # azimuth_sigma: 0.12 # azimuth uncertainty (1.41 degree)
-  # elevation_sigma: 0.12 # elevation uncertainty (18 degree)
+  doppler_sigma: 0.124 # doppler uncertainty (m/s)
   azimuth_sigma: 0.0490873852 # azimuth uncertainty (2.82 degree)
   elevation_sigma: 0.062831853 # elevation uncertainty (36 degree)
 
 odom:
   imu: imu0
   radar: [radar0, radar1]
-  doppler_inlier_thresh: 0.12
+  doppler_inlier_thresh: 0.124
   static_init_window: 2.0 # seconds
   static_init_threshold: 0.2
   optimization_window: 5.0 # seconds
+  bv_use_huber: true
+  bv_huber_k: 0.5
 
 loop_close:
   enable_loop_close: false

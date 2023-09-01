@@ -270,6 +270,8 @@ int main(int argc, char *argv[])
     std::string tmp;
     std::cin >> tmp;
 
+    int r_cout = 0;
+
     for (auto b : bags)
     {
         rosbag::Bag bag;
@@ -280,9 +282,16 @@ int main(int argc, char *argv[])
 
         foreach (rosbag::MessageInstance const m, view)
         {
+
             sensor_msgs::PointCloud2::ConstPtr radar_msg = m.instantiate<sensor_msgs::PointCloud2>();
             if (radar_msg != NULL)
             {
+                // r_cout++;
+                // if (r_cout % 8 > 1){
+                //     std::cout << "skip" << r_cout <<std::endl;
+                //     continue;
+                // }
+
 #ifndef PREDICT
                 runner.cb_radar(*radar_msg);
 #endif

@@ -10,7 +10,8 @@ typedef boost::shared_ptr<gtsam::PreintegratedCombinedMeasurements::Params> ImuP
 
 namespace rplrio
 {
-    struct RadarParams{
+    struct RadarParams
+    {
         std::string topic;
         Eigen::Matrix4d T_r_i;
         Eigen::Matrix4d T_r_b;
@@ -24,6 +25,13 @@ namespace rplrio
     {
         // odom
         std::string imu_topic;
+        double lag;
+        bool bv_use_huber;
+        double bv_huber_k;
+
+        // initializer
+        double init_window;
+        double init_thres;
 
         // imu
         Eigen::Matrix4d T_i_b;
@@ -38,11 +46,6 @@ namespace rplrio
         double doppler_inlier_thresh;
         std::unordered_map<std::string, RadarParams> radars;
         std::vector<std::string> radar_list;
-
-        // initializer
-        double init_window;
-        double init_thres;
-        double lag;
 
         // loop close
         bool enable_loop_close;
