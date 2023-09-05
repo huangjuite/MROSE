@@ -23,15 +23,15 @@ r = R.from_euler('z', np.pi).as_matrix()
 gt_odoms, odoms, h_odoms, v_odoms = [], [], [], []
 
 for seq in sequence:
-    odom_file = pjoin(root, seq, "result/razor/odom_rio.csv")
+    odom_file = pjoin(root, seq, "result/razor1/odom_rio.csv")
     df = pd.read_csv(odom_file).to_numpy()[:, 1:4]
     odoms.append(df)
 
-    h_file = pjoin(root, seq, "result/razor/odom_r0_rio.csv")
+    h_file = pjoin(root, seq, "result/razor1/odom_r0_rio.csv")
     df = pd.read_csv(h_file).to_numpy()[:, 1:4]
     h_odoms.append(df)
 
-    v_file = pjoin(root, seq, "result/razor/odom_r1_rio.csv")
+    v_file = pjoin(root, seq, "result/razor1/odom_r1_rio.csv")
     df = pd.read_csv(v_file).to_numpy()[:, 1:4]
     v_odoms.append(df)
 

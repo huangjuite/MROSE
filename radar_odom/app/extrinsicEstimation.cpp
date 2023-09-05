@@ -266,7 +266,7 @@ void DopplerIOex::update()
     {
         radar_que.pop_front();
     }
-    if (radar_que.empty()) // delay radar frame to interpolate IMU
+    if (radar_que.size() <= 2) // delay radar frame to interpolate IMU
     {
         return;
     }
@@ -288,15 +288,15 @@ void DopplerIOex::update()
         imu_que.pop_front();
     }
 
-    // auto next_imu = imu_que.front();
-    // rplrio::IMU interp;
-    // bool interp_success = rplrio::IMU::interpolate(
-    //     interp, radar_stamp, *last_imu, *next_imu);
-    // if (interp_success)
-    // {
-    //     preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
-    //     pre_imu_t = interp.stamp;
-    // }
+    auto next_imu = imu_que.front();
+    rplrio::IMU interp;
+    bool interp_success = rplrio::IMU::interpolate(
+        interp, radar_stamp, *last_imu, *next_imu);
+    if (interp_success)
+    {
+        preintegrated->integrateMeasurement(interp.acc, interp.gyro, interp.stamp - pre_imu_t);
+        pre_imu_t = interp.stamp;
+    }
 
     step++;
     optimize(radar_msg);
@@ -333,8 +333,11 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     key_frame_stamp[step] = radar_msg->header.stamp.toSec();
 
     // ------------------------------------------------------------------------------------
+    rplrio::RadarParams rp = params.radars[radar_msg->header.frame_id];
+    step_radar[step] = radar_msg->header.frame_id;
 
-    velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
+    velocity_estimator->set_initial_velocity(
+        rp.R_r_b.transpose() * prop_state.bodyVelocity());
     gtsam::Vector3 measured_v = velocity_estimator->optimize(radar_pc);
     pcl::PointCloud<pcl::PointXYZSD>::Ptr radar_inlier =
         velocity_estimator->get_inlier(radar_pc, measured_v);
@@ -349,8 +352,6 @@ void DopplerIOex::optimize(const sensor_msgs::PointCloud2::ConstPtr radar_msg)
     radar_velocity_cache.emplace_back(measured_v);
     radar_cov_cache.emplace_back(radar_velocity_cov);
 
-    rplrio::RadarParams rp = params.radars[radar_msg->header.frame_id];
-    step_radar[step] = radar_msg->header.frame_id;
     // velocity pose measurement
     measured_v = rp.R_r_b * measured_v;
     radar_velocity_cov = rp.R_r_b * radar_velocity_cov * rp.R_r_b.transpose();

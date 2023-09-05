@@ -12,7 +12,7 @@
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
-
+#include <std_srvs/Trigger.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
@@ -269,6 +269,12 @@ int main(int argc, char *argv[])
     std::cout << "input any to start:\n";
     std::string tmp;
     std::cin >> tmp;
+
+    std_srvs::Trigger trig;
+    if (ros::service::call("/pub_gt", trig))
+    {
+        std::cout << "publish gt" << std::endl;
+    }
 
     int r_cout = 0;
 

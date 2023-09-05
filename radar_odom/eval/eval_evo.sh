@@ -1,6 +1,6 @@
-odom="odom_r1_rio.csv"
-save_table="razor_r1"
-imu="razor"
+odom="odom_rio.csv"
+save_table="epson"
+imu="epson"
 
 ROOT=/home/rpl/Documents/RPL_radar
 SEQ="1692139890_nsh_atrium 1692312182_nsh_4th 1692145970_frc 1692308112_frc_2nd 1692311541_ghc_ramp 1692923792_ghc_stair"

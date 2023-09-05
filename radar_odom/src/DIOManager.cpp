@@ -132,7 +132,8 @@ namespace rplrio
 
         // ------------------------------------------------------------------------------------
 
-        velocity_estimator->set_initial_velocity(prop_state.bodyVelocity());
+        velocity_estimator->set_initial_velocity(
+            radar.param.R_r_b.transpose() * prop_state.bodyVelocity());
         gtsam::Vector3 measured_v = velocity_estimator->optimize(radar.pc);
         auto radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
 
