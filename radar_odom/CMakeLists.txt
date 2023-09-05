@@ -134,6 +134,9 @@ target_link_libraries(test_clustering ${PROJECT_NAME})
 add_executable(test_noise_prediction app/test_noise_prediction.cpp )
 target_link_libraries(test_noise_prediction ${PROJECT_NAME})
 
+add_executable(velocity_cov app/velocity_cov.cpp )
+target_link_libraries(velocity_cov ${PROJECT_NAME})
+
 add_executable(doppler_odom_bag app/DIOrunbag.cpp )
 target_link_libraries(doppler_odom_bag ${PROJECT_NAME})
 
