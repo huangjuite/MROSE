@@ -101,14 +101,11 @@ std::vector<rplrio::Odom> odom_csv(std::string path)
     return gt;
 }
 
-
-bool cb_publish(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep)
+void pub_once()
 {
-
-    
     path.header.frame_id = "map";
     path.header.stamp = ros::Time::now();
-    
+
     std::cout << odom_vio.size() << std::endl;
 
     for (uint i = 0; i < odom_vio.size(); i++)
@@ -118,8 +115,14 @@ bool cb_publish(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &re
         header.stamp = ros::Time::now();
         path.poses.emplace_back(toROSPoseStamped(odom_vio[i].pose, header));
     }
-    
+
     pub_path.publish(path);
+}
+
+bool cb_publish(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &rep)
+{
+
+    pub_once();
 
     rep.success = true;
     return true;
@@ -141,7 +144,7 @@ int main(int argc, char *argv[])
 
     auto pub_srv = nh.advertiseService("pub_gt", cb_publish);
 
-    
+    pub_once();
 
     ros::spin();
     return 0;

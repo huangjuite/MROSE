@@ -259,16 +259,16 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 3.9354701042175293
-        Min Value: -5.797718524932861
+        Max Value: 26.052194595336914
+        Min Value: -18.552122116088867
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 252; 233; 79
-      Color Transformer: Intensity
+      Color Transformer: AxisColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -277,13 +277,13 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.05000000074505806
+      Size (m): 0.019999999552965164
       Style: Spheres
       Topic: /radar_map
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -526,9 +526,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.02479737251996994
+      Pitch: 0.3747972548007965
       Target Frame: base
-      Yaw: 5.464005947113037
+      Yaw: 0.07082492858171463
     Saved: ~
 Window Geometry:
   Displays:

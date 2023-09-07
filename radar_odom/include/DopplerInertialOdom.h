@@ -46,8 +46,8 @@ private:
 
     ros::NodeHandle *nh;
     
-    ros::Subscriber sub_radar;
     ros::Subscriber sub_imu;
+    std::vector<ros::Subscriber> sub_radars;
 
     ros::Publisher pub_odom;
     ros::Publisher pub_v;
