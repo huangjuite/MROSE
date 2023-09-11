@@ -1,12 +1,25 @@
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 from os.path import join as pjoin
 import pandas as pd
-import matplotlib
-font = {'size': 11}
-matplotlib.rc('font', **font)
+
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+from matplotlib import rc
+
+fe = fm.FontEntry(
+    fname=r'/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf',
+    name="Times New Roman"
+)
+fm.fontManager.ttflist.insert(0, fe)
+fontp = {'family':'Times New Roman', 'size': 12}
+pdfp = {'fonttype':42}
+
+# rc('text', usetex=True)
+rc('font', **fontp)
+rc('pdf', **pdfp)
+
 
 root = "/home/rpl/Documents/RPL_radar"
 
@@ -56,7 +69,7 @@ for i in range(seqn):
     # ax.set_xlabel("x (m)")
     if i == 0:
         ax.set_ylabel("y (m)")
-        ax.legend(loc='lower left', bbox_to_anchor=(0.15, 0., 0.5, 0.5))
+        ax.legend(loc='lower left', bbox_to_anchor=(0.15, 0., 0.2, 0.2))
     ax.axis('equal')
 
     ax1 = plt.subplot(2, seqn, seqn + i+1)
@@ -74,5 +87,5 @@ for i in range(seqn):
     # ax2.plot(gt_odoms[i][:, 1], gt_odoms[i][:, 2], label="vio")
 
 fig.tight_layout()
-plt.savefig('/tmp/vis_odom.png', dpi=400, bbox_inches='tight')
-# plt.show()
+plt.savefig('/tmp/vis_odom.pdf', format="pdf")
+plt.show()

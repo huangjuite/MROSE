@@ -12,8 +12,8 @@
 
 
     <!-- parameter -->
-    <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" />
-    <!-- <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" /> -->
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" /> -->
+    <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" />
     <arg name="info_plot" default="false" />
 
     <!-- odometry -->
