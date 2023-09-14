@@ -12,11 +12,11 @@
     <node pkg="tf" type="static_transform_publisher" name="lidar_broadcaster"
         args="0.00015 -0.11715 0.02135 0 0 0 epson velodyne 100" />
 
-    <!-- <node pkg="tf" type="static_transform_publisher" name="radar_broadcaster"
-        args="0 -0.11715 -0.1 0 0 0 epson radar 100" />  -->
+    <node pkg="tf" type="static_transform_publisher" name="radar0_broadcaster"
+        args="0 -0.11715 -0.1 0 0 0 epson radar0 100" /> 
     
-    <node pkg="tf" type="static_transform_publisher" name="radar_broadcaster"
-        args="0 0 -0.1 0 0 -1.57079632679 epson radar 100" /> 
+    <node pkg="tf" type="static_transform_publisher" name="radar1_broadcaster"
+        args="0 0 -0.1 0 0 -1.57079632679 epson radar1 100" /> 
 
     <node pkg="tf" type="static_transform_publisher" name="base_broadcaster"
         args="0 0 0 0 0 0 base epson 100" />
