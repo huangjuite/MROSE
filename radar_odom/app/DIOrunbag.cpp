@@ -32,10 +32,7 @@
 #include "DIOManager.h"
 
 #include "RadarVelocityEstimatorCeres.h"
-#include "RadarVelocityEstimatorCeresHCS.h"
-#include "RadarVelocityEstimatorCeresWeighted.h"
 #include "RadarVelocityEstimatorEigenWeighted.h"
-#include "RadarVelocityEstimatorGtsamHCS.h"
 
 #include "rplrio_types.h"
 #include "utils.h"

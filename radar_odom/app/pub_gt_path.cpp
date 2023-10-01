@@ -36,12 +36,8 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Marginals.h>
 
-#include "VelocityMeasurementFactor.h"
 #include "VelocityPoseMeasurementFactor.h"
-#include "VelocityPoseExtrinsicFactor.h"
-#include "AltitudeFactor.h"
 
-#include "RadarVelocityEstimatorCeresHCS.h"
 #include "RadarVelocityEstimatorCeres.h"
 #include "StaticInitializer.hpp"
 

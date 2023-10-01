@@ -36,12 +36,8 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Marginals.h>
 
-#include "VelocityMeasurementFactor.h"
 #include "VelocityPoseMeasurementFactor.h"
-#include "VelocityPoseExtrinsicFactor.h"
-#include "AltitudeFactor.h"
 
-#include "RadarVelocityEstimatorCeresHCS.h"
 #include "RadarVelocityEstimatorCeres.h"
 #include "StaticInitializer.hpp"
 
@@ -148,11 +144,7 @@ int main(int argc, char *argv[])
     topics.push_back(radarParam.topic);
     std::cout << radarParam.topic << std::endl;
 
-    // RadarVelocityEstimatorCeres v_opt;
-    RadarVelocityEstimatorCeresHCS v_opt;
-    auto radar_p = params.radars[params.radar_list[0]];
-    v_opt.set_uncertainty(
-        radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
+    RadarVelocityEstimatorCeres v_opt;
 
     gtsam::NonlinearFactorGraph graph;
     gtsam::Values init_values;

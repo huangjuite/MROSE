@@ -70,23 +70,10 @@ add_library(${PROJECT_NAME} SHARED
   src/rplrio_types.cpp
   src/params.cpp
 
-  src/DopplerMeasurementFactor.cpp
-  src/DopplerCelestialFactor.cpp
-  src/DopplerCelestial2Factor.cpp
-  src/DopplerPoseMeasurementFactor.cpp
-
-  src/VelocityMeasurementFactor.cpp
   src/VelocityPoseMeasurementFactor.cpp
-  src/VelocityPoseExtrinsicFactor.cpp
 
-  src/RadarVelocityEstimatorGtsamHCS.cpp
   src/RadarVelocityEstimatorCeres.cpp
-  src/RadarVelocityEstimatorCeresHCS.cpp
-  src/RadarVelocityEstimatorCeresWeighted.cpp
   src/RadarVelocityEstimatorEigenWeighted.cpp
-
-  src/LandmarkFactor.cpp
-  src/LandmarkTracker.cpp
 
   src/MapOptimize.cpp
 
@@ -106,16 +93,6 @@ target_include_directories(${PROJECT_NAME}
   ${catkin_INCLUDE_DIRS}
 )
 
-# target_link_directories(${PROJECT_NAME}
-#   PUBLIC
-#   ${PCL_LIBRARY_DIRS}
-# )
-
-# target_compile_definitions(${PROJECT_NAME}
-#   PUBLIC
-#   ${PCL_DEFINITIONS}
-# )
-
 target_link_libraries(${PROJECT_NAME}
   gtsam
   gtsam_unstable 
@@ -125,86 +102,25 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-# add_executable(test_libtorch app/test_libtorch.cpp)
-# target_link_libraries(test_libtorch ${PROJECT_NAME} ${TORCH_LIBRARIES})
-
-add_executable(test_clustering app/test_clustering.cpp )
-target_link_libraries(test_clustering ${PROJECT_NAME})
-
-add_executable(test_noise_prediction app/test_noise_prediction.cpp )
-target_link_libraries(test_noise_prediction ${PROJECT_NAME})
-
 add_executable(velocity_cov app/velocity_cov.cpp )
 target_link_libraries(velocity_cov ${PROJECT_NAME})
 
 add_executable(doppler_odom_bag app/DIOrunbag.cpp )
 target_link_libraries(doppler_odom_bag ${PROJECT_NAME})
 
-# add_executable(radar_icp app/radar_icp.cpp)
-# target_link_libraries(radar_icp ${catkin_LIBRARIES} ${PROJECT_NAME} gtsam)
-
-# add_executable(radar_ndt app/radar_ndt.cpp)
-# target_link_libraries(radar_ndt ${catkin_LIBRARIES} ${PROJECT_NAME} gtsam)
-
-# add_executable(radar_ndt_omp app/radar_ndt_omp.cpp)
-# target_link_libraries(radar_ndt_omp ${catkin_LIBRARIES} ${PROJECT_NAME} gtsam ndt_omp)
-
 add_executable(publish_gt app/pub_gt_path.cpp)
 target_link_libraries(publish_gt ${PROJECT_NAME})
-
-add_executable(covariance_analysis app/covariance_analysis.cpp)
-target_link_libraries(covariance_analysis ${PROJECT_NAME})
 
 add_executable(vo_ex app/extrinsicEstimation_velocity.cpp)
 add_dependencies(vo_ex ${catkin_EXPORTED_TARGETS})
 target_link_libraries(vo_ex ${PROJECT_NAME})
 
-add_executable(dio_ex app/extrinsicEstimation.cpp)
-add_dependencies(dio_ex ${catkin_EXPORTED_TARGETS})
-target_link_libraries(dio_ex ${PROJECT_NAME})
-
-add_executable(doppler_odom src/DopplerInertialOdom.cpp)
+add_executable(doppler_odom app/DIO.cpp)
 add_dependencies(doppler_odom ${catkin_EXPORTED_TARGETS})
 target_link_libraries(doppler_odom ${PROJECT_NAME})
 
-# add_executable(doppler_landmark_odom src/DopplerInertialLandmarkOdom.cpp)
-# add_dependencies(doppler_landmark_odom ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(doppler_landmark_odom ${PROJECT_NAME})
-
-# add_executable(doppler_odom_multi src/DopplerInertialOdomMulti.cpp)
-# add_dependencies(doppler_odom_multi ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(doppler_odom_multi ${PROJECT_NAME})
-
-# add_executable(rio src/RadarInertialOdom.cpp)
-# add_dependencies(rio ${catkin_EXPORTED_TARGETS})
-# target_link_libraries(rio ${PROJECT_NAME})
-
-add_executable(map_optimize src/map_node.cpp)
+add_executable(map_optimize app/map_node.cpp)
 target_link_libraries(map_optimize ${PROJECT_NAME})
 
-add_executable(map_optimize_weighted src/map_node_weighted.cpp)
+add_executable(map_optimize_weighted app/map_node_weighted.cpp)
 target_link_libraries(map_optimize_weighted ${PROJECT_NAME})
-
-add_executable(radar_pose_graph src/RadarPoseGraph.cpp)
-add_dependencies(radar_pose_graph ${catkin_EXPORTED_TARGETS})
-target_link_libraries(radar_pose_graph ${PROJECT_NAME})
-
-add_executable(radar_pose_graph_2d src/RadarPoseGraph2d.cpp)
-add_dependencies(radar_pose_graph_2d ${catkin_EXPORTED_TARGETS})
-target_link_libraries(radar_pose_graph_2d ${PROJECT_NAME})
-
-add_executable(radar_pose_graph_2d_fgr src/RadarPoseGraph2dFGR.cpp)
-add_dependencies(radar_pose_graph_2d_fgr ${catkin_EXPORTED_TARGETS})
-target_link_libraries(radar_pose_graph_2d_fgr ${PROJECT_NAME})
-
-add_executable(radar_pose_graph_2d_detect src/RadarPoseGraph2dDetect.cpp)
-add_dependencies(radar_pose_graph_2d_detect ${catkin_EXPORTED_TARGETS})
-target_link_libraries(radar_pose_graph_2d_detect ${PROJECT_NAME})
-
-add_executable(radar_mapping src/RadarMapping.cpp)
-add_dependencies(radar_mapping ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-target_link_libraries(radar_mapping ${PROJECT_NAME})
-
-add_executable(radar_octo_mapping src/RadarOctoMapping.cpp)
-add_dependencies(radar_octo_mapping ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
-target_link_libraries(radar_octo_mapping  ${PROJECT_NAME})

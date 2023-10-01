@@ -27,8 +27,6 @@
 #include "DIOManager.h"
 
 #include "RadarVelocityEstimatorCeres.h"
-#include "RadarVelocityEstimatorCeresHCS.h"
-#include "RadarVelocityEstimatorCeresWeighted.h"
 #include "RadarVelocityEstimatorEigenWeighted.h"
 
 #include "rplrio_types.h"

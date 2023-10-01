@@ -29,7 +29,6 @@
 #include <pclradar/RadarPointType.h>
 
 #include "RadarVelocityEstimatorCeres.h"
-#include "RadarVelocityEstimatorCeresWeighted.h"
 #include "RadarVelocityEstimatorEigenWeighted.h"
 
 #include "radar_odom/Prediction.h"
