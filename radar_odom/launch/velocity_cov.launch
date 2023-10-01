@@ -1,8 +1,9 @@
 <launch>
 
 
-    <arg name="seq" default="1692139890_nsh_atrium"/> 
+    <!-- <arg name="seq" default="1692139890_nsh_atrium"/>  -->
     <!-- <arg name="seq" default="1692145970_frc"/> -->
+    <arg name="seq" default="1692923792_ghc_stair"/> 
     
     <arg name="bag_folder" default="/home/rpl/Documents/RPL_radar/$(arg seq)/rosbag" />
 
