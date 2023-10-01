@@ -3,10 +3,11 @@
 ## dependencies
 - ROS noetic
 - GTSAM 4.2a8
+- Ceres-Solver 2.1.0
 
 
 ## dataset
-https://docs.google.com/spreadsheets/d/1Y8laH8Bpx8Q06hx8cPZvMHAJ0SMbmu_COp1SMDYQfNc/edit#gid=0
+[sheet_link](https://docs.google.com/spreadsheets/d/1Y8laH8Bpx8Q06hx8cPZvMHAJ0SMbmu_COp1SMDYQfNc/edit#gid=0)
 
 ## quick start
 
@@ -17,7 +18,7 @@ roslaunch radar_odom vis_mapping.launch
 
 2. radar slam
 ```
-roslaunch radar_odom mapping.launch
+roslaunch radar_odom rpl_rio.launch
 ```
 
 3. play bag

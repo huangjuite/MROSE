@@ -62,8 +62,6 @@ catkin_package(
   std_msgs
   ndt_omp
   pcl_radar
-  octomap_ros
-  octomap_msgs
 )
 
 add_library(${PROJECT_NAME} SHARED
