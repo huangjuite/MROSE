@@ -74,12 +74,14 @@ add_library(${PROJECT_NAME} SHARED
   src/RadarVelocityEstimatorEigenWeighted.cpp
 
   src/MapOptimize.cpp
+  src/MapConstraint.cpp
 
   Scancontext/Scancontext.cpp
 
   src/StaticInitializer.cpp
 
   src/DIOManager.cpp
+  src/RIOManager.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -100,6 +102,12 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
+add_executable(rio app/RIO.cpp)
+target_link_libraries(rio ${PROJECT_NAME})
+
+add_executable(doppler_odom app/DIO.cpp)
+target_link_libraries(doppler_odom ${PROJECT_NAME})
+
 add_executable(velocity_cov app/velocity_cov.cpp )
 target_link_libraries(velocity_cov ${PROJECT_NAME})
 
@@ -110,12 +118,7 @@ add_executable(publish_gt app/pub_gt_path.cpp)
 target_link_libraries(publish_gt ${PROJECT_NAME})
 
 add_executable(vo_ex app/extrinsicEstimation_velocity.cpp)
-add_dependencies(vo_ex ${catkin_EXPORTED_TARGETS})
 target_link_libraries(vo_ex ${PROJECT_NAME})
-
-add_executable(doppler_odom app/DIO.cpp)
-add_dependencies(doppler_odom ${catkin_EXPORTED_TARGETS})
-target_link_libraries(doppler_odom ${PROJECT_NAME})
 
 add_executable(map_optimize app/map_node.cpp)
 target_link_libraries(map_optimize ${PROJECT_NAME})

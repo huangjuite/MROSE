@@ -92,9 +92,9 @@ namespace rplrio
     {
         double stamp;
         uint seq;
+        
         gtsam::NavState state;
         gtsam::Matrix pose_cov;
-
         gtsam::imuBias::ConstantBias imu_bias;
 
         typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
