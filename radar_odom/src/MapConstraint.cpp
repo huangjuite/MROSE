@@ -70,6 +70,12 @@ gtsam::Pose3 MapConstraint<PointType>::regist(PclPtr submap, PclPtr localmap, pc
     if (!subkeyframes.empty())
     {
         get_submap(key_pos, 8, submap, subpos);
+
+        gicp_omp.setInputTarget(submap);
+        gicp_omp.setInputSource(localmap);
+        // ndt_omp.setInputTarget(submap);
+        // ndt_omp.setInputSource(localmap);
+
     }
 
     cloud_keyframes->points.emplace_back(key_pos);

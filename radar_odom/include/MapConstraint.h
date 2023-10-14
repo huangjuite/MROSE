@@ -15,6 +15,9 @@
 
 #include <gtsam/geometry/Pose3.h>
 
+#include <pclomp/gicp_omp.h>
+#include <pclomp/ndt_omp.h>
+
 #include "rplrio_types.h"
 
 template <class PointType>
@@ -24,6 +27,10 @@ private:
     typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
     typedef typename pcl::PointCloud<PointType> Pcl;
     typedef std::shared_ptr<rplrio::Keyframe<PointType>> KeyFramePtr;
+
+    pclomp::GeneralizedIterativeClosestPoint<PointType, PointType> gicp_omp;
+    // pclomp::NormalDistributionsTransform<PointType, PointType> ndt_omp;
+
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_keyframes;
     std::vector<KeyFramePtr> subkeyframes;
