@@ -31,6 +31,7 @@ private:
     pclomp::GeneralizedIterativeClosestPoint<PointType, PointType> gicp_omp;
     // pclomp::NormalDistributionsTransform<PointType, PointType> ndt_omp;
 
+    pcl::VoxelGrid<PointType> voxel_filter;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_keyframes;
     std::vector<KeyFramePtr> subkeyframes;
@@ -44,5 +45,6 @@ public:
     ~MapConstraint();
 
     void update_sub_key_frame(KeyFramePtr keyframe);
-    gtsam::Pose3 regist(PclPtr submap, PclPtr localmap, pcl::PointCloud<pcl::PointXYZ>::Ptr subpos);
+    bool regist(PclPtr submap, PclPtr localmap, PclPtr aligned,
+                pcl::PointCloud<pcl::PointXYZ>::Ptr subpos, gtsam::Pose3 &pose);
 };

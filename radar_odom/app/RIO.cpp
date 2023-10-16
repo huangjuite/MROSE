@@ -16,6 +16,7 @@ RadarIO::RadarIO(ros::NodeHandle *nh)
     pub_subkey = nh->advertise<sensor_msgs::PointCloud2>("radar/subkeyframe", 1);
     pub_submap = nh->advertise<sensor_msgs::PointCloud2>("radar/submap", 1);
     pub_subkeypos = nh->advertise<sensor_msgs::PointCloud2>("radar/subkeypos", 1);
+    pub_aligned = nh->advertise<sensor_msgs::PointCloud2>("radar/aligned", 1);
 
     sub_imu = nh->subscribe(params.imu_topic, 1000, &RadarIO::cb_imu, this);
 
@@ -65,7 +66,9 @@ void RadarIO::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType
     pcl::PointCloud<PointType>::Ptr subkey(new pcl::PointCloud<PointType>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<PointType>::Ptr submap(new pcl::PointCloud<PointType>);
-    rio_manager->get_local_maps(subkey, submap, subkeypos);
+    pcl::PointCloud<PointType>::Ptr aligned(new pcl::PointCloud<PointType>);
+
+    rio_manager->get_local_maps(subkey, submap, aligned, subkeypos);
     if(subkey->points.size()>0){
         sensor_msgs::PointCloud2 subkey_msg;
         pcl::toROSMsg(*subkey, subkey_msg);
@@ -82,6 +85,14 @@ void RadarIO::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType
         // subkey_msg.header.seq = keyframe->seq;
         pub_submap.publish(submap_msg);
     }
+    if(aligned->points.size()>0){
+        sensor_msgs::PointCloud2 aligned_msg;
+        pcl::toROSMsg(*aligned, aligned_msg);
+        aligned_msg.header.stamp = ros::Time().fromSec(keyframe->stamp);
+        aligned_msg.header.frame_id = "map";
+        // subkey_msg.header.seq = keyframe->seq;
+        pub_aligned.publish(aligned_msg);
+    }
     if(subkeypos->points.size()>0){
         sensor_msgs::PointCloud2 subpos_msg;
         pcl::toROSMsg(*subkeypos, subpos_msg);
@@ -90,7 +101,6 @@ void RadarIO::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType
         // subkey_msg.header.seq = keyframe->seq;
         pub_subkeypos.publish(subpos_msg);
     }
-    
 
 
     // broadcast odometry transformation

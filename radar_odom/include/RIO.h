@@ -56,6 +56,7 @@ private:
     ros::Publisher pub_subkey;
     ros::Publisher pub_submap;
     ros::Publisher pub_subkeypos;
+    ros::Publisher pub_aligned;
 
     tf::TransformBroadcaster br;
     tf::TransformListener listener;

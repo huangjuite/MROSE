@@ -4,6 +4,7 @@ template <class PointType>
 MapConstraint<PointType>::MapConstraint(/* args */)
 {
     cloud_keyframes.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    voxel_filter.setLeafSize(0.5, 0.5, 0.5);
 }
 
 template <class PointType>
@@ -57,7 +58,8 @@ void MapConstraint<PointType>::get_submap(
 }
 
 template <class PointType>
-gtsam::Pose3 MapConstraint<PointType>::regist(PclPtr submap, PclPtr localmap, pcl::PointCloud<pcl::PointXYZ>::Ptr subpos)
+bool MapConstraint<PointType>::regist(PclPtr submap, PclPtr localmap, PclPtr aligned,
+                                      pcl::PointCloud<pcl::PointXYZ>::Ptr subpos, gtsam::Pose3 &pose)
 {
     pcl::transformPointCloud(
         *sub_keyframe->radar_points, *sub_keyframe->radar_points,
@@ -66,24 +68,36 @@ gtsam::Pose3 MapConstraint<PointType>::regist(PclPtr submap, PclPtr localmap, pc
 
     auto t = sub_keyframe->state.pose().translation();
     pcl::PointXYZ key_pos(t.x(), t.y(), t.z());
+    cloud_keyframes->points.emplace_back(key_pos);
+    subkeyframes.emplace_back(sub_keyframe);
 
     if (!subkeyframes.empty())
     {
-        get_submap(key_pos, 8, submap, subpos);
+        get_submap(key_pos, 6, submap, subpos);
+
+        voxel_filter.setInputCloud(submap);
+        voxel_filter.filter(*submap);
+        voxel_filter.setInputCloud(localmap);
+        voxel_filter.filter(*localmap);
 
         gicp_omp.setInputTarget(submap);
         gicp_omp.setInputSource(localmap);
+        gicp_omp.align(*aligned);
+        Eigen::Matrix4f tf = gicp_omp.getFinalTransformation();
+        gtsam::Pose3 tpose(tf.cast<double>());
+        float score = gicp_omp.getFitnessScore();
+        // std::cout << tpose << std::endl;
+        // std::cout << "fitness score:" << score << std::endl;
+        pose = tpose * sub_keyframe->state.pose();
         // ndt_omp.setInputTarget(submap);
         // ndt_omp.setInputSource(localmap);
 
+        sub_keyframe = nullptr;
+        return (score < 2);
     }
 
-    cloud_keyframes->points.emplace_back(key_pos);
-    subkeyframes.emplace_back(sub_keyframe);
     sub_keyframe = nullptr;
-
-    gtsam::Pose3 pose_map;
-    return pose_map;
+    return false;
 }
 
 template class MapConstraint<pcl::PointXYZSD>;

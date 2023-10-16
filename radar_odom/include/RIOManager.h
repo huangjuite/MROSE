@@ -58,8 +58,7 @@ namespace rplrio
         // radar
         std::deque<std::shared_ptr<DIORadar>> radar_que;
         std::unique_ptr<MapConstraint<PointType>> radar_map;
-        PclPtr subkeyframe_;
-        PclPtr submap_;
+        PclPtr subkeyframe_, submap_, aligned_;
         pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos_;
 
         // imu settings
@@ -99,6 +98,6 @@ namespace rplrio
 
         std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
 
-        void get_local_maps(PclPtr subkeyframe, PclPtr submap, pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos);
+        void get_local_maps(PclPtr subkeyframe, PclPtr submap, PclPtr aligned, pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos);
     };
 }

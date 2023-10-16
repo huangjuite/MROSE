@@ -193,14 +193,23 @@ namespace rplrio
         key_frame->radar_velocity_cov = radar_velocity_cov;
 
         // ------------------------------------------------------------------------------------
+        gtsam::Pose3 scm_pose;
         radar_map->update_sub_key_frame(key_frame);
 
         if (step % 40 == 0)
         {
             subkeyframe_.reset(new Pcl);
-            subkeypos_.reset(new pcl::PointCloud<pcl::PointXYZ>);
             submap_.reset(new Pcl);
-            radar_map->regist(submap_, subkeyframe_, subkeypos_);
+            aligned_.reset(new Pcl);
+            subkeypos_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+            bool sc_regist = radar_map->regist(submap_, subkeyframe_, aligned_,
+                                               subkeypos_, scm_pose);
+            if (sc_regist)
+            {
+                graph->addPrior(X(step), scm_pose,
+                                gtsam::noiseModel::Diagonal::Sigmas(
+                                    (gtsam::Vector(6) << 5e-2, 5e-2, 5e-2, 0.5, 0.5, 0.5).finished()));
+            }
         }
 
         return key_frame;
@@ -259,7 +268,7 @@ namespace rplrio
     }
 
     template <class PointType>
-    void RIOManager<PointType>::get_local_maps(PclPtr subkeyframe, PclPtr submap, pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos)
+    void RIOManager<PointType>::get_local_maps(PclPtr subkeyframe, PclPtr submap, PclPtr aligned, pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos)
     {
 
         if (subkeyframe_ != nullptr)
@@ -276,6 +285,11 @@ namespace rplrio
         {
             pcl::copyPointCloud(*submap_, *submap);
             submap_ = nullptr;
+        }
+        if (aligned_ != nullptr)
+        {
+            pcl::copyPointCloud(*aligned_, *aligned);
+            aligned_ = nullptr;
         }
     }
 
