@@ -35,16 +35,18 @@ private:
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_keyframes;
     std::vector<KeyFramePtr> subkeyframes;
-
     KeyFramePtr sub_keyframe;
+    PclPtr map_;
 
     void get_submap(pcl::PointXYZ key_pos, float radius, PclPtr submap, pcl::PointCloud<pcl::PointXYZ>::Ptr subpos);
 
 public:
-    MapConstraint(/* args */);
+    MapConstraint();
     ~MapConstraint();
 
     void update_sub_key_frame(KeyFramePtr keyframe);
     bool regist(PclPtr submap, PclPtr localmap, PclPtr aligned,
                 pcl::PointCloud<pcl::PointXYZ>::Ptr subpos, gtsam::Pose3 &pose);
+
+    void render_map(PclPtr map);
 };

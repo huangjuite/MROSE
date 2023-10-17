@@ -16,6 +16,8 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/TwistWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <radar_odom/Keyframe.h>
 
 // PCL includes
 #include <pcl_ros/point_cloud.h>
@@ -43,9 +45,10 @@ private:
     std::unique_ptr<rplrio::RIOManager<PointType>> rio_manager;
 
     ros::NodeHandle *nh;
-    
+
     ros::Subscriber sub_imu;
     std::vector<ros::Subscriber> sub_radars;
+    ros::Subscriber sub_mappose;
 
     ros::Publisher pub_odom;
     ros::Publisher pub_v;
@@ -57,16 +60,17 @@ private:
     ros::Publisher pub_submap;
     ros::Publisher pub_subkeypos;
     ros::Publisher pub_aligned;
+    ros::Publisher pub_keyframe;
 
     tf::TransformBroadcaster br;
     tf::TransformListener listener;
 
     void cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg);
     void cb_imu(const sensor_msgs::Imu::ConstPtr &imu);
+    void cb_mappose(const radar_odom::KeyframeConstPtr &mappose);
     void publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe);
 
 public:
     RadarIO(ros::NodeHandle *nh);
     ~RadarIO();
-
 };

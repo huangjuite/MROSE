@@ -13,18 +13,14 @@ RadarIO::RadarIO(ros::NodeHandle *nh)
     pub_error = nh->advertise<geometry_msgs::Twist>("radar/error", 1);
     pub_odom = nh->advertise<nav_msgs::Odometry>("dopplerIO", 1);
     pub_radar = nh->advertise<sensor_msgs::PointCloud2>("radar_inlier", 1);
-    pub_subkey = nh->advertise<sensor_msgs::PointCloud2>("radar/subkeyframe", 1);
-    pub_submap = nh->advertise<sensor_msgs::PointCloud2>("radar/submap", 1);
-    pub_subkeypos = nh->advertise<sensor_msgs::PointCloud2>("radar/subkeypos", 1);
-    pub_aligned = nh->advertise<sensor_msgs::PointCloud2>("radar/aligned", 1);
+    pub_keyframe = nh->advertise<radar_odom::Keyframe>("radar/keyframe", 1);
 
     sub_imu = nh->subscribe(params.imu_topic, 1000, &RadarIO::cb_imu, this);
-
+    sub_mappose = nh->subscribe("radar/map_pose", 5, &RadarIO::cb_mappose, this);
     for (auto r : params.radar_list)
     {
         sub_radars.emplace_back(
-            nh->subscribe(params.radars[r].topic,
-                          1, &RadarIO::cb_radar, this));
+            nh->subscribe(params.radars[r].topic, 20, &RadarIO::cb_radar, this));
     }
 }
 
@@ -33,83 +29,58 @@ void RadarIO::publish_all(const std::shared_ptr<const rplrio::Keyframe<PointType
 
     nav_msgs::Odometry odom = toOdometry(keyframe->state.pose().matrix(), keyframe->pose_cov);
     odom.header.stamp = ros::Time().fromSec(keyframe->stamp);
-    odom.header.seq = keyframe->seq;
     odom.header.frame_id = "map";
     pub_odom.publish(odom);
 
-    sensor_msgs::PointCloud2 inlier_msg;
-    pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
-    inlier_msg.header.stamp = ros::Time().fromSec(keyframe->stamp);
-    inlier_msg.header.frame_id = "base";
-    inlier_msg.header.seq = keyframe->seq;
-    geometry_msgs::TwistWithCovarianceStamped radar_v =
-        toROSTwist(keyframe->radar_velocity, keyframe->radar_velocity_cov, inlier_msg.header);
-    radar_v.header.seq = keyframe->seq;
-    radar_v.header.frame_id = "base";
+    radar_odom::Keyframe key_msg;
+    pcl::toROSMsg(*(keyframe->radar_points), key_msg.radar_points);
+    key_msg.radar_points.header.stamp = ros::Time().fromSec(keyframe->stamp);
+    key_msg.radar_points.header.frame_id = "base";
+    key_msg.pose = toROSPoseStamped(keyframe->state.pose(), odom.header);
+    key_msg.seq = keyframe->seq;
+    pub_keyframe.publish(key_msg);
 
-    geometry_msgs::Twist v_err;
-    gtsam::Vector3 verr = keyframe->state.bodyVelocity() - keyframe->radar_velocity;
-    v_err.linear.x = verr(0);
-    v_err.linear.y = verr(1);
-    v_err.linear.z = verr(2);
-    pub_error.publish(v_err);
-
-    pub_radar.publish(inlier_msg);
-    pub_twist.publish(radar_v);
-    pub_bias.publish(toROStwist(keyframe->imu_bias));
-    pub_v.publish(velocityMarker(
-        keyframe->state.velocity(),
-        keyframe->state.pose().translation(),
-        "map",
-        "velocity"));
-
-    pcl::PointCloud<PointType>::Ptr subkey(new pcl::PointCloud<PointType>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<PointType>::Ptr submap(new pcl::PointCloud<PointType>);
-    pcl::PointCloud<PointType>::Ptr aligned(new pcl::PointCloud<PointType>);
-
-    rio_manager->get_local_maps(subkey, submap, aligned, subkeypos);
-    if(subkey->points.size()>0){
-        sensor_msgs::PointCloud2 subkey_msg;
-        pcl::toROSMsg(*subkey, subkey_msg);
-        subkey_msg.header.stamp = ros::Time().fromSec(keyframe->stamp);
-        subkey_msg.header.frame_id = "map";
-        // subkey_msg.header.seq = keyframe->seq;
-        pub_subkey.publish(subkey_msg);
-    }
-    if(submap->points.size()>0){
-        sensor_msgs::PointCloud2 submap_msg;
-        pcl::toROSMsg(*submap, submap_msg);
-        submap_msg.header.stamp = ros::Time().fromSec(keyframe->stamp);
-        submap_msg.header.frame_id = "map";
-        // subkey_msg.header.seq = keyframe->seq;
-        pub_submap.publish(submap_msg);
-    }
-    if(aligned->points.size()>0){
-        sensor_msgs::PointCloud2 aligned_msg;
-        pcl::toROSMsg(*aligned, aligned_msg);
-        aligned_msg.header.stamp = ros::Time().fromSec(keyframe->stamp);
-        aligned_msg.header.frame_id = "map";
-        // subkey_msg.header.seq = keyframe->seq;
-        pub_aligned.publish(aligned_msg);
-    }
-    if(subkeypos->points.size()>0){
-        sensor_msgs::PointCloud2 subpos_msg;
-        pcl::toROSMsg(*subkeypos, subpos_msg);
-        subpos_msg.header.stamp = ros::Time().fromSec(keyframe->stamp);
-        subpos_msg.header.frame_id = "map";
-        // subkey_msg.header.seq = keyframe->seq;
-        pub_subkeypos.publish(subpos_msg);
+    if (pub_radar.getNumSubscribers() > 0)
+    {
+        pub_radar.publish(key_msg.radar_points);
     }
 
+    if (pub_twist.getNumSubscribers() > 0)
+    {
+        geometry_msgs::TwistWithCovarianceStamped radar_v =
+            toROSTwist(keyframe->radar_velocity, keyframe->radar_velocity_cov, odom.header);
+        radar_v.header.seq = keyframe->seq;
+        radar_v.header.frame_id = "base";
+        pub_twist.publish(radar_v);
+    }
+
+    if (pub_error.getNumSubscribers() > 0)
+    {
+        geometry_msgs::Twist v_err;
+        gtsam::Vector3 verr = keyframe->state.bodyVelocity() - keyframe->radar_velocity;
+        v_err.linear.x = verr(0);
+        v_err.linear.y = verr(1);
+        v_err.linear.z = verr(2);
+        pub_error.publish(v_err);
+    }
+
+    if (pub_bias.getNumSubscribers() > 0)
+        pub_bias.publish(toROStwist(keyframe->imu_bias));
+
+    if (pub_v.getNumSubscribers() > 0)
+        pub_v.publish(velocityMarker(
+            keyframe->state.velocity(),
+            keyframe->state.pose().translation(),
+            "map",
+            "velocity"));
 
     // broadcast odometry transformation
-    // tf::Transform transform;
-    // auto trans = prev_state.pose().translation();
-    // auto orien = prev_state.pose().rotation().toQuaternion();
-    // transform.setOrigin(tf::Vector3(trans.x(), trans.y(), trans.z()));
-    // transform.setRotation(tf::Quaternion(orien.x(), orien.y(), orien.z(), orien.w()));
-    // br.sendTransform(tf::StampedTransform(transform, radar_msg->header.stamp, "map", "base"));
+    tf::Transform transform;
+    auto trans = keyframe->state.pose().translation();
+    auto orien = keyframe->state.pose().rotation().toQuaternion();
+    transform.setOrigin(tf::Vector3(trans.x(), trans.y(), trans.z()));
+    transform.setRotation(tf::Quaternion(orien.x(), orien.y(), orien.z(), orien.w()));
+    br.sendTransform(tf::StampedTransform(transform, odom.header.stamp, "map", "base"));
 }
 
 void RadarIO::cb_imu(const sensor_msgs::Imu::ConstPtr &imu_msg)
@@ -145,6 +116,12 @@ void RadarIO::cb_radar(const sensor_msgs::PointCloud2::ConstPtr &pc_msg)
     {
         publish_all(kf);
     }
+}
+
+void RadarIO::cb_mappose(const radar_odom::KeyframeConstPtr &mappose)
+{
+    gtsam::Pose3 mp = toPose3(mappose->pose);
+    rio_manager->feed_mappose(mp, mappose->seq);
 }
 
 RadarIO::~RadarIO()

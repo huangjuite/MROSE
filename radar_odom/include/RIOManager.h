@@ -27,7 +27,6 @@
 #include "VelocityPoseMeasurementFactor.h"
 #include "RadarVelocityEstimatorBase.h"
 #include "StaticInitializer.hpp"
-#include "MapConstraint.h"
 
 #include "rplrio_types.h"
 #include "params.h"
@@ -57,9 +56,6 @@ namespace rplrio
 
         // radar
         std::deque<std::shared_ptr<DIORadar>> radar_que;
-        std::unique_ptr<MapConstraint<PointType>> radar_map;
-        PclPtr subkeyframe_, submap_, aligned_;
-        pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos_;
 
         // imu settings
         std::shared_ptr<gtsam::PreintegrationType> preintegrated;
@@ -94,10 +90,11 @@ namespace rplrio
 
         void feed_imu(std::shared_ptr<rplrio::IMU> imu_data);
 
+        void feed_mappose(gtsam::Pose3 mappose, uint key_step);
+
         std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> get_latest_states();
 
         std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
 
-        void get_local_maps(PclPtr subkeyframe, PclPtr submap, PclPtr aligned, pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos);
     };
 }

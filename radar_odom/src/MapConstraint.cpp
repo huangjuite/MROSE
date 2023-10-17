@@ -1,10 +1,11 @@
 #include "MapConstraint.h"
 
 template <class PointType>
-MapConstraint<PointType>::MapConstraint(/* args */)
+MapConstraint<PointType>::MapConstraint()
 {
     cloud_keyframes.reset(new pcl::PointCloud<pcl::PointXYZ>);
     voxel_filter.setLeafSize(0.5, 0.5, 0.5);
+    map_.reset(new Pcl);
 }
 
 template <class PointType>
@@ -65,11 +66,15 @@ bool MapConstraint<PointType>::regist(PclPtr submap, PclPtr localmap, PclPtr ali
         *sub_keyframe->radar_points, *sub_keyframe->radar_points,
         sub_keyframe->state.pose().matrix());
     pcl::copyPointCloud(*sub_keyframe->radar_points, *localmap);
+    voxel_filter.setInputCloud(localmap);
+    voxel_filter.filter(*localmap);
 
     auto t = sub_keyframe->state.pose().translation();
     pcl::PointXYZ key_pos(t.x(), t.y(), t.z());
     cloud_keyframes->points.emplace_back(key_pos);
     subkeyframes.emplace_back(sub_keyframe);
+
+    float score = 100;
 
     if (!subkeyframes.empty())
     {
@@ -77,27 +82,30 @@ bool MapConstraint<PointType>::regist(PclPtr submap, PclPtr localmap, PclPtr ali
 
         voxel_filter.setInputCloud(submap);
         voxel_filter.filter(*submap);
-        voxel_filter.setInputCloud(localmap);
-        voxel_filter.filter(*localmap);
 
         gicp_omp.setInputTarget(submap);
         gicp_omp.setInputSource(localmap);
         gicp_omp.align(*aligned);
         Eigen::Matrix4f tf = gicp_omp.getFinalTransformation();
         gtsam::Pose3 tpose(tf.cast<double>());
-        float score = gicp_omp.getFitnessScore();
+        score = gicp_omp.getFitnessScore();
         // std::cout << tpose << std::endl;
         // std::cout << "fitness score:" << score << std::endl;
         pose = tpose * sub_keyframe->state.pose();
         // ndt_omp.setInputTarget(submap);
         // ndt_omp.setInputSource(localmap);
-
-        sub_keyframe = nullptr;
-        return (score < 2);
     }
 
+    pcl::copyPointCloud((score < 2) ? *aligned : *localmap, *sub_keyframe->radar_points);
+    // *map_ += *sub_keyframe->radar_points;
     sub_keyframe = nullptr;
-    return false;
+    return (score < 2);
+}
+
+template <class PointType>
+void MapConstraint<PointType>::render_map(PclPtr map)
+{
+    pcl::copyPointCloud(*map_, *map);
 }
 
 template class MapConstraint<pcl::PointXYZSD>;

@@ -40,6 +40,11 @@ add_service_files(
   Prediction.srv
 )
 
+add_message_files(
+  FILES
+  Keyframe.msg
+)
+
 generate_dynamic_reconfigure_options(
     cfg/mapping.cfg
     cfg/extrinsic.cfg
@@ -62,12 +67,13 @@ catkin_package(
   std_msgs
   ndt_omp
   pcl_radar
+  message_runtime
 )
 
 add_library(${PROJECT_NAME} SHARED
   src/rplrio_types.cpp
   src/params.cpp
-
+  
   src/VelocityPoseMeasurementFactor.cpp
 
   src/RadarVelocityEstimatorCeres.cpp
@@ -104,6 +110,9 @@ target_link_libraries(${PROJECT_NAME}
 
 add_executable(rio app/RIO.cpp)
 target_link_libraries(rio ${PROJECT_NAME})
+
+add_executable(rio_map app/RIO_map.cpp)
+target_link_libraries(rio_map ${PROJECT_NAME})
 
 add_executable(doppler_odom app/DIO.cpp)
 target_link_libraries(doppler_odom ${PROJECT_NAME})

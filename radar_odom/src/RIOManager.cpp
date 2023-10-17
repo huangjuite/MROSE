@@ -11,7 +11,7 @@ namespace rplrio
         this->velocity_estimator = velocity_estimator;
         velocity_estimator->set_inlier_thresh(params.doppler_inlier_thresh);
 
-        radar_map = std::make_unique<MapConstraint<PointType>>();
+        // radar_map = std::make_unique<MapConstraint<PointType>>();
 
         // optimizer init
         gtsam::ISAM2Params parameters;
@@ -192,26 +192,6 @@ namespace rplrio
         key_frame->radar_velocity = measured_v;
         key_frame->radar_velocity_cov = radar_velocity_cov;
 
-        // ------------------------------------------------------------------------------------
-        gtsam::Pose3 scm_pose;
-        radar_map->update_sub_key_frame(key_frame);
-
-        if (step % 40 == 0)
-        {
-            subkeyframe_.reset(new Pcl);
-            submap_.reset(new Pcl);
-            aligned_.reset(new Pcl);
-            subkeypos_.reset(new pcl::PointCloud<pcl::PointXYZ>);
-            bool sc_regist = radar_map->regist(submap_, subkeyframe_, aligned_,
-                                               subkeypos_, scm_pose);
-            if (sc_regist)
-            {
-                graph->addPrior(X(step), scm_pose,
-                                gtsam::noiseModel::Diagonal::Sigmas(
-                                    (gtsam::Vector(6) << 5e-2, 5e-2, 5e-2, 0.5, 0.5, 0.5).finished()));
-            }
-        }
-
         return key_frame;
     }
 
@@ -262,36 +242,20 @@ namespace rplrio
     }
 
     template <class PointType>
+    void RIOManager<PointType>::feed_mappose(gtsam::Pose3 mappose, uint key_step)
+    {
+        graph->addPrior(X(key_step), mappose,
+                        gtsam::noiseModel::Diagonal::Sigmas(
+                            (gtsam::Vector(6) << 5e-2, 5e-2, 5e-2, 0.5, 0.5, 0.5).finished()));
+        std::cout << "map constraint delay: " << step - key_step << " frames" << std::endl;
+    }
+
+    template <class PointType>
     std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> RIOManager<PointType>::get_latest_states()
     {
         return latest_states;
     }
 
-    template <class PointType>
-    void RIOManager<PointType>::get_local_maps(PclPtr subkeyframe, PclPtr submap, PclPtr aligned, pcl::PointCloud<pcl::PointXYZ>::Ptr subkeypos)
-    {
-
-        if (subkeyframe_ != nullptr)
-        {
-            pcl::copyPointCloud(*subkeyframe_, *subkeyframe);
-            subkeyframe_ = nullptr;
-        }
-        if (subkeypos_ != nullptr)
-        {
-            pcl::copyPointCloud(*subkeypos_, *subkeypos);
-            subkeypos_ = nullptr;
-        }
-        if (submap_ != nullptr)
-        {
-            pcl::copyPointCloud(*submap_, *submap);
-            submap_ = nullptr;
-        }
-        if (aligned_ != nullptr)
-        {
-            pcl::copyPointCloud(*aligned_, *aligned);
-            aligned_ = nullptr;
-        }
-    }
 
     template <class PointType>
     RIOManager<PointType>::~RIOManager()

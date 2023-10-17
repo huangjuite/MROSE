@@ -27,6 +27,6 @@
     </node>
 
     <!-- pose graph -->
-    <node name="radar_pose_graph" pkg="radar_odom" type="map_optimize" output="screen" />
+    <node name="radar_mapping" pkg="radar_odom" type="rio_map" output="screen" />
 
 </launch>
