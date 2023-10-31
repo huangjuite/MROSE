@@ -39,8 +39,6 @@
 #include "params.h"
 
 // #define PREDICT
-// #define CERES_HCS
-// #define GTSAM_HCS
 
 #ifdef PREDICT
 typedef pcl::PointXYZSDW PointType;
@@ -49,21 +47,9 @@ typedef RadarVelocityEstimatorEigenWeighted VestType;
 
 #ifndef PREDICT
 
-#ifndef CERES_HCS
 #ifndef GTSAM_HCS
 typedef pcl::PointXYZSD PointType;
 typedef RadarVelocityEstimatorCeres VestType;
-#endif
-#endif
-
-#ifdef CERES_HCS
-typedef pcl::PointXYZSD PointType;
-typedef RadarVelocityEstimatorCeresHCS VestType;
-#endif
-
-#ifdef GTSAM_HCS
-typedef pcl::PointXYZSD PointType;
-typedef RadarVelocityEstimatorGtsamHCS VestType;
 #endif
 
 #endif
@@ -110,22 +96,6 @@ DopplerIOBag::DopplerIOBag(ros::NodeHandle *nh)
     params = rplrio::get_params(*nh);
     dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
         params, std::make_shared<VestType>());
-
-#ifdef CERES_HCS
-    auto estimator = std::dynamic_pointer_cast<RadarVelocityEstimatorCeresHCS>(dio_manager->velocity_estimator);
-
-    auto radar_p = params.radars[params.radar_list[0]];
-    estimator->set_uncertainty(
-        radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
-#endif
-
-#ifdef GTSAM_HCS
-    auto estimator = std::dynamic_pointer_cast<RadarVelocityEstimatorGtsamHCS>(dio_manager->velocity_estimator);
-
-    auto radar_p = params.radars[params.radar_list[0]];
-    estimator->set_uncertainty(
-        radar_p.doppler_std, radar_p.azimuth_std, radar_p.elevation_std);
-#endif
 
     // ros init
     pub_v = nh->advertise<visualization_msgs::Marker>("velocity", 10);

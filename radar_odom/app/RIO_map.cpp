@@ -33,6 +33,7 @@
 
 #include <MapConstraint.h>
 #include <radar_odom/Keyframe.h>
+#include <radar_odom/GetMap.h>
 
 #include "rplrio_types.h"
 #include "utils.h"
@@ -52,7 +53,12 @@ private:
 
     ros::Publisher pub_subkey, pub_submap, pub_subkeypos,
         pub_aligned, pub_mappose, pub_path, pub_map;
+
     ros::Subscriber sub_keyframe;
+
+    ros::ServiceServer map_srv;
+    bool getMap(radar_odom::GetMap::Request &req, radar_odom::GetMap::Response &resp);
+
     void cb_node(const radar_odom::KeyframeConstPtr &key_msg);
 
 public:
@@ -76,6 +82,8 @@ RIO_map<PointType>::RIO_map(ros::NodeHandle *nh)
     pub_path = nh->advertise<nav_msgs::Path>("radar_path", 1);
 
     path.header.frame_id = "map";
+
+    map_srv = nh->advertiseService("radar/get_map", &RIO_map::getMap, this);
 
     sub_keyframe = nh->subscribe("radar/keyframe", 40, &RIO_map::cb_node, this);
 }
@@ -181,6 +189,15 @@ void RIO_map<PointType>::render_map()
             pub_map.publish(map_msg);
         }
     }
+}
+
+template <class PointType>
+bool RIO_map<PointType>::getMap(radar_odom::GetMap::Request &req, radar_odom::GetMap::Response &resp)
+{
+    pcl::toROSMsg(*map_, resp.map);
+    resp.map.header.frame_id = "map";
+
+    return true;
 }
 
 int main(int argc, char *argv[])

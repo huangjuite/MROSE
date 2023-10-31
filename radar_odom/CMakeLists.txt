@@ -38,6 +38,7 @@ add_service_files(
   FILES
   Registration.srv
   Prediction.srv
+  GetMap.srv
 )
 
 add_message_files(
@@ -134,3 +135,6 @@ target_link_libraries(map_optimize ${PROJECT_NAME})
 
 add_executable(map_optimize_weighted app/map_node_weighted.cpp)
 target_link_libraries(map_optimize_weighted ${PROJECT_NAME})
+
+add_executable(map_gt app/map_gt.cpp)
+target_link_libraries(map_gt ${PROJECT_NAME})
