@@ -24,7 +24,6 @@
 #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam_unstable/nonlinear/BatchFixedLagSmoother.h>
 
-
 #include "VelocityPoseMeasurementFactor.h"
 #include "RadarVelocityEstimatorBase.h"
 #include "StaticInitializer.hpp"
@@ -91,7 +90,6 @@ namespace rplrio
 
         std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> get_latest_states();
 
-                std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
-
+        std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
     };
 }
