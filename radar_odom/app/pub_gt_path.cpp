@@ -48,7 +48,8 @@
 std::vector<rplrio::Odom> odom_vio;
 ros::Publisher pub_path;
 nav_msgs::Path path;
-double rotate = M_PI;
+double rotate = 0;
+
 std::vector<rplrio::Odom> odom_csv(std::string path)
 {
     std::vector<rplrio::Odom> gt;
@@ -101,8 +102,7 @@ void pub_once()
 {
     path.header.frame_id = "map";
     path.header.stamp = ros::Time::now();
-
-    std::cout << odom_vio.size() << std::endl;
+    path.poses.clear();
 
     for (uint i = 0; i < odom_vio.size(); i++)
     {
@@ -126,7 +126,6 @@ bool cb_publish(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &re
 
 int main(int argc, char *argv[])
 {
-    std::cout << std::fixed << std::setprecision(6);
 
     ros::init(argc, argv, "gt_path");
     ros::NodeHandle nh;

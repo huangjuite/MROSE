@@ -48,7 +48,7 @@ python3 main_box_2.py \
 
 python3 main_box_2.py \
     /tmp/evo_razor/ape/rot/*.zip \
-    /tmp/evo_epson/ape/trans/*.zip \
+    /tmp/evo_epson/ape/rot/*.zip \
     --save_plot /tmp/ape_rot.png \
     --no_warnings 
 

@@ -1,0 +1,24 @@
+<launch>
+
+    <arg name="gt_path" default="/tmp/odom_vio.csv" />
+
+
+    <!-- parameter -->
+    <rosparam file="$(find radar_odom)/cfg/params_epson.yaml" />
+    <!-- <rosparam file="$(find radar_odom)/cfg/params_razor.yaml" /> -->
+    <arg name="info_plot" default="false" />
+
+    <!-- odometry -->
+    <node name="roam" pkg="radar_odom" type="rio" output="screen" />
+    <node if="$(arg info_plot)" pkg="plotjuggler" type="plotjuggler" name="plot"
+        args="-l $(find radar_odom)/cfg/info_vis.xml" />
+
+    <node name="pub_gt" pkg="radar_odom" type="publish_gt" output="screen">
+        <param name="gt_path" value="$(arg gt_path)" />
+        <param name="rotate" value="0" />
+    </node>
+
+    <!-- pose graph -->
+    <node name="radar_mapping" pkg="radar_odom" type="rio_map" output="screen" />
+
+</launch>
