@@ -4,12 +4,13 @@
 // PCL includes
 #include <stdlib.h>
 
-#include <pcl_ros/point_cloud.h>
+#include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_types.h>
-#include <pclradar/RadarPointType.h>
 
 #include <Eigen/Dense>
+
+#include "RadarPointType.h"
 
 template <class PointType>
 class RadarVelocityEstimatorBase

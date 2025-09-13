@@ -1,0 +1,47 @@
+#ifndef RADAR_POINT_TYPE_H
+#define RADAR_POINT_TYPE_H
+
+// PCL includes
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+namespace pcl {
+struct EIGEN_ALIGN16 PointXYZSD {
+  PCL_ADD_POINT4D;
+  float snr;
+  float doppler;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+struct EIGEN_ALIGN16 PointXYZSDW {
+  PCL_ADD_POINT4D;
+  float snr;
+  float doppler;
+  float weight;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+struct EIGEN_ALIGN16 PointXYZSNV {
+  PCL_ADD_POINT4D;
+  float snr_db;
+  float noise_db;
+  float v_doppler_mps;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+} // namespace pcl
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::PointXYZSD,
+                                  (float, x, x)(float, y, y)(float, z, z)(
+                                      float, snr, snr)(float, doppler, doppler))
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(
+    pcl::PointXYZSDW, (float, x, x)(float, y, y)(float, z, z)(float, snr, snr)(
+                          float, doppler, doppler)(float, weight, weight))
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(
+    pcl::PointXYZSNV,
+    (float, x, x)(float, y, y)(float, z, z)(float, snr_db, snr_db)(
+        float, noise_db, noise_db)(float, v_doppler_mps, v_doppler_mps))
+
+#endif

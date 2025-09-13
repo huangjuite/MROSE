@@ -1,6 +1,0 @@
-!!python/object/new:dynamic_reconfigure.encoding.Config
-dictitems:
-  map_voxel: false
-  snr_thresh: 4.0
-  voxel_size: 0.2
-state: []

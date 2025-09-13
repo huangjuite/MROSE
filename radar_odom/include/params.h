@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <gtsam/navigation/CombinedImuFactor.h>
 
-typedef boost::shared_ptr<gtsam::PreintegratedCombinedMeasurements::Params> ImuParam_ptr;
+typedef std::shared_ptr<gtsam::PreintegratedCombinedMeasurements::Params>  ImuParam_ptr;
 
 namespace rplrio
 {
@@ -54,9 +54,9 @@ namespace rplrio
         int key_frame_search;
         double loop_distance_thresh;
         double process_voxel_size;
-        double ndt_voxel_size;
-        int ndt_thread;
         double snr_thresh;
+        int pc_reg_thread;
+        
 
         // mapping
         double map_snr_thresh;

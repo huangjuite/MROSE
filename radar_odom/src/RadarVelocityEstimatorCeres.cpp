@@ -1,7 +1,7 @@
 #include "RadarVelocityEstimatorCeres.h"
 
-Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc)
-{
+Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc) {
     double v_est[3] = {initial_v[0], initial_v[1], initial_v[2]};
 
     ceres::Problem problem;
@@ -9,8 +9,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<pcl::Point
 
     problem.AddParameterBlock(v_est, 3);
 
-    for (auto p : radar_pc->points)
-    {
+    for (auto p : radar_pc->points) {
         Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
         DopplerCostFunction *cost_function =
             new DopplerCostFunction(pos, p.doppler, 0.124);
@@ -49,7 +48,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(pcl::PointCloud<pcl::Point
 }
 
 Eigen::Matrix3d RadarVelocityEstimatorCeres::get_covariance(
-    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc, Eigen::Vector3d velocity)
-{
+    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc,
+    Eigen::Vector3d velocity) {
     return covariance_matrix;
 }
