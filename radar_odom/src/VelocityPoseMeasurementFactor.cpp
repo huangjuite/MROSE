@@ -9,14 +9,14 @@ VelocityPoseMeasurementFactor::VelocityPoseMeasurementFactor(
 gtsam::Vector VelocityPoseMeasurementFactor::evaluateError(
     const gtsam::Vector3 &vel, const gtsam::Pose3 &pose,
     gtsam::OptionalMatrixType H1, gtsam::OptionalMatrixType H2) const {
-    gtsam::Matrix33 Hr;
-    gtsam::Vector3 err = pose.rotation().unrotate(vel, Hr, H1) - v_measure;
-    if (H2) {
-        *H2 = gtsam::Matrix::Zero(3, 6);
-        H2->block(0, 0, 3, 3) = Hr;
-    }
+  gtsam::Matrix33 Hr;
+  gtsam::Vector3 err = pose.rotation().unrotate(vel, Hr, H1) - v_measure;
+  if (H2) {
+    *H2 = gtsam::Matrix::Zero(3, 6);
+    H2->block(0, 0, 3, 3) = Hr;
+  }
 
-    return err;
+  return err;
 }
 
 VelocityPoseMeasurementFactor::~VelocityPoseMeasurementFactor() {}
