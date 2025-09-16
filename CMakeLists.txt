@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10.2)
-project(radar_odom)
+project(rpl_rio)
 
 add_compile_options(-std=c++17)
 
@@ -31,7 +31,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 # Build the library
 #############################################
-add_library(rplrio SHARED
+add_library(rio SHARED
   # src/radar_point_type.cpp
   src/rplrio_types.cpp
   src/params.cpp
@@ -53,11 +53,11 @@ add_library(rplrio SHARED
 
 )
 
-target_include_directories(rplrio PUBLIC
+target_include_directories(rio PUBLIC
   include
 )
 
-target_link_libraries(rplrio
+target_link_libraries(rio
   Eigen3::Eigen
   gtsam
   ceres
@@ -65,7 +65,7 @@ target_link_libraries(rplrio
   OpenMP::OpenMP_CXX
 )
 
-ament_target_dependencies(rplrio
+ament_target_dependencies(rio
   rclcpp
   pcl_ros
   visualization_msgs
@@ -76,23 +76,23 @@ ament_target_dependencies(rplrio
 #############################################
 
 add_executable(runDIO app/runDIO.cpp)
-target_link_libraries(runDIO rplrio)
+target_link_libraries(runDIO rio)
 
 add_executable(runMapping app/runMapping.cpp)
-target_link_libraries(runMapping rplrio)
+target_link_libraries(runMapping rio)
 
 # add_executable(rio app/RIO.cpp)
-# target_link_libraries(rio rplrio)
+# target_link_libraries(rio rio)
 
 # add_executable(rio_map app/RIO_map.cpp)
-# target_link_libraries(rio_map rplrio)
+# target_link_libraries(rio_map rio)
 
 
 
 # Install
 #############################################
 install(
-  TARGETS rplrio
+  TARGETS rio
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin

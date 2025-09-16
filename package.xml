@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>radar_odom</name>
+  <name>rpl_rio</name>
   <version>0.0.0</version>
-  <description>The radar_odom package</description>
+  <description>The rpl_rio package</description>
   <maintainer email="juiteh@andrew.cmu.edu">Ray Huang</maintainer>
 
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->

@@ -20,13 +20,13 @@ def generate_launch_description():
 
     def odom_node_setup(context):
         doppler_odom_node = Node(
-            package="radar_odom",
+            package="rpl_rio",
             executable="runDIO",
             output="screen",
             parameters=[
                 {
                     "config": os.path.join(
-                        get_package_share_directory("radar_odom"),
+                        get_package_share_directory("rpl_rio"),
                         "cfg",
                         f"{LaunchConfiguration('config').perform(context)}.yaml",
                     )
@@ -41,7 +41,7 @@ def generate_launch_description():
         arguments=[
             "-l",
             PathJoinSubstitution(
-                [FindPackageShare("radar_odom"), "cfg", "info_vis.xml"]
+                [FindPackageShare("rpl_rio"), "cfg", "info_vis.xml"]
             ),
         ],
         condition=IfCondition(LaunchConfiguration("info_plot")),
