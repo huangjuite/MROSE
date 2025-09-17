@@ -57,6 +57,7 @@ odom:
   imu: imu1
   radar: [radar0, radar1]
   doppler_inlier_thresh: 0.124
+  use_static_init: true
   static_init_window: 2.0 # seconds
   static_init_threshold: 0.2
   optimization_window: 5.0 # seconds

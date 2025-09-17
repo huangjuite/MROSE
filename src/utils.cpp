@@ -297,8 +297,6 @@ Params get_params(std::string cfg_path) {
   for (std::string r : param.radar_list) {
     param.radars[r].topic = config[r]["rostopic"].as<std::string>();
     param.radars[r].doppler_std = config[r]["doppler_sigma"].as<double>();
-    param.radars[r].azimuth_std = config[r]["azimuth_sigma"].as<double>();
-    param.radars[r].elevation_std = config[r]["elevation_sigma"].as<double>();
 
     auto T_r_i_node = config[r]["T_r_i"];
     for (size_t i = 0; i < 4; ++i) {
@@ -316,6 +314,7 @@ Params get_params(std::string cfg_path) {
   param.bv_huber_k = config["odom"]["bv_huber_k"].as<double>();
 
   // initializer
+  param.use_static_init = config["odom"]["use_static_init"].as<bool>();
   param.doppler_inlier_thresh =
       config["odom"]["doppler_inlier_thresh"].as<double>();
   param.init_window = config["odom"]["static_init_window"].as<double>();

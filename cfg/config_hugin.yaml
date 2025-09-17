@@ -1,0 +1,47 @@
+imu0:
+  T_i_b:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  accelerometer_noise_density: 0.0015903917463388937
+  accelerometer_random_walk: 7.316842828686425e-05
+  gyroscope_noise_density: 3.581400308085914e-05
+  gyroscope_random_walk: 1.1036348379504944e-06
+  rostopic: /epson_imu
+  gravity: 9.80126
+
+radar_f:
+  T_r_i:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  rostopic: /radar0/points
+  doppler_sigma: 0.124 # doppler uncertainty (m/s)
+
+odom:
+  imu: imu0
+  radar: [radar_f]
+  doppler_inlier_thresh: 0.124
+  optimization_window: 5.0 # seconds
+  bv_use_huber: true
+  bv_huber_k: 0.5
+  use_static_init: false
+  static_init_window: 4.0 # seconds
+  static_init_threshold: 0.2
+
+
+loop_close:
+  enable_loop_close: false
+  loop_close_rate: 40 # frames
+  loop_ignore: 100 # frames
+  key_frame_search: 30 # frames
+  loop_distance_thresh: 2 # meters
+  snr_thresh: 1.6 # log dB
+  process_voxel_size: 0.2 # meters
+  pc_reg_thread: 8
+
+mapping:
+  render_rate: 1.0 # Hz
+  map_snr_thresh: 1.6 # log dB

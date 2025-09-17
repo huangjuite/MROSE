@@ -30,6 +30,7 @@ namespace rplrio
         double bv_huber_k;
 
         // initializer
+        bool use_static_init;
         double init_window;
         double init_thres;
 
