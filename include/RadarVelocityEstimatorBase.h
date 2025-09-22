@@ -10,8 +10,6 @@
 
 #include <Eigen/Dense>
 
-#include "RadarPointType.h"
-
 template <class PointType> class RadarVelocityEstimatorBase {
 protected:
   typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;

@@ -1,6 +1,7 @@
 // PCL includes
 #include "RadarVelocityEstimatorBase.h"
 #include <ceres/ceres.h>
+#include "RadarPointType.h"
 
 class DopplerCostFunction : public ceres::SizedCostFunction<1, 3> {
 private:

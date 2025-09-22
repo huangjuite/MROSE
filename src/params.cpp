@@ -12,7 +12,7 @@ namespace rplrio
         gtsam::Matrix33 bias_omega_cov = gtsam::I_3x3 * pow(param.gyro_rw, 2);
         gtsam::Matrix66 bias_acc_omega_init = gtsam::I_6x6 * 1e-5; // error in the bias used for preintegration
 
-        auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(param.gravity);
+        auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedD(param.gravity);
         // PreintegrationBase params:
         p->accelerometerCovariance = measured_acc_cov;    // acc white noise in continuous
         p->integrationCovariance = integration_error_cov; // integration uncertainty continuous

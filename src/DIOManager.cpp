@@ -1,4 +1,6 @@
 #include "DIOManager.h"
+#include "RadarPointType.h"
+#include <Eigen/src/Geometry/Quaternion.h>
 
 namespace rplrio {
 
@@ -19,8 +21,11 @@ DIOManager<PointType>::DIOManager(
       params.lag, parameters);
 
   // imu init
-  initializer = std::make_unique<StaticInitializer>(params.init_window,
-                                                    params.init_thres);
+  if (params.use_static_init) {
+    initialized = false;
+    initializer = std::make_unique<StaticInitializer>(params.init_window,
+                                                      params.init_thres);
+  }
 }
 
 template <class PointType>
@@ -201,7 +206,7 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
 template <class PointType>
 void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
 
-  if (!initialized) {
+  if (params.use_static_init && !initialized) {
     bool init_success = initializer->init_update(imu_data);
     if (init_success) {
       initialized = true;
@@ -220,10 +225,17 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
 
       update();
     }
+  } else if (!params.use_static_init && !initialized) {
+    initialized = true;
+    Eigen::Vector3d bias_a = Eigen::Vector3d::Zero();
+    Eigen::Vector3d bias_g = Eigen::Vector3d::Zero();
+    Eigen::Quaterniond init_r = Eigen::Quaterniond::Identity();
 
-    return;
+    pre_imu_t = imu_data->stamp;
+    graph_init(init_r, bias_a, bias_g, pre_imu_t);
+  } else {
+    imu_que.emplace_back(imu_data);
   }
-  imu_que.emplace_back(imu_data);
 }
 
 template <class PointType>

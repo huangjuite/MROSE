@@ -290,7 +290,6 @@ Params get_params(std::string cfg_path) {
     }
   }
   param.R_i_b = param.T_i_b.block(0, 0, 3, 3);
-  std::cout << param.T_i_b << std::endl;
 
   // radar
   param.radar_list = config["odom"]["radar"].as<std::vector<std::string>>();

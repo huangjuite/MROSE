@@ -40,9 +40,7 @@ def generate_launch_description():
         executable="plotjuggler",
         arguments=[
             "-l",
-            PathJoinSubstitution(
-                [FindPackageShare("rpl_rio"), "cfg", "info_vis.xml"]
-            ),
+            PathJoinSubstitution([FindPackageShare("rpl_rio"), "cfg", "info_vis.xml"]),
         ],
         condition=IfCondition(LaunchConfiguration("info_plot")),
     )

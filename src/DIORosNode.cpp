@@ -1,5 +1,6 @@
 #include "DIORosNode.h"
 #include "utils.h"
+#include <rclcpp/logging.hpp>
 #include <rclcpp/node_options.hpp>
 #include <rclcpp/parameter.hpp>
 
@@ -38,6 +39,8 @@ DIORosNode::DIORosNode()
             params.radars[r].topic, 1,
             std::bind(&DIORosNode::cb_radar, this, std::placeholders::_1)));
   }
+
+  RCLCPP_INFO(get_logger(), "radar odometry node initialized.");
 }
 
 void DIORosNode::publish_all(
@@ -52,11 +55,11 @@ void DIORosNode::publish_all(
   sensor_msgs::msg::PointCloud2 inlier_msg;
   pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
   inlier_msg.header.stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
-  inlier_msg.header.frame_id = "base";
+  inlier_msg.header.frame_id = "base_link";
   geometry_msgs::msg::TwistWithCovarianceStamped radar_v =
       rplrio::toROSTwist(keyframe->radar_velocity, keyframe->radar_velocity_cov,
                          inlier_msg.header);
-  radar_v.header.frame_id = "base";
+  radar_v.header.frame_id = "base_link";
 
   geometry_msgs::msg::Twist v_err;
   gtsam::Vector3 verr =
@@ -84,7 +87,6 @@ void DIORosNode::publish_all(
 }
 
 void DIORosNode::cb_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg) {
-
   double imu_t = rclcpp::Time(imu_msg->header.stamp).seconds();
 
   gtsam::Vector3 acc =
