@@ -26,7 +26,7 @@
 #include "rplrio_types.h"
 
 typedef pcl::PointXYZSD PointType;
-typedef RadarVelocityEstimatorCeres VestType;
+typedef RadarVelocityEstimatorCeres<PointType> VestType;
 
 class DIORosNode : public rclcpp::Node {
 private:

@@ -1,7 +1,9 @@
 // PCL includes
 #include "RadarVelocityEstimatorBase.h"
 #include <ceres/ceres.h>
-#include "RadarPointType.h"
+#include <ceres/solver.h>
+#include <ceres/types.h>
+#include <optional>
 
 class DopplerCostFunction : public ceres::SizedCostFunction<1, 3> {
 private:
@@ -33,11 +35,22 @@ public:
   };
 };
 
+template <typename PointType>
 class RadarVelocityEstimatorCeres
-    : public RadarVelocityEstimatorBase<pcl::PointXYZSD> {
+    : public RadarVelocityEstimatorBase<PointType> {
+  typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;
+  typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
+  typedef typename pcl::PointCloud<PointType> Pcl;
+  ceres::Solver::Options options;
+  float doppler_sigma;
+  float cauchy_scale;
+
 public:
-  Eigen::Vector3d optimize(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc);
-  Eigen::Matrix3d
-  get_covariance(pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc,
-                 Eigen::Vector3d velocity);
+  RadarVelocityEstimatorCeres(
+      std::optional<ceres::Solver::Options> options = std::nullopt,
+      std::optional<float> doppler_sigma = 0.124,
+      std::optional<float> cauchy_scale = 1.0);
+  Eigen::Vector3d optimize(PclConstPtr radar_pc);
+  Eigen::Matrix3d get_covariance(PclConstPtr radar_pc,
+                                 Eigen::Vector3d velocity);
 };

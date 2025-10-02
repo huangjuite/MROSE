@@ -1,8 +1,29 @@
 #include "RadarVelocityEstimatorCeres.h"
+#include "RadarPointType.h"
+#include <optional>
 
-Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(
-    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc) {
-  double v_est[3] = {initial_v[0], initial_v[1], initial_v[2]};
+template <typename PointType>
+RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
+    std::optional<ceres::Solver::Options> options,
+    std::optional<float> doppler_sigma, std::optional<float> cauchy_scale) {
+
+  if (options.has_value())
+    this->options = options.value();
+  else
+    this->options.linear_solver_type = ceres::DENSE_QR;
+
+  if (doppler_sigma.has_value())
+    this->doppler_sigma = doppler_sigma.value();
+
+  if (cauchy_scale.has_value())
+    this->cauchy_scale = cauchy_scale.value();
+}
+
+template <typename PointType>
+Eigen::Vector3d
+RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
+  double v_est[3] = {this->initial_v[0], this->initial_v[1],
+                     this->initial_v[2]};
 
   ceres::Problem problem;
   std::vector<ceres::ResidualBlockId> residual_ids;
@@ -12,15 +33,12 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(
   for (auto p : radar_pc->points) {
     Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
     DopplerCostFunction *cost_function =
-        new DopplerCostFunction(pos, p.doppler, 0.124);
+        new DopplerCostFunction(pos, p.doppler, doppler_sigma);
     ceres::ResidualBlockId id = problem.AddResidualBlock(
-        cost_function, new ceres::CauchyLoss(0.124), v_est);
+        cost_function, new ceres::CauchyLoss(cauchy_scale), v_est);
     residual_ids.push_back(id);
   }
 
-  ceres::Solver::Options options;
-  options.linear_solver_type = ceres::DENSE_QR;
-  // options.minimizer_progress_to_stdout = true;
   ceres::Solver::Summary summary;
   Solve(options, &problem, &summary);
 
@@ -34,7 +52,7 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(
   covariance.Compute(covariance_blocks, &problem);
   double cov[3 * 3];
   covariance.GetCovarianceBlock(v_est, v_est, cov);
-  covariance_matrix = Eigen::Matrix3d(cov);
+  this->covariance_matrix = Eigen::Matrix3d(cov);
 
   // ceres::Problem::EvaluateOptions eval_opt;
   // eval_opt.residual_blocks = residual_ids;
@@ -47,8 +65,12 @@ Eigen::Vector3d RadarVelocityEstimatorCeres::optimize(
   return Eigen::Vector3d(v_est);
 }
 
-Eigen::Matrix3d RadarVelocityEstimatorCeres::get_covariance(
-    pcl::PointCloud<pcl::PointXYZSD>::ConstPtr radar_pc,
-    Eigen::Vector3d velocity) {
-  return covariance_matrix;
+template <typename PointType>
+Eigen::Matrix3d RadarVelocityEstimatorCeres<PointType>::get_covariance(
+    PclConstPtr radar_pc, Eigen::Vector3d velocity) {
+  return this->covariance_matrix;
 }
+
+// Template instantiation
+template class RadarVelocityEstimatorCeres<pcl::PointHugin>;
+template class RadarVelocityEstimatorCeres<pcl::PointXYZSD>;

@@ -87,7 +87,8 @@ target_link_libraries(runMapping rio)
 # add_executable(rio_map app/RIO_map.cpp)
 # target_link_libraries(rio_map rio)
 
-
+add_executable(test_velocity_estimator app/test_vest.cpp)
+target_link_libraries(test_velocity_estimator rio)
 
 # Install
 #############################################
@@ -106,6 +107,7 @@ install(DIRECTORY include/
 install(TARGETS
   runDIO 
   runMapping
+  test_velocity_estimator
   DESTINATION lib/${PROJECT_NAME}
 )
 
