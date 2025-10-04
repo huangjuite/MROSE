@@ -23,7 +23,6 @@ find_package(yaml-cpp REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Keyframe.msg"
-  "msg/IQ.msg"
   "srv/GetMap.srv"
   "srv/Registration.srv"
   DEPENDENCIES geometry_msgs sensor_msgs
