@@ -33,18 +33,24 @@ def generate_launch_description():
                 }
             ],
         )
-        return [doppler_odom_node]
+        
+        map_node = Node(
+            package="rpl_rio",
+            executable="runMapping",
+            output="screen",
+            parameters=[
+                {
+                    "config": os.path.join(
+                        get_package_share_directory("rpl_rio"),
+                        "cfg",
+                        f"{LaunchConfiguration('config').perform(context)}.yaml",
+                    )
+                }
+            ],
+        )
 
-    plotjuggler_node = Node(
-        package="plotjuggler",
-        executable="plotjuggler",
-        arguments=[
-            "-l",
-            PathJoinSubstitution([FindPackageShare("rpl_rio"), "cfg", "info_vis.xml"]),
-        ],
-        condition=IfCondition(LaunchConfiguration("info_plot")),
-    )
+        return [doppler_odom_node, map_node]
 
-    ld = LaunchDescription([info_plot_arg, config_arg, plotjuggler_node])
+    ld = LaunchDescription([info_plot_arg, config_arg])
     ld.add_action(OpaqueFunction(function=odom_node_setup))
     return ld

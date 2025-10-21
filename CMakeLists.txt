@@ -43,11 +43,9 @@ add_library(rio SHARED
   src/StaticInitializer.cpp
 
   src/DIOManager.cpp
-  src/DIORosNode.cpp
-  src/MapRosNode.cpp
+  src/RosNode/DIORosNode.cpp
+  src/RosNode/MapRosNode.cpp
   # src/RIOManager.cpp
-
-  # src/MapOptimize.cpp
   # src/MapConstraint.cpp
 
 )

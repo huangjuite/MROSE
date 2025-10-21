@@ -25,11 +25,13 @@ public:
     velocity_estimator->set_initial_velocity(Eigen::Vector3d(0, 1, 0));
 
     // Open a CSV file in append mode
-    csv_file.open("/root/radar_stream/velocity_data.csv", std::ios::out);
+    csv_file.open("/home/rpldocker/vest_data.csv", std::ios::out);
     if (!csv_file.is_open()) {
       RCLCPP_ERROR(this->get_logger(), "Failed to open CSV file for writing.");
       return;
     }
+
+    csv_file << "timestamp,velocity_x,velocity_y,velocity_z\n";
 
     publisher_ =
         create_publisher<visualization_msgs::msg::Marker>("velocity", 100);

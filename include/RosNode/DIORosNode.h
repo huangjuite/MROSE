@@ -25,11 +25,15 @@
 #include "params.h"
 #include "rplrio_types.h"
 
-typedef pcl::PointXYZSD PointType;
-typedef RadarVelocityEstimatorCeres<PointType> VestType;
+// typedef pcl::PointXYZSD PointType;
 
-class DIORosNode : public rclcpp::Node {
+template <class PointType> class DIORosNode : public rclcpp::Node {
 private:
+  typedef RadarVelocityEstimatorCeres<PointType> VestType;
+  typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;
+  typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
+  typedef typename pcl::PointCloud<PointType> Pcl;
+
   rplrio::Params params;
   std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
 

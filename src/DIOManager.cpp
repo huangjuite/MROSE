@@ -1,6 +1,7 @@
 #include "DIOManager.h"
 #include "RadarPointType.h"
 #include <Eigen/src/Geometry/Quaternion.h>
+#include <ios>
 
 namespace rplrio {
 
@@ -69,6 +70,8 @@ void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
   graph->addPrior(X(0), prior_pose, pose_noise_model);
   graph->addPrior(V(0), prior_velocity, velocity_noise_model);
   graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
+
+  initialized = true;
 }
 
 template <class PointType> void DIOManager<PointType>::update() {
@@ -147,10 +150,6 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
   gtsam::Vector3 measured_v = velocity_estimator->optimize(radar.pc);
   auto radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
 
-  // second inlier estimate
-  // velocity_estimator->set_initial_velocity(measured_v);
-  // measured_v = velocity_estimator->optimize(radar_inlier);
-
   gtsam::Matrix radar_velocity_cov =
       velocity_estimator->get_covariance(radar.pc, measured_v);
 
@@ -159,7 +158,6 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
   radar_velocity_cov =
       radar.param.R_r_b * radar_velocity_cov * radar.param.R_r_b.transpose();
   pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_b);
-
   gtsam::noiseModel::Base::shared_ptr rv_noise;
   if (params.bv_use_huber) {
     rv_noise = gtsam::noiseModel::Robust::Create(
@@ -209,7 +207,7 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
   if (params.use_static_init && !initialized) {
     bool init_success = initializer->init_update(imu_data);
     if (init_success) {
-      initialized = true;
+
       Eigen::Vector3d bias_a = initializer->get_bias_acc();
       Eigen::Vector3d bias_g = initializer->get_bias_gyro();
       Eigen::Quaterniond init_r = initializer->get_rotation();
@@ -226,13 +224,14 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       update();
     }
   } else if (!params.use_static_init && !initialized) {
-    initialized = true;
+
     Eigen::Vector3d bias_a = Eigen::Vector3d::Zero();
     Eigen::Vector3d bias_g = Eigen::Vector3d::Zero();
     Eigen::Quaterniond init_r = Eigen::Quaterniond::Identity();
 
     pre_imu_t = imu_data->stamp;
     graph_init(init_r, bias_a, bias_g, pre_imu_t);
+
   } else {
     imu_que.emplace_back(imu_data);
   }
@@ -263,5 +262,6 @@ template <class PointType> DIOManager<PointType>::~DIOManager() {}
 
 template class DIOManager<pcl::PointXYZSD>;
 template class DIOManager<pcl::PointXYZSDW>;
+template class DIOManager<pcl::PointHugin>;
 
 } // namespace rplrio

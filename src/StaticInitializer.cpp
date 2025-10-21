@@ -74,7 +74,7 @@ bool StaticInitializer::init_update(std::shared_ptr<rplrio::IMU> imu) {
         (imu_queue[i]->acc - acc_mean_w1).dot(imu_queue[i]->acc - acc_mean_w1);
   }
   acc_var_w1 = sqrt(acc_var_w1 / c_idx);
-  // std::cout << "var " << acc_var_w1 << std::endl;
+
   if (acc_var_w1 < acc_var_thresh_) {
     return false;
   }
@@ -94,7 +94,7 @@ bool StaticInitializer::init_update(std::shared_ptr<rplrio::IMU> imu) {
   q_MtoI_ = Eigen::Quaterniond(R_IinM);
 
   // biases
-  Eigen::Vector3d g(0, 0, 9.81);
+  Eigen::Vector3d g(0, 0, 9.80126);
   bias_acc_ = acc_mean_w0 - R_MinI * g;
   bias_gyro_ = gyro_mean_w0;
 
