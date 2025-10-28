@@ -31,8 +31,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 # Build the library
 #############################################
 add_library(rio SHARED
-  # src/radar_point_type.cpp
-  src/rplrio_types.cpp
   src/params.cpp
   src/utils.cpp
 
@@ -43,10 +41,9 @@ add_library(rio SHARED
   src/StaticInitializer.cpp
 
   src/DIOManager.cpp
+
   src/RosNode/DIORosNode.cpp
   src/RosNode/MapRosNode.cpp
-  # src/RIOManager.cpp
-  # src/MapConstraint.cpp
 
 )
 
@@ -77,12 +74,6 @@ target_link_libraries(runDIO rio)
 
 add_executable(runMapping app/runMapping.cpp)
 target_link_libraries(runMapping rio)
-
-# add_executable(rio app/RIO.cpp)
-# target_link_libraries(rio rio)
-
-# add_executable(rio_map app/RIO_map.cpp)
-# target_link_libraries(rio_map rio)
 
 add_executable(test_velocity_estimator app/test_vest.cpp)
 target_link_libraries(test_velocity_estimator rio)

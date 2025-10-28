@@ -25,8 +25,6 @@
 #include "params.h"
 #include "rplrio_types.h"
 
-// typedef pcl::PointXYZSD PointType;
-
 template <class PointType> class DIORosNode : public rclcpp::Node {
 private:
   typedef RadarVelocityEstimatorCeres<PointType> VestType;
@@ -36,8 +34,7 @@ private:
 
   rplrio::Params params;
   std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
-
-  // ROS2: NodeHandle is not needed, use 'this' as Node pointer
+  double last_radar_time_ = -1.0;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr>

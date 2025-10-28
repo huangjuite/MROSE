@@ -1,7 +1,9 @@
 #include "StaticInitializer.h"
 
-StaticInitializer::StaticInitializer(float init_window, float acc_var_thresh)
-    : init_window_(init_window), acc_var_thresh_(acc_var_thresh) {}
+StaticInitializer::StaticInitializer(float init_window, float acc_var_thresh,
+                                     float gravity)
+    : init_window_(init_window), acc_var_thresh_(acc_var_thresh),
+      gravity_(gravity) {}
 
 Eigen::Quaterniond StaticInitializer::get_rotation() { return q_MtoI_; }
 Eigen::Vector3d StaticInitializer::get_bias_acc() { return bias_acc_; }
@@ -21,7 +23,7 @@ double StaticInitializer::get_first_stamp() {
 
 Eigen::Matrix3d StaticInitializer::gram_schmidt(Eigen::Vector3d gravity) {
   Eigen::Matrix3d R_MinI;
-  Eigen::Vector3d z_axis = gravity / gravity.norm();
+  Eigen::Vector3d z_axis = -gravity / gravity.norm();
   Eigen::Vector3d v1(1, 0, 0), v2(0, 1, 0);
 
   Eigen::Vector3d x_axis = v1 - v1.dot(z_axis) * z_axis;
@@ -94,7 +96,7 @@ bool StaticInitializer::init_update(std::shared_ptr<rplrio::IMU> imu) {
   q_MtoI_ = Eigen::Quaterniond(R_IinM);
 
   // biases
-  Eigen::Vector3d g(0, 0, 9.80126);
+  Eigen::Vector3d g(0, 0, gravity_);
   bias_acc_ = acc_mean_w0 - R_MinI * g;
   bias_gyro_ = gyro_mean_w0;
 

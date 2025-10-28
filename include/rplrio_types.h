@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <Eigen/Eigen>
+#include <Eigen/src/Core/Matrix.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/NavState.h>
@@ -62,11 +63,19 @@ template <class PointType> struct Radar {
   myPcPtr pc;
   double stamp;
   RadarParams param;
+  Eigen::Vector3d vel;
 
   Radar(myPcPtr p, double t, RadarParams params) {
     stamp = t;
     pc = p;
     param = params;
+  }
+
+  Radar(myPcPtr p, double t, RadarParams params, Eigen::Vector3d v) {
+    stamp = t;
+    pc = p;
+    param = params;
+    vel = v;
   }
 };
 

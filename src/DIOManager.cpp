@@ -1,6 +1,7 @@
 #include "DIOManager.h"
 #include "RadarPointType.h"
 #include <Eigen/src/Geometry/Quaternion.h>
+#include <gtsam/linear/NoiseModel.h>
 #include <ios>
 
 namespace rplrio {
@@ -24,8 +25,8 @@ DIOManager<PointType>::DIOManager(
   // imu init
   if (params.use_static_init) {
     initialized = false;
-    initializer = std::make_unique<StaticInitializer>(params.init_window,
-                                                      params.init_thres);
+    initializer = std::make_unique<StaticInitializer>(
+        params.init_window, params.init_thres, params.gravity);
   }
 }
 
@@ -144,21 +145,23 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
   key_timestamps[B(step)] = current_t;
 
   // ------------------------------------------------------------------------------------
+  gtsam::Vector3 measured_v;
+  gtsam::noiseModel::Base::shared_ptr rv_noise;
 
-  velocity_estimator->set_initial_velocity(radar.param.R_r_b.transpose() *
+  velocity_estimator->set_initial_velocity(radar.param.R_r_i.transpose() *
                                            prop_state.bodyVelocity());
-  gtsam::Vector3 measured_v = velocity_estimator->optimize(radar.pc);
+  measured_v = velocity_estimator->optimize(radar.pc);
   auto radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
 
   gtsam::Matrix radar_velocity_cov =
       velocity_estimator->get_covariance(radar.pc, measured_v);
 
   // velocity pose measurement
-  measured_v = radar.param.R_r_b * measured_v;
+  measured_v = radar.param.R_r_i * measured_v;
   radar_velocity_cov =
-      radar.param.R_r_b * radar_velocity_cov * radar.param.R_r_b.transpose();
-  pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_b);
-  gtsam::noiseModel::Base::shared_ptr rv_noise;
+      radar.param.R_r_i * radar_velocity_cov * radar.param.R_r_i.transpose();
+  pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_i);
+
   if (params.bv_use_huber) {
     rv_noise = gtsam::noiseModel::Robust::Create(
         gtsam::noiseModel::mEstimator::Huber::Create(params.bv_huber_k),
@@ -188,6 +191,7 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
 
   // key frame informations
   // -----------------------------------------------------------------------------
+
   auto key_frame = std::make_shared<DIOKeyframe>();
   key_frame->stamp = current_t;
   key_frame->seq = step;
@@ -215,11 +219,12 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       pre_imu_t = initializer->get_first_stamp();
       graph_init(init_r, bias_a, bias_g, pre_imu_t);
       imu_que = initializer->get_imu_queue();
-      std::cout << "static init\n";
+      std::cout << "static init" << std::endl;
       std::cout << "bias acc: " << bias_a[0] << ", " << bias_a[1] << ", "
-                << bias_a[2] << "\n";
+                << bias_a[2] << std::endl;
       std::cout << "bias gyro: " << bias_g[0] << ", " << bias_g[1] << ", "
-                << bias_g[2] << "\n";
+                << bias_g[2] << std::endl;
+      std::cout << "rotation: \n" << init_r.toRotationMatrix() << std::endl;
 
       update();
     }
@@ -239,6 +244,7 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
 
 template <class PointType>
 void DIOManager<PointType>::feed_radar(std::shared_ptr<DIORadar> radar) {
+
   radar_que.emplace_back(radar);
 
   if (!initialized) {

@@ -11,13 +11,14 @@ class StaticInitializer {
 private:
   float init_window_ = 4;
   float acc_var_thresh_ = 0.5;
+  float gravity_ = 9.80126;
   std::deque<std::shared_ptr<rplrio::IMU>> imu_queue;
   Eigen::Quaterniond q_MtoI_;
   Eigen::Vector3d bias_acc_;
   Eigen::Vector3d bias_gyro_;
 
 public:
-  StaticInitializer(float init_window, float acc_var_thresh);
+  StaticInitializer(float init_window, float acc_var_thresh, float gravity);
   bool init_update(std::shared_ptr<rplrio::IMU> imu);
   Eigen::Quaterniond get_rotation();
   Eigen::Vector3d get_bias_acc();

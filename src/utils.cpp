@@ -234,15 +234,6 @@ from_xrio_type(pcl::PointCloud<pcl::PointXYZSNV> &radar_xrio) {
   return radar_rpl;
 }
 
-// Eigen::Matrix4f toMatrix(tf::StampedTransform tf_ros) {
-//   tf::Quaternion q = tf_ros.getRotation();
-//   tf::Vector3 p = tf_ros.getOrigin();
-//   return gtsam::Pose3(gtsam::Rot3(q.w(), q.x(), q.y(), q.z()),
-//                       gtsam::Point3(p.x(), p.y(), p.z()))
-//       .matrix()
-//       .cast<float>();
-// }
-
 void logdB_SNR(pcl::PointCloud<pcl::PointXYZSD>::Ptr pc) {
   for (size_t i = 0; i < pc->size(); i++) {
     pc->points[i].snr = log(pc->points[i].snr);
@@ -303,8 +294,7 @@ Params get_params(std::string cfg_path) {
         param.radars[r].T_r_i(i, j) = T_r_i_node[i][j].as<double>();
       }
     }
-    param.radars[r].T_r_b = param.T_i_b * param.radars[r].T_r_i;
-    param.radars[r].R_r_b = param.radars[r].T_r_b.block(0, 0, 3, 3);
+    param.radars[r].R_r_i = param.radars[r].T_r_i.block(0, 0, 3, 3);
   }
 
   // odom
@@ -319,20 +309,9 @@ Params get_params(std::string cfg_path) {
   param.init_window = config["odom"]["static_init_window"].as<double>();
   param.init_thres = config["odom"]["static_init_threshold"].as<double>();
 
-  // loop close
-  param.enable_loop_close =
-      config["loop_close"]["enable_loop_close"].as<bool>();
-  param.loop_close_rate = config["loop_close"]["loop_close_rate"].as<double>();
-  param.loop_ignore = config["loop_close"]["loop_ignore"].as<int>();
-  param.key_frame_search = config["loop_close"]["key_frame_search"].as<int>();
-  param.loop_distance_thresh =
-      config["loop_close"]["loop_distance_thresh"].as<double>();
-  param.process_voxel_size =
-      config["loop_close"]["process_voxel_size"].as<double>();
-  param.snr_thresh = config["loop_close"]["snr_thresh"].as<double>();
-  param.pc_reg_thread = config["loop_close"]["pc_reg_thread"].as<int>();
-
   // mapping
+  param.process_voxel_size =
+      config["mapping"]["process_voxel_size"].as<double>();
   param.map_snr_thresh = config["mapping"]["map_snr_thresh"].as<double>();
   param.render_rate = config["mapping"]["render_rate"].as<double>();
 

@@ -56,8 +56,9 @@ private:
   message_filters::Subscriber<nav_msgs::msg::Odometry> sub_odom;
   std::unique_ptr<message_filters::Synchronizer<MySyncPolicy>> sync;
 
-  pcl::PointCloud<PointT> global_map;
+  PclPtr global_map;
   std::mutex global_map_mtx;
+  pcl::VoxelGrid<PointT> voxel_filter;
 
   void cb_node(const sensor_msgs::msg::PointCloud2::ConstSharedPtr radar_msg,
                const nav_msgs::msg::Odometry::ConstSharedPtr odom);

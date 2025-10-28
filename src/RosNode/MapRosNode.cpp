@@ -17,11 +17,15 @@ MapOptimize<PointT>::MapOptimize()
   pub_map =
       this->create_publisher<sensor_msgs::msg::PointCloud2>("radar/map", 1);
 
+  global_map.reset(new pcl::PointCloud<PointT>);
+  voxel_filter.setLeafSize(params.process_voxel_size, params.process_voxel_size,
+                           params.process_voxel_size);
+
   br = std::make_unique<tf2_ros::TransformBroadcaster>(this);
 
   rclcpp::QoS qos = rclcpp::QoS(10);
-  sub_radar.subscribe(this, "radar_inlier", qos.get_rmw_qos_profile());
-  sub_odom.subscribe(this, "dopplerIO", qos.get_rmw_qos_profile());
+  sub_radar.subscribe(this, "radar/inlier", qos.get_rmw_qos_profile());
+  sub_odom.subscribe(this, "radar/odom", qos.get_rmw_qos_profile());
   sync = std::make_unique<message_filters::Synchronizer<MySyncPolicy>>(
       MySyncPolicy(10), sub_radar, sub_odom);
   sync->registerCallback(std::bind(&MapOptimize::cb_node, this,
@@ -44,10 +48,23 @@ void MapOptimize<PointT>::cb_node(
       gtsam::Point3(odom->pose.pose.position.x, odom->pose.pose.position.y,
                     odom->pose.pose.position.z));
 
+  PclPtr p(new pcl::PointCloud<PointT>);
+  p->header = radar_pc->header;
+  p->is_dense = radar_pc->is_dense;
+  p->points.reserve(radar_pc->points.size());
+  double max_range = 40.0;
+  for (const auto &pt : radar_pc->points) {
+    double r2 = pt.x * pt.x + pt.y * pt.y + pt.z * pt.z;
+    if (r2 <= max_range * max_range)
+      p->points.push_back(pt);
+  }
+
+  pcl::transformPointCloud(*p, *p, current_pose.matrix());
+
   global_map_mtx.lock();
-  pcl::PointCloud<PointT> p;
-  pcl::transformPointCloud(*radar_pc, p, current_pose.matrix());
-  global_map += p;
+  *global_map += *p;
+  voxel_filter.setInputCloud(global_map);
+  voxel_filter.filter(*global_map);
   global_map_mtx.unlock();
 
   path.poses.push_back(rplrio::toROSPoseStamped(current_pose, odom->header));
@@ -69,8 +86,9 @@ template <class PointT> void MapOptimize<PointT>::render_map() {
   while (rclcpp::ok()) {
     rate.sleep();
     sensor_msgs::msg::PointCloud2 map_msg;
-    toROSMsg(global_map, map_msg);
+    toROSMsg(*global_map, map_msg);
     map_msg.header.frame_id = "map";
+    map_msg.header.stamp = this->now();
     pub_map->publish(map_msg);
   }
 }

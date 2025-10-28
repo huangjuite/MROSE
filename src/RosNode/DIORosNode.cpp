@@ -1,9 +1,6 @@
 #include "RosNode/DIORosNode.h"
 #include "RadarPointType.h"
 #include "utils.h"
-#include <rclcpp/logging.hpp>
-#include <rclcpp/node_options.hpp>
-#include <rclcpp/parameter.hpp>
 
 template <class PointType>
 DIORosNode<PointType>::DIORosNode()
@@ -19,8 +16,8 @@ DIORosNode<PointType>::DIORosNode()
       params, std::make_shared<VestType>());
 
   // ros init
-  pub_v =
-      this->create_publisher<visualization_msgs::msg::Marker>("velocity", 1);
+  pub_v = this->create_publisher<visualization_msgs::msg::Marker>(
+      "radar/velocity_marker", 1);
   pub_twist =
       this->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
           "radar/velocity", 1);
@@ -28,17 +25,17 @@ DIORosNode<PointType>::DIORosNode()
   pub_error =
       this->create_publisher<geometry_msgs::msg::Twist>("radar/error", 1);
   pub_radar =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("radar_inlier", 1);
-  pub_odom = this->create_publisher<nav_msgs::msg::Odometry>("dopplerIO", 1);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("radar/inlier", 1);
+  pub_odom = this->create_publisher<nav_msgs::msg::Odometry>("radar/odom", 1);
 
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
-      params.imu_topic, 10,
+      params.imu_topic, 20,
       std::bind(&DIORosNode::cb_imu, this, std::placeholders::_1));
 
   for (auto r : params.radar_list) {
     sub_radars.push_back(
         this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            params.radars[r].topic, 1,
+            params.radars[r].topic, 10,
             std::bind(&DIORosNode::cb_radar, this, std::placeholders::_1)));
   }
 
@@ -49,8 +46,8 @@ template <class PointType>
 void DIORosNode<PointType>::publish_all(
     const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe) {
 
-  nav_msgs::msg::Odometry odom =
-      rplrio::toOdometry(keyframe->state.pose().matrix(), keyframe->pose_cov);
+  nav_msgs::msg::Odometry odom = rplrio::toOdometry(
+      params.T_i_b * keyframe->state.pose().matrix(), keyframe->pose_cov);
   odom.header.stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
   odom.header.frame_id = "map";
   pub_odom->publish(odom);
@@ -59,6 +56,7 @@ void DIORosNode<PointType>::publish_all(
   pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
   inlier_msg.header.stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
   inlier_msg.header.frame_id = "base_link";
+
   geometry_msgs::msg::TwistWithCovarianceStamped radar_v =
       rplrio::toROSTwist(keyframe->radar_velocity, keyframe->radar_velocity_cov,
                          inlier_msg.header);
@@ -76,24 +74,23 @@ void DIORosNode<PointType>::publish_all(
   pub_twist->publish(radar_v);
   pub_bias->publish(rplrio::toROStwist(keyframe->imu_bias));
   pub_v->publish(rplrio::velocityMarker(keyframe->state.velocity(),
-                                        keyframe->state.pose().translation(),
-                                        "map", "velocity"));
+                                        gtsam::Vector3(0, 0, 0), "base_link",
+                                        "velocity"));
 }
 
 template <class PointType>
 void DIORosNode<PointType>::cb_imu(
     const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg) {
-  double imu_t = rclcpp::Time(imu_msg->header.stamp).seconds() + 1756245591.42;
+  double imu_t = rclcpp::Time(imu_msg->header.stamp).seconds();
 
   gtsam::Vector3 acc =
-      params.R_i_b * (gtsam::Vector3() << imu_msg->linear_acceleration.x,
-                      imu_msg->linear_acceleration.y,
-                      imu_msg->linear_acceleration.z)
-                         .finished();
+      (gtsam::Vector3() << imu_msg->linear_acceleration.x,
+       imu_msg->linear_acceleration.y, imu_msg->linear_acceleration.z)
+          .finished();
   gtsam::Vector3 omega =
-      params.R_i_b * (gtsam::Vector3() << imu_msg->angular_velocity.x,
-                      imu_msg->angular_velocity.y, imu_msg->angular_velocity.z)
-                         .finished();
+      (gtsam::Vector3() << imu_msg->angular_velocity.x,
+       imu_msg->angular_velocity.y, imu_msg->angular_velocity.z)
+          .finished();
 
   dio_manager->feed_imu(std::make_shared<rplrio::IMU>(acc, omega, imu_t));
 }
@@ -101,11 +98,15 @@ void DIORosNode<PointType>::cb_imu(
 template <class PointType>
 void DIORosNode<PointType>::cb_radar(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg) {
+
+  double radar_t = rclcpp::Time(pc_msg->header.stamp).seconds();
+  if (radar_t - last_radar_time_ < (1.0 / 13.0))
+    return;
+  last_radar_time_ = radar_t;
+
   PclPtr radar_pc;
   radar_pc.reset(new Pcl);
-
   pcl::fromROSMsg(*pc_msg, *radar_pc);
-  double radar_t = rclcpp::Time(pc_msg->header.stamp).seconds();
 
   dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
       radar_pc, radar_t, params.radars[pc_msg->header.frame_id]));

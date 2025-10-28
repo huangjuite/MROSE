@@ -1,10 +1,8 @@
 import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
-from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -16,6 +14,11 @@ def generate_launch_description():
         name="config",
         default_value="config_epson",
         description="config_epson, config_razor...",
+    )
+    use_sim_time = DeclareLaunchArgument(
+        name="use_sim_time",
+        default_value="false",
+        description="Use simulation clock if true",
     )
 
     def odom_node_setup(context):
@@ -29,11 +32,12 @@ def generate_launch_description():
                         get_package_share_directory("rpl_rio"),
                         "cfg",
                         f"{LaunchConfiguration('config').perform(context)}.yaml",
-                    )
+                    ),
+                    "use_sim_time": LaunchConfiguration("use_sim_time"),
                 }
             ],
         )
-        
+
         map_node = Node(
             package="rpl_rio",
             executable="runMapping",
@@ -44,13 +48,14 @@ def generate_launch_description():
                         get_package_share_directory("rpl_rio"),
                         "cfg",
                         f"{LaunchConfiguration('config').perform(context)}.yaml",
-                    )
+                    ),
+                    "use_sim_time": LaunchConfiguration("use_sim_time"),
                 }
             ],
         )
 
         return [doppler_odom_node, map_node]
 
-    ld = LaunchDescription([info_plot_arg, config_arg])
+    ld = LaunchDescription([info_plot_arg, config_arg, use_sim_time])
     ld.add_action(OpaqueFunction(function=odom_node_setup))
     return ld
