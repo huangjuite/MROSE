@@ -7,9 +7,6 @@ from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    info_plot_arg = DeclareLaunchArgument(
-        "info_plot", default_value="false", description="Enable info plot"
-    )
     config_arg = DeclareLaunchArgument(
         name="config",
         default_value="config_epson",
@@ -56,6 +53,6 @@ def generate_launch_description():
 
         return [doppler_odom_node, map_node]
 
-    ld = LaunchDescription([info_plot_arg, config_arg, use_sim_time])
+    ld = LaunchDescription([config_arg, use_sim_time])
     ld.add_action(OpaqueFunction(function=odom_node_setup))
     return ld
