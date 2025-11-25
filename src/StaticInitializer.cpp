@@ -3,7 +3,7 @@
 StaticInitializer::StaticInitializer(float init_window, float acc_var_thresh,
                                      float gravity)
     : init_window_(init_window), acc_var_thresh_(acc_var_thresh),
-      gravity_(gravity) {}
+      gravity_(abs(gravity)) {}
 
 Eigen::Quaterniond StaticInitializer::get_rotation() { return q_MtoI_; }
 Eigen::Vector3d StaticInitializer::get_bias_acc() { return bias_acc_; }
@@ -23,19 +23,16 @@ double StaticInitializer::get_first_stamp() {
 
 Eigen::Matrix3d StaticInitializer::gram_schmidt(Eigen::Vector3d gravity) {
   Eigen::Matrix3d R_MinI;
-  Eigen::Vector3d z_axis = -gravity / gravity.norm();
-  Eigen::Vector3d v1(1, 0, 0), v2(0, 1, 0);
-
-  Eigen::Vector3d x_axis = v1 - v1.dot(z_axis) * z_axis;
+  Eigen::Vector3d z_axis = gravity / gravity.norm();
+  Eigen::Vector3d x_axis(1, 0, 0);
+  x_axis = x_axis - x_axis.dot(z_axis) * z_axis;
   x_axis /= x_axis.norm();
-  Eigen::Vector3d y_axis =
-      v2 - v2.dot(z_axis) * z_axis - v2.dot(x_axis) * x_axis;
+  Eigen::Vector3d y_axis = z_axis.cross(x_axis);
   y_axis /= y_axis.norm();
 
   R_MinI.block(0, 0, 3, 1) = x_axis;
   R_MinI.block(0, 1, 3, 1) = y_axis;
   R_MinI.block(0, 2, 3, 1) = z_axis;
-
   return R_MinI;
 }
 
@@ -64,16 +61,19 @@ bool StaticInitializer::init_update(std::shared_ptr<rplrio::IMU> imu) {
   }
 
   // detect moving in second window
-  Eigen::Vector3d acc_mean_w1(0, 0, 0);
+  Eigen::Vector2d acc_mean_w1(0, 0);
   double acc_var_w1 = 0;
   size_t c_idx = imu_queue.size() / 2;
+
   for (size_t i = c_idx; i < imu_queue.size(); i++) { // new data window mean
-    acc_mean_w1 += imu_queue[i]->acc;
+    acc_mean_w1 += imu_queue[i]->acc.block<2, 1>(0, 0);
   }
+
   acc_mean_w1 /= (imu_queue.size() - c_idx);
+
   for (size_t i = c_idx; i < imu_queue.size(); i++) { // new data window var
-    acc_var_w1 +=
-        (imu_queue[i]->acc - acc_mean_w1).dot(imu_queue[i]->acc - acc_mean_w1);
+    acc_var_w1 += (imu_queue[i]->acc.block<2, 1>(0, 0) - acc_mean_w1)
+                      .dot(imu_queue[i]->acc.block<2, 1>(0, 0) - acc_mean_w1);
   }
   acc_var_w1 = sqrt(acc_var_w1 / c_idx);
 
