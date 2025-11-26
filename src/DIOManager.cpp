@@ -1,8 +1,6 @@
 #include "DIOManager.h"
 #include "RadarPointType.h"
 #include <Eigen/src/Geometry/Quaternion.h>
-#include <gtsam/linear/NoiseModel.h>
-#include <ios>
 
 namespace rplrio {
 
@@ -81,8 +79,8 @@ template <class PointType> void DIOManager<PointType>::update() {
          radar_que.front()->stamp < imu_que.front()->stamp) {
     radar_que.pop_front();
   }
-  if (radar_que.size() <= 2) // delay radar frame to interpolate IMU
-  {
+
+  if (radar_que.empty() || radar_que.front()->stamp > imu_que.back()->stamp) {
     return;
   }
 
@@ -92,6 +90,8 @@ template <class PointType> void DIOManager<PointType>::update() {
 
   // integrate imu measurements
   std::shared_ptr<rplrio::IMU> last_imu;
+  size_t imu_size = 0;
+  std::cout << "imu queue size: " << imu_que.size() << std::endl;
   while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp) {
     auto imu_data = imu_que.front();
     double dt = imu_data->stamp - pre_imu_t;
@@ -100,7 +100,9 @@ template <class PointType> void DIOManager<PointType>::update() {
 
     last_imu = imu_data;
     imu_que.pop_front();
+    imu_size++;
   }
+  std::cout << "Integrated " << imu_size << " IMU measurements." << std::endl;
 
   auto next_imu = imu_que.front();
   rplrio::IMU interp;
@@ -111,6 +113,8 @@ template <class PointType> void DIOManager<PointType>::update() {
                                         interp.stamp - pre_imu_t);
     pre_imu_t = interp.stamp;
   }
+  std::cout << std::fixed << "Interpolated IMU at time: " << radar_stamp
+            << std::endl;
 
   step++;
   auto keyframe = optimize(*radar_msg);

@@ -3,8 +3,10 @@
 #include <memory>
 
 // ROS includes
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
+#include <nav_msgs/msg/detail/path__struct.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -40,16 +42,15 @@ private:
   std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr>
       sub_radars;
 
-  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_v;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_pose;
   rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr
       pub_twist;
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_bias;
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_error;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_bias, pub_err;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_radar;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub_path;
+  nav_msgs::msg::Path path_msg;
 
-  std::shared_ptr<tf2_ros::TransformBroadcaster> br;
-  std::shared_ptr<tf2_ros::TransformListener> listener;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> br;
 
   void cb_radar(const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg);
   void cb_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu);

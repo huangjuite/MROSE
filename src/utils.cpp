@@ -102,9 +102,8 @@ nav_msgs::msg::Odometry toOdometry(Eigen::Matrix4d global_pose,
 }
 
 geometry_msgs::msg::TwistWithCovarianceStamped
-toROSTwist(gtsam::Vector3 v, gtsam::Matrix cov, std_msgs::msg::Header header) {
+toROSTwist(gtsam::Vector3 v, gtsam::Matrix cov) {
   geometry_msgs::msg::TwistWithCovarianceStamped twist;
-  twist.header = header;
   twist.twist.twist.linear.x = v.x();
   twist.twist.twist.linear.y = v.y();
   twist.twist.twist.linear.z = v.z();
@@ -296,6 +295,7 @@ Params get_params(std::string cfg_path) {
     }
     param.radars[r].R_r_i = param.radars[r].T_r_i.block(0, 0, 3, 3);
   }
+  param.target_frame_rate = config["odom"]["target_frame_rate"].as<float>();
 
   // odom
   param.lag = config["odom"]["optimization_window"].as<double>();

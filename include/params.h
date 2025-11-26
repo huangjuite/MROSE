@@ -44,6 +44,7 @@ struct Params {
   double doppler_inlier_thresh;
   std::unordered_map<std::string, RadarParams> radars;
   std::vector<std::string> radar_list;
+  float target_frame_rate;
 
   // mapping
   double process_voxel_size;

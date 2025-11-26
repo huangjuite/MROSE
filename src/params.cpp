@@ -14,8 +14,8 @@ ImuParam_ptr imuParams(Params param) // EPSON G364
   gtsam::Matrix66 bias_acc_omega_init =
       gtsam::I_6x6 * 1e-5; // error in the bias used for preintegration
 
-  auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedD(
-      -param.gravity);
+  auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
+      param.gravity);
   // PreintegrationBase params:
   p->accelerometerCovariance =
       measured_acc_cov; // acc white noise in continuous

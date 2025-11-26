@@ -45,8 +45,8 @@ Eigen::MatrixXd fromROSCov_2d(std::array<double, 36> ros_cov);
 nav_msgs::msg::Odometry toOdometry(Eigen::Matrix4d global_pose,
                                    gtsam::Matrix covariance = gtsam::Matrix());
 
-geometry_msgs::msg::TwistWithCovarianceStamped
-toROSTwist(gtsam::Vector3 v, gtsam::Matrix cov, std_msgs::msg::Header header);
+geometry_msgs::msg::TwistWithCovarianceStamped toROSTwist(gtsam::Vector3 v,
+                                                          gtsam::Matrix cov);
 
 geometry_msgs::msg::Twist toROStwist(gtsam::imuBias::ConstantBias bias);
 

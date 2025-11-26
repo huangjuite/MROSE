@@ -16,17 +16,20 @@ DIORosNode<PointType>::DIORosNode()
       params, std::make_shared<VestType>());
 
   // ros init
-  pub_v = this->create_publisher<visualization_msgs::msg::Marker>(
-      "radar/velocity_marker", 1);
   pub_twist =
       this->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-          "radar/velocity", 1);
-  pub_bias = this->create_publisher<geometry_msgs::msg::Twist>("radar/bias", 1);
-  pub_error =
-      this->create_publisher<geometry_msgs::msg::Twist>("radar/error", 1);
+          "rio/velocity", 1);
+  pub_bias =
+      this->create_publisher<geometry_msgs::msg::Twist>("rio/imu_bias", 1);
+  pub_err =
+      this->create_publisher<geometry_msgs::msg::Twist>("rio/residual", 1);
   pub_radar =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("radar/inlier", 1);
-  pub_odom = this->create_publisher<nav_msgs::msg::Odometry>("radar/odom", 1);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("rio/inlier", 1);
+  pub_pose =
+      this->create_publisher<geometry_msgs::msg::PoseStamped>("rio/pose", 1);
+  pub_path = this->create_publisher<nav_msgs::msg::Path>("rio/path", 1);
+
+  path_msg.header.frame_id = "map";
 
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
       params.imu_topic, 20,
@@ -35,9 +38,11 @@ DIORosNode<PointType>::DIORosNode()
   for (auto r : params.radar_list) {
     sub_radars.push_back(
         this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            params.radars[r].topic, 10,
+            params.radars[r].topic, 2,
             std::bind(&DIORosNode::cb_radar, this, std::placeholders::_1)));
   }
+
+  br = std::make_unique<tf2_ros::TransformBroadcaster>(this);
 
   RCLCPP_INFO(get_logger(), "radar odometry node initialized.");
 }
@@ -46,36 +51,61 @@ template <class PointType>
 void DIORosNode<PointType>::publish_all(
     const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe) {
 
-  nav_msgs::msg::Odometry odom = rplrio::toOdometry(
-      params.T_i_b * keyframe->state.pose().matrix(), keyframe->pose_cov);
-  odom.header.stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
-  odom.header.frame_id = "map";
-  pub_odom->publish(odom);
+  auto current_pose = keyframe->state.pose();
+  current_pose = current_pose.compose(
+      gtsam::Pose3(gtsam::Rot3(params.R_i_b),
+                   gtsam::Point3(params.T_i_b.block<3, 1>(0, 3))));
+  auto ros_stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
+  nav_msgs::msg::Odometry odom =
+      rplrio::toOdometry(current_pose.matrix(), keyframe->pose_cov);
+  geometry_msgs::msg::PoseStamped pose_msg;
+  pose_msg.header.stamp = ros_stamp;
+  pose_msg.header.frame_id = "map";
+  pose_msg.pose = odom.pose.pose;
+  path_msg.poses.push_back(pose_msg);
 
-  sensor_msgs::msg::PointCloud2 inlier_msg;
-  pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
-  inlier_msg.header.stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
-  inlier_msg.header.frame_id = "base_link";
+  if (pub_pose->get_subscription_count() > 0) {
+    pub_pose->publish(pose_msg);
+  }
 
-  geometry_msgs::msg::TwistWithCovarianceStamped radar_v =
-      rplrio::toROSTwist(keyframe->radar_velocity, keyframe->radar_velocity_cov,
-                         inlier_msg.header);
-  radar_v.header.frame_id = "base_link";
+  if (pub_path->get_subscription_count() > 0) {
+    pub_path->publish(path_msg);
+  }
 
-  geometry_msgs::msg::Twist v_err;
-  gtsam::Vector3 verr =
-      keyframe->state.bodyVelocity() - keyframe->radar_velocity;
-  v_err.linear.x = verr(0);
-  v_err.linear.y = verr(1);
-  v_err.linear.z = verr(2);
-  pub_error->publish(v_err);
+  if (pub_radar->get_subscription_count() > 0) {
+    sensor_msgs::msg::PointCloud2 inlier_msg;
+    pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
+    inlier_msg.header.stamp = ros_stamp;
+    inlier_msg.header.frame_id = "base_link"; // TODO: on imu frame
+    pub_radar->publish(inlier_msg);
+  }
 
-  pub_radar->publish(inlier_msg);
-  pub_twist->publish(radar_v);
-  pub_bias->publish(rplrio::toROStwist(keyframe->imu_bias));
-  pub_v->publish(rplrio::velocityMarker(keyframe->state.velocity(),
-                                        gtsam::Vector3(0, 0, 0), "base_link",
-                                        "velocity"));
+  if (pub_twist->get_subscription_count() > 0) {
+    geometry_msgs::msg::TwistWithCovarianceStamped radar_v = rplrio::toROSTwist(
+        keyframe->radar_velocity, keyframe->radar_velocity_cov);
+    radar_v.header.stamp = ros_stamp;
+    radar_v.header.frame_id = "base_link"; // TODO: on imu frame
+    pub_twist->publish(radar_v);
+  }
+
+  if (pub_err->get_subscription_count() > 0) {
+    geometry_msgs::msg::Twist v_err;
+    gtsam::Vector3 verr =
+        keyframe->state.bodyVelocity() - keyframe->radar_velocity;
+    v_err.linear.x = verr(0);
+    v_err.linear.y = verr(1);
+    v_err.linear.z = verr(2);
+    pub_err->publish(v_err);
+  }
+
+  if (pub_bias->get_subscription_count() > 0) {
+    pub_bias->publish(rplrio::toROStwist(keyframe->imu_bias));
+  }
+
+  // broadcast transformation
+  geometry_msgs::msg::TransformStamped transform_stamped =
+      rplrio::toROSTransform(current_pose, "map", "base_link", ros_stamp);
+  br->sendTransform(transform_stamped);
 }
 
 template <class PointType>
@@ -100,8 +130,8 @@ void DIORosNode<PointType>::cb_radar(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg) {
 
   double radar_t = rclcpp::Time(pc_msg->header.stamp).seconds();
-  if (radar_t - last_radar_time_ < (1.0 / 13.0))
-    return;
+  // if (radar_t - last_radar_time_ < (1.0 / params.target_frame_rate))
+  //   return;
   last_radar_time_ = radar_t;
 
   PclPtr radar_pc;

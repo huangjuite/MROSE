@@ -1,22 +1,22 @@
 imu0:
   T_i_b:
-    - [1.0, 0.0, 0.0, -1.326]
-    - [0.0, -1.0, 0.0, 0.05]
-    - [0.0, 0.0, -1.0, 1.731]
-    - [0.0, 0.0, 0.0, 1.0]
+    - [1.000, 0.000, 0.000, -1.326]
+    - [0.000, -1.000, 0.000, 0.050]
+    - [0.000, 0.000, -1.000, 1.731]
+    - [0.000, 0.000, 0.000, 1.000]
   accelerometer_noise_density: 0.0015903917463388937
   accelerometer_random_walk: 7.316842828686425e-05
   gyroscope_noise_density: 3.581400308085914e-05
   gyroscope_random_walk: 1.1036348379504944e-06
   rostopic: /starfire_imu
-  gravity: -9.80126
+  gravity: 9.80126
 
 radar_1:
   T_r_i:
-    - [0.0, 1.0, 0.0, -0.05]
-    - [1.0, 0.0, 0.0, -1.411]
-    - [0.0, 0.0, -1.0, 0.832]
-    - [0.0, 0.0, 0.0, 1.0]
+    - [0.000, 1.000, 0.000, -0.050]
+    - [1.000, 0.000, 0.000, -1.411]
+    - [0.000, 0.000, -1.000, 0.832]
+    - [0.000, 0.000, 0.000, 1.000]
   rostopic: /hugin_raf_1/radar_data
   doppler_sigma: 0.124 # doppler uncertainty (m/s)
 
@@ -24,6 +24,7 @@ odom:
   imu: imu0
   radar: [radar_1]
   doppler_inlier_thresh: 0.124
+  target_frame_rate: 13.0 # Hz
   optimization_window: 4.0 # seconds
   bv_use_huber: true
   bv_huber_k: 0.5
