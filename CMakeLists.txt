@@ -17,6 +17,11 @@ find_package(Ceres REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
+# Download the rerun_sdk
+include(FetchContent)
+FetchContent_Declare(rerun_sdk URL
+    https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
+FetchContent_MakeAvailable(rerun_sdk)
 
 # ROS messages and services
 #############################################
@@ -44,6 +49,7 @@ add_library(rio SHARED
 
   src/RosNode/DIORosNode.cpp
   src/RosNode/MapRosNode.cpp
+  src/RosNode/RerunLogger.cpp
 
 )
 
@@ -57,10 +63,12 @@ target_link_libraries(rio
   ceres
   yaml-cpp
   OpenMP::OpenMP_CXX
+  rerun_sdk
 )
 
 ament_target_dependencies(rio
   rclcpp
+  sensor_msgs
   pcl_ros
   visualization_msgs
   nav_msgs
@@ -78,6 +86,15 @@ target_link_libraries(runMapping rio)
 add_executable(test_velocity_estimator app/test_vest.cpp)
 target_link_libraries(test_velocity_estimator rio)
 
+add_executable(bagDIO app/bagDIO.cpp)
+target_link_libraries(bagDIO rio)
+ament_target_dependencies(bagDIO
+  rosbag2_cpp
+  rosbag2_storage
+)
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(bagDIO "${cpp_typesupport_target}")
+
 # Install
 #############################################
 install(
@@ -93,9 +110,10 @@ install(DIRECTORY include/
 )
 
 install(TARGETS
-  runDIO 
+  runDIO
   runMapping
   test_velocity_estimator
+  bagDIO
   DESTINATION lib/${PROJECT_NAME}
 )
 
