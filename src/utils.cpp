@@ -315,7 +315,24 @@ Params get_params(std::string cfg_path) {
   param.map_snr_thresh = config["mapping"]["map_snr_thresh"].as<double>();
   param.render_rate = config["mapping"]["render_rate"].as<double>();
 
+  // logging
+  if (config["log_level"]) {
+    std::string log_level_str = config["log_level"].as<std::string>();
+    if (log_level_str == "trace") {
+      param.log_level = 0;
+    } else if (log_level_str == "debug") {
+      param.log_level = 1;
+    } else if (log_level_str == "info") {
+      param.log_level = 2;
+    } else if (log_level_str == "warn") {
+      param.log_level = 3;
+    } else if (log_level_str == "error") {
+      param.log_level = 4;
+    } else if (log_level_str == "fatal" || log_level_str == "critical") {
+      param.log_level = 5;
+    }
+  }
+
   return param;
 }
-
 } // namespace rplrio

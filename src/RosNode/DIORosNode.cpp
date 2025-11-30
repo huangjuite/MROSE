@@ -12,6 +12,7 @@ DIORosNode<PointType>::DIORosNode()
       get_parameter_or("config", rclcpp::Parameter("config", "config.yaml"));
   RCLCPP_INFO(get_logger(), "config: %s", cfg.as_string().c_str());
   params = rplrio::get_params(cfg.as_string());
+  
   dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
       params, std::make_shared<VestType>());
 
@@ -76,7 +77,7 @@ void DIORosNode<PointType>::publish_all(
     sensor_msgs::msg::PointCloud2 inlier_msg;
     pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
     inlier_msg.header.stamp = ros_stamp;
-    inlier_msg.header.frame_id = "base_link"; // TODO: on imu frame
+    inlier_msg.header.frame_id = imu_frame_id_;
     pub_radar->publish(inlier_msg);
   }
 
@@ -84,7 +85,7 @@ void DIORosNode<PointType>::publish_all(
     geometry_msgs::msg::TwistWithCovarianceStamped radar_v = rplrio::toROSTwist(
         keyframe->radar_velocity, keyframe->radar_velocity_cov);
     radar_v.header.stamp = ros_stamp;
-    radar_v.header.frame_id = "base_link"; // TODO: on imu frame
+    radar_v.header.frame_id = imu_frame_id_;
     pub_twist->publish(radar_v);
   }
 
@@ -112,6 +113,10 @@ template <class PointType>
 void DIORosNode<PointType>::cb_imu(
     const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg) {
   double imu_t = rclcpp::Time(imu_msg->header.stamp).seconds();
+
+  if (imu_frame_id_.empty()) {
+    imu_frame_id_ = imu_msg->header.frame_id;
+  }
 
   gtsam::Vector3 acc =
       (gtsam::Vector3() << imu_msg->linear_acceleration.x,
@@ -149,5 +154,6 @@ void DIORosNode<PointType>::cb_radar(
 
 template <class PointType> DIORosNode<PointType>::~DIORosNode() {}
 
+template class DIORosNode<pcl::PointXYZD>;
 template class DIORosNode<pcl::PointXYZSD>;
 template class DIORosNode<pcl::PointHugin>;

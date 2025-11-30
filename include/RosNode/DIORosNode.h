@@ -36,6 +36,7 @@ private:
 
   rplrio::Params params;
   double last_radar_time_ = -1.0;
+  std::string imu_frame_id_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr>

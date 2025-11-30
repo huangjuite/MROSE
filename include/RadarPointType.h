@@ -7,6 +7,13 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 namespace pcl {
+
+struct EIGEN_ALIGN16 PointXYZD {
+  PCL_ADD_POINT4D;
+  float doppler;
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
 struct EIGEN_ALIGN16 PointXYZSD {
   PCL_ADD_POINT4D;
   float snr;
@@ -41,6 +48,11 @@ struct EIGEN_ALIGN16 PointHugin {
 };
 
 } // namespace pcl
+
+POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::PointXYZD,
+                                  (float, x, x)(float, y, y)(float, z,
+                                                             z)(float, doppler,
+                                                                doppler))
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::PointXYZSD,
                                   (float, x, x)(float, y, y)(float, z, z)(

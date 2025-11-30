@@ -50,6 +50,9 @@ struct Params {
   double process_voxel_size;
   double map_snr_thresh;
   double render_rate;
+
+  // logging
+  int log_level = 2; // 0=trace, 1=debug, 2=info, 3=warn, 4=error, 5=critical
 };
 
 ImuParam_ptr imuParams(Params param);

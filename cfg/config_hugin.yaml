@@ -20,6 +20,10 @@ radar_1:
   rostopic: /hugin_raf_1/radar_data
   doppler_sigma: 0.124 # doppler uncertainty (m/s)
 
+point_type: PointHugin
+
+log_level: info # options: debug, info, warn, error, fatal
+
 odom:
   imu: imu0
   radar: [radar_1]

@@ -74,3 +74,4 @@ Eigen::Matrix3d RadarVelocityEstimatorCeres<PointType>::get_covariance(
 // Template instantiation
 template class RadarVelocityEstimatorCeres<pcl::PointHugin>;
 template class RadarVelocityEstimatorCeres<pcl::PointXYZSD>;
+template class RadarVelocityEstimatorCeres<pcl::PointXYZD>;

@@ -1,6 +1,7 @@
 #include "DIOManager.h"
 #include "RadarPointType.h"
 #include <Eigen/src/Geometry/Quaternion.h>
+#include <spdlog/spdlog.h>
 
 namespace rplrio {
 
@@ -8,6 +9,9 @@ template <class PointType>
 DIOManager<PointType>::DIOManager(
     rplrio::Params params,
     std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator) {
+  spdlog::set_pattern("[%^%l%$] %v");
+  spdlog::set_level(static_cast<spdlog::level::level_enum>(params.log_level));
+
   this->params = params;
   this->velocity_estimator = velocity_estimator;
 
@@ -61,7 +65,7 @@ void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
       (gtsam::Vector(6) << 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3)
           .finished()); // rad,rad,rad,m, m, m
   auto velocity_noise_model =
-      gtsam::noiseModel::Isotropic::Sigma(3, 1e-1); // m/s
+      gtsam::noiseModel::Isotropic::Sigma(3, 1e-3); // m/s
   auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
 
   // Add all prior
@@ -91,7 +95,7 @@ template <class PointType> void DIOManager<PointType>::update() {
   // integrate imu measurements
   std::shared_ptr<rplrio::IMU> last_imu;
   size_t imu_size = 0;
-  std::cout << "imu queue size: " << imu_que.size() << std::endl;
+  spdlog::debug("imu queue size: {}", imu_que.size());
   while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp) {
     auto imu_data = imu_que.front();
     double dt = imu_data->stamp - pre_imu_t;
@@ -102,7 +106,7 @@ template <class PointType> void DIOManager<PointType>::update() {
     imu_que.pop_front();
     imu_size++;
   }
-  std::cout << "Integrated " << imu_size << " IMU measurements." << std::endl;
+  spdlog::debug("IMU measurements: {}", imu_size);
 
   auto next_imu = imu_que.front();
   rplrio::IMU interp;
@@ -113,8 +117,7 @@ template <class PointType> void DIOManager<PointType>::update() {
                                         interp.stamp - pre_imu_t);
     pre_imu_t = interp.stamp;
   }
-  std::cout << std::fixed << "Interpolated IMU at time: " << radar_stamp
-            << std::endl;
+  spdlog::debug("key frame time: {:.6f}", radar_stamp);
 
   step++;
   auto keyframe = optimize(*radar_msg);
@@ -223,12 +226,14 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       pre_imu_t = initializer->get_first_stamp();
       graph_init(init_r, bias_a, bias_g, pre_imu_t);
       imu_que = initializer->get_imu_queue();
-      std::cout << "static init" << std::endl;
-      std::cout << "bias acc: " << bias_a[0] << ", " << bias_a[1] << ", "
-                << bias_a[2] << std::endl;
-      std::cout << "bias gyro: " << bias_g[0] << ", " << bias_g[1] << ", "
-                << bias_g[2] << std::endl;
-      std::cout << "rotation: \n" << init_r.toRotationMatrix() << std::endl;
+      spdlog::info("static init");
+      spdlog::info("bias acc: {}, {}, {}", bias_a[0], bias_a[1], bias_a[2]);
+      spdlog::info("bias gyro: {}, {}, {}", bias_g[0], bias_g[1], bias_g[2]);
+      auto rot_mat = init_r.toRotationMatrix();
+      spdlog::info("rotation:");
+      spdlog::info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(0,0), rot_mat(0,1), rot_mat(0,2));
+      spdlog::info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(1,0), rot_mat(1,1), rot_mat(1,2));
+      spdlog::info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(2,0), rot_mat(2,1), rot_mat(2,2));
 
       update();
     }
@@ -270,6 +275,7 @@ DIOManager<PointType>::get_latest_states() {
 
 template <class PointType> DIOManager<PointType>::~DIOManager() {}
 
+template class DIOManager<pcl::PointXYZD>;
 template class DIOManager<pcl::PointXYZSD>;
 template class DIOManager<pcl::PointXYZSDW>;
 template class DIOManager<pcl::PointHugin>;

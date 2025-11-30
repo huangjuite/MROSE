@@ -9,7 +9,6 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     config_arg = DeclareLaunchArgument(
         name="config",
-        default_value="config_epson",
         description="config_epson, config_razor...",
     )
     use_sim_time = DeclareLaunchArgument(
@@ -34,6 +33,9 @@ def generate_launch_description():
                 }
             ],
         )
+        
+        return [doppler_odom_node]
+
 
         # map_node = Node(
         #     package="rpl_rio",
@@ -52,7 +54,6 @@ def generate_launch_description():
         # )
 
         # return [doppler_odom_node, map_node]
-        return [doppler_odom_node]
 
     ld = LaunchDescription([config_arg, use_sim_time])
     ld.add_action(OpaqueFunction(function=odom_node_setup))
