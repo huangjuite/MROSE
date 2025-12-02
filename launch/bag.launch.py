@@ -15,8 +15,8 @@ def generate_launch_description():
 
     mode_arg = DeclareLaunchArgument(
         name="mode",
-        default_value="server",
-        description="bagDIO mode (server, client, etc.)",
+        default_value="none",
+        description="rerun log mode (spawn, connect, save, server, none, etc.)",
     )
 
     config_arg = DeclareLaunchArgument(
@@ -30,6 +30,7 @@ def generate_launch_description():
             package="rpl_rio",
             executable="bagDIO",
             output="screen",
+            emulate_tty=True,
             arguments=[LaunchConfiguration("data_dir"), LaunchConfiguration("mode")],
             parameters=[
                 {

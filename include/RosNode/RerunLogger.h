@@ -43,6 +43,12 @@ public:
   void log_text(const std::string &entity_path, const std::string &text,
                 double timestamp = -1.0);
 
+  void log_scalar(const std::string &entity_path, double value,
+                  double timestamp = -1.0);
+
+  void log_vector3(const std::string &entity_path, const Eigen::Vector3d &vec,
+                   double timestamp = -1.0);
+
   bool is_initialized() const { return initialized_; }
 
   rerun::RecordingStream &stream() { return *rec_; }

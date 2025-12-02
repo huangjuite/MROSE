@@ -34,7 +34,6 @@ private:
   typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
   typedef typename pcl::PointCloud<PointType> Pcl;
 
-  rplrio::Params params;
   double last_radar_time_ = -1.0;
   std::string imu_frame_id_;
 
@@ -58,6 +57,7 @@ private:
 public:
   DIORosNode();
   ~DIORosNode();
+  rplrio::Params params;
   std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
   void cb_radar(const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg);
   void cb_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu);

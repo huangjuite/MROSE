@@ -22,7 +22,7 @@ radar_1:
 
 point_type: PointHugin
 
-log_level: info # options: debug, info, warn, error, fatal
+log_level: debug # options: debug, info, warn, error, fatal
 
 odom:
   imu: imu0

@@ -107,4 +107,33 @@ void RerunLogger::log_text(const std::string &entity_path,
   rec_->log(entity_path, rerun::TextLog(text));
 }
 
+void RerunLogger::log_scalar(const std::string &entity_path, double value,
+                             double timestamp) {
+  if (!initialized_) {
+    return;
+  }
+
+  if (timestamp > 0.0) {
+    rec_->set_time_timestamp_secs_since_epoch("timestamp", timestamp);
+  }
+
+  rec_->log(entity_path, rerun::Scalars(value));
+}
+
+void RerunLogger::log_vector3(const std::string &entity_path,
+                              const Eigen::Vector3d &vec, double timestamp) {
+  if (!initialized_) {
+    return;
+  }
+
+  if (timestamp > 0.0) {
+    rec_->set_time_timestamp_secs_since_epoch("timestamp", timestamp);
+  }
+
+  // Log each component as a separate scalar
+  rec_->log(entity_path + "/x", rerun::Scalars(vec.x()));
+  rec_->log(entity_path + "/y", rerun::Scalars(vec.y()));
+  rec_->log(entity_path + "/z", rerun::Scalars(vec.z()));
+}
+
 } // namespace rplrio
