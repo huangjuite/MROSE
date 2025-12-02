@@ -4,6 +4,7 @@
 #include <Eigen/Eigen>
 #include <deque>
 #include <memory>
+#include <spdlog/spdlog.h>
 
 #include "rplrio_types.h"
 
@@ -16,6 +17,7 @@ private:
   Eigen::Quaterniond q_MtoI_;
   Eigen::Vector3d bias_acc_;
   Eigen::Vector3d bias_gyro_;
+  std::shared_ptr<spdlog::logger> logger_;
 
 public:
   StaticInitializer(float init_window, float acc_var_thresh, float gravity);

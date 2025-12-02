@@ -2,6 +2,7 @@
 #include "RadarPointType.h"
 #include <Eigen/src/Geometry/Quaternion.h>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace rplrio {
 
@@ -9,8 +10,10 @@ template <class PointType>
 DIOManager<PointType>::DIOManager(
     rplrio::Params params,
     std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator) {
-  spdlog::set_pattern("[%^%l%$] %v");
-  spdlog::set_level(static_cast<spdlog::level::level_enum>(params.log_level));
+
+  logger_ = spdlog::stdout_color_mt("rplrio");
+  logger_->set_pattern("[%^%l%$] %v");
+  logger_->set_level(static_cast<spdlog::level::level_enum>(params.log_level));
 
   this->params = params;
   this->velocity_estimator = velocity_estimator;
@@ -95,7 +98,7 @@ template <class PointType> void DIOManager<PointType>::update() {
   // integrate imu measurements
   std::shared_ptr<rplrio::IMU> last_imu;
   size_t imu_size = 0;
-  spdlog::debug("imu queue size: {}", imu_que.size());
+  logger_->debug("imu queue size: {}", imu_que.size());
   while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp) {
     auto imu_data = imu_que.front();
     double dt = imu_data->stamp - pre_imu_t;
@@ -106,7 +109,7 @@ template <class PointType> void DIOManager<PointType>::update() {
     imu_que.pop_front();
     imu_size++;
   }
-  spdlog::debug("IMU measurements: {}", imu_size);
+  logger_->debug("IMU measurements: {}", imu_size);
 
   auto next_imu = imu_que.front();
   rplrio::IMU interp;
@@ -117,7 +120,7 @@ template <class PointType> void DIOManager<PointType>::update() {
                                         interp.stamp - pre_imu_t);
     pre_imu_t = interp.stamp;
   }
-  spdlog::debug("key frame time: {:.6f}", radar_stamp);
+  logger_->debug("key frame time: {:.6f}", radar_stamp);
 
   step++;
   auto keyframe = optimize(*radar_msg);
@@ -226,14 +229,14 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       pre_imu_t = initializer->get_first_stamp();
       graph_init(init_r, bias_a, bias_g, pre_imu_t);
       imu_que = initializer->get_imu_queue();
-      spdlog::info("static init");
-      spdlog::info("bias acc: {}, {}, {}", bias_a[0], bias_a[1], bias_a[2]);
-      spdlog::info("bias gyro: {}, {}, {}", bias_g[0], bias_g[1], bias_g[2]);
+      logger_->info("static init");
+      logger_->info("bias acc: {}, {}, {}", bias_a[0], bias_a[1], bias_a[2]);
+      logger_->info("bias gyro: {}, {}, {}", bias_g[0], bias_g[1], bias_g[2]);
       auto rot_mat = init_r.toRotationMatrix();
-      spdlog::info("rotation:");
-      spdlog::info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(0,0), rot_mat(0,1), rot_mat(0,2));
-      spdlog::info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(1,0), rot_mat(1,1), rot_mat(1,2));
-      spdlog::info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(2,0), rot_mat(2,1), rot_mat(2,2));
+      logger_->info("rotation:");
+      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(0,0), rot_mat(0,1), rot_mat(0,2));
+      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(1,0), rot_mat(1,1), rot_mat(1,2));
+      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(2,0), rot_mat(2,1), rot_mat(2,2));
 
       update();
     }

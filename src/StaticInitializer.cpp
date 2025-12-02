@@ -1,9 +1,12 @@
 #include "StaticInitializer.h"
+#include <spdlog/spdlog.h>
 
 StaticInitializer::StaticInitializer(float init_window, float acc_var_thresh,
                                      float gravity)
     : init_window_(init_window), acc_var_thresh_(acc_var_thresh),
-      gravity_(abs(gravity)) {}
+      gravity_(abs(gravity)) {
+  logger_ = spdlog::get("rplrio");
+}
 
 Eigen::Quaterniond StaticInitializer::get_rotation() { return q_MtoI_; }
 Eigen::Vector3d StaticInitializer::get_bias_acc() { return bias_acc_; }
@@ -76,6 +79,7 @@ bool StaticInitializer::init_update(std::shared_ptr<rplrio::IMU> imu) {
                       .dot(imu_queue[i]->acc.block<2, 1>(0, 0) - acc_mean_w1);
   }
   acc_var_w1 = sqrt(acc_var_w1 / c_idx);
+  logger_->debug("acc_var_w1: {}", acc_var_w1);
 
   if (acc_var_w1 < acc_var_thresh_) {
     return false;

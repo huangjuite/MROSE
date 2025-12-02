@@ -16,6 +16,7 @@ find_package(GTSAM REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(fmt REQUIRED)
 
 # Download the rerun_sdk
 include(FetchContent)
@@ -62,6 +63,7 @@ target_link_libraries(rio
   gtsam
   ceres
   yaml-cpp
+  fmt::fmt
   OpenMP::OpenMP_CXX
   rerun_sdk
 )

@@ -12,7 +12,7 @@ DIORosNode<PointType>::DIORosNode()
       get_parameter_or("config", rclcpp::Parameter("config", "config.yaml"));
   RCLCPP_INFO(get_logger(), "config: %s", cfg.as_string().c_str());
   params = rplrio::get_params(cfg.as_string());
-  
+
   dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
       params, std::make_shared<VestType>());
 
@@ -33,13 +33,13 @@ DIORosNode<PointType>::DIORosNode()
   path_msg.header.frame_id = "map";
 
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
-      params.imu_topic, 20,
+      params.imu_topic, 400,
       std::bind(&DIORosNode::cb_imu, this, std::placeholders::_1));
 
   for (auto r : params.radar_list) {
     sub_radars.push_back(
         this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            params.radars[r].topic, 2,
+            params.radars[r].topic, 20,
             std::bind(&DIORosNode::cb_radar, this, std::placeholders::_1)));
   }
 
@@ -53,9 +53,9 @@ void DIORosNode<PointType>::publish_all(
     const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe) {
 
   auto current_pose = keyframe->state.pose();
-  current_pose = current_pose.compose(
-      gtsam::Pose3(gtsam::Rot3(params.R_i_b),
-                   gtsam::Point3(params.T_i_b.block<3, 1>(0, 3))));
+  auto T_i_b = gtsam::Pose3(gtsam::Rot3(params.R_i_b),
+                            gtsam::Point3(params.T_i_b.block<3, 1>(0, 3)));
+  current_pose = current_pose.compose(T_i_b);
   auto ros_stamp = rplrio::create_stamp_from_seconds(keyframe->stamp);
   nav_msgs::msg::Odometry odom =
       rplrio::toOdometry(current_pose.matrix(), keyframe->pose_cov);
@@ -75,9 +75,11 @@ void DIORosNode<PointType>::publish_all(
 
   if (pub_radar->get_subscription_count() > 0) {
     sensor_msgs::msg::PointCloud2 inlier_msg;
+    pcl::transformPointCloud(*keyframe->radar_points, *keyframe->radar_points,
+                             T_i_b.matrix());
     pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
     inlier_msg.header.stamp = ros_stamp;
-    inlier_msg.header.frame_id = imu_frame_id_;
+    inlier_msg.header.frame_id = "base_link";
     pub_radar->publish(inlier_msg);
   }
 

@@ -4,6 +4,9 @@
 #include <memory>
 #include <vector>
 
+// spdlog includes
+#include <spdlog/spdlog.h>
+
 // PCL includes
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
@@ -38,6 +41,7 @@ private:
   typedef rplrio::Radar<PointType> DIORadar;
 
   rplrio::Params params;
+  std::shared_ptr<spdlog::logger> logger_;
 
   double pre_imu_t = 0;
   int step = 0;
