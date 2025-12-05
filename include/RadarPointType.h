@@ -1,5 +1,4 @@
-#ifndef RADAR_POINT_TYPE_H
-#define RADAR_POINT_TYPE_H
+#pragma once
 
 // PCL includes
 #include <pcl/point_cloud.h>
@@ -72,5 +71,3 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
     (float, x, x)(float, y, y)(float, z, z)(float, range,
                                             range)(float, elevation, elevation)(
         float, azimuth, azimuth)(float, power, power)(float, doppler, doppler))
-
-#endif

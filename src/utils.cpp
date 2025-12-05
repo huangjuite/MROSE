@@ -295,7 +295,6 @@ Params get_params(std::string cfg_path) {
     }
     param.radars[r].R_r_i = param.radars[r].T_r_i.block(0, 0, 3, 3);
   }
-  param.target_frame_rate = config["odom"]["target_frame_rate"].as<float>();
 
   // odom
   param.lag = config["odom"]["optimization_window"].as<double>();
@@ -309,27 +308,21 @@ Params get_params(std::string cfg_path) {
   param.init_window = config["odom"]["static_init_window"].as<double>();
   param.init_thres = config["odom"]["static_init_threshold"].as<double>();
 
-  // mapping
-  param.process_voxel_size =
-      config["mapping"]["process_voxel_size"].as<double>();
-  param.map_snr_thresh = config["mapping"]["map_snr_thresh"].as<double>();
-  param.render_rate = config["mapping"]["render_rate"].as<double>();
-
   // logging
   if (config["log_level"]) {
     std::string log_level_str = config["log_level"].as<std::string>();
     if (log_level_str == "trace") {
-      param.log_level = 0;
+      param.log_level = LogLevel::TRACE;
     } else if (log_level_str == "debug") {
-      param.log_level = 1;
+      param.log_level = LogLevel::DEBUG;
     } else if (log_level_str == "info") {
-      param.log_level = 2;
+      param.log_level = LogLevel::INFO;
     } else if (log_level_str == "warn") {
-      param.log_level = 3;
+      param.log_level = LogLevel::WARN;
     } else if (log_level_str == "error") {
-      param.log_level = 4;
+      param.log_level = LogLevel::ERROR;
     } else if (log_level_str == "fatal" || log_level_str == "critical") {
-      param.log_level = 5;
+      param.log_level = LogLevel::CRITICAL;
     }
   }
 

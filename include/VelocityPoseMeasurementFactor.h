@@ -1,5 +1,4 @@
-#ifndef VELOCITY_POSE_MEASUREMENT_FACTOR_H
-#define VELOCITY_POSE_MEASUREMENT_FACTOR_H
+#pragma once
 
 #include <gtsam/base/Lie.h>
 #include <gtsam/base/Matrix.h>
@@ -24,5 +23,3 @@ public:
                               gtsam::OptionalMatrixType H1,
                               gtsam::OptionalMatrixType H2) const;
 };
-
-#endif

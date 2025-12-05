@@ -50,7 +50,7 @@ DIORosNode<PointType>::DIORosNode()
 
 template <class PointType>
 void DIORosNode<PointType>::publish_all(
-    const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe) {
+    const std::shared_ptr<rplrio::Keyframe<PointType>> keyframe) {
 
   auto current_pose = keyframe->state.pose();
   auto T_i_b = gtsam::Pose3(gtsam::Rot3(params.R_i_b),
@@ -137,9 +137,6 @@ void DIORosNode<PointType>::cb_radar(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg) {
 
   double radar_t = rclcpp::Time(pc_msg->header.stamp).seconds();
-  // if (radar_t - last_radar_time_ < (1.0 / params.target_frame_rate))
-  //   return;
-  last_radar_time_ = radar_t;
 
   PclPtr radar_pc;
   radar_pc.reset(new Pcl);
@@ -148,7 +145,7 @@ void DIORosNode<PointType>::cb_radar(
   dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
       radar_pc, radar_t, params.radars[pc_msg->header.frame_id]));
 
-  auto states = dio_manager->get_latest_states();
+  const auto& states = dio_manager->get_latest_states();
   for (auto kf : states) {
     publish_all(kf);
   }

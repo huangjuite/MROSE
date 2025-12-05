@@ -1,5 +1,4 @@
-#ifndef STATIC_INITIALIZER_HPP
-#define STATIC_INITIALIZER_HPP
+#pragma once
 
 #include <Eigen/Eigen>
 #include <deque>
@@ -30,5 +29,3 @@ public:
   double get_first_stamp();
   ~StaticInitializer();
 };
-
-#endif

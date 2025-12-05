@@ -1,7 +1,0 @@
-# Registration srv
-
-sensor_msgs/PointCloud2 local_map
-sensor_msgs/PointCloud2 sub_map
----
-geometry_msgs/Pose tf
-float32 fitness

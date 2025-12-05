@@ -1,24 +1,26 @@
 
-#include "RosNode/DIORosNode.h"
-#include "RosNode/RerunLogger.h"
 #include <atomic>
 #include <chrono>
 #include <errno.h>
 #include <fcntl.h>
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp/serialization.hpp>
-#include <rosbag2_cpp/converter_options.hpp>
-#include <rosbag2_cpp/reader.hpp>
-#include <rosbag2_cpp/readers/sequential_reader.hpp>
-#include <rosbag2_storage/storage_options.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <signal.h>
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
 
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/serialization.hpp>
+#include <rosbag2_cpp/converter_options.hpp>
+#include <rosbag2_cpp/reader.hpp>
+#include <rosbag2_cpp/readers/sequential_reader.hpp>
+#include <rosbag2_storage/storage_filter.hpp>
+#include <rosbag2_storage/storage_options.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
 #include "RadarPointType.h"
+#include "RosNode/DIORosNode.h"
+#include "RosNode/RerunLogger.h"
 
 typedef pcl::PointHugin PointType;
 
@@ -133,6 +135,19 @@ int main(int argc, char *argv[]) {
 
   RCLCPP_INFO(node->get_logger(), "Reading from bag: %s", bag_path.c_str());
 
+  // Set up topic filter to only read topics we need
+  rosbag2_storage::StorageFilter storage_filter;
+  storage_filter.topics.push_back(node->params.imu_topic);
+  for (auto r : node->params.radar_list) {
+    storage_filter.topics.push_back(node->params.radars[r].topic);
+  }
+  reader.set_filter(storage_filter);
+
+  RCLCPP_INFO(node->get_logger(), "Filtering topics:");
+  for (const auto &topic : storage_filter.topics) {
+    RCLCPP_INFO(node->get_logger(), "  - %s", topic.c_str());
+  }
+
   // Print topic metadata
   auto topics = reader.get_all_topics_and_types();
   RCLCPP_INFO(node->get_logger(), "Bag contains %zu topics:", topics.size());
@@ -170,8 +185,8 @@ int main(int argc, char *argv[]) {
   // Read and process messages
 
   // Store all poses for trajectory logging
-  std::vector<Eigen::Vector3d> trajectory_positions;
-  std::vector<double> trajectory_timestamps;
+  std::vector<Eigen::Vector3d> path_positions;
+  std::vector<double> path_timestamps;
 
   // Point cloud for incrementally growing trajectory
   pcl::PointCloud<pcl::PointXYZ>::Ptr path_cloud(
@@ -211,7 +226,7 @@ int main(int argc, char *argv[]) {
 
         // Log keyframes to Rerun
         if (rerun_logger) {
-          auto states = node->dio_manager->get_latest_states();
+          auto& states = node->dio_manager->get_latest_states();
           for (auto kf : states) {
             double timestamp = kf->stamp;
             auto current_pose = kf->state.pose();
@@ -228,8 +243,8 @@ int main(int argc, char *argv[]) {
                                    T_i_b.rotation().toQuaternion(), timestamp);
 
             // trajectory
-            trajectory_positions.push_back(position);
-            trajectory_timestamps.push_back(timestamp);
+            path_positions.push_back(position);
+            path_timestamps.push_back(timestamp);
 
             // Log the trajectory
             pcl::PointXYZ point;
@@ -265,6 +280,29 @@ int main(int argc, char *argv[]) {
                 Eigen::Vector3d(kf->imu_bias.accelerometer()), timestamp);
             rerun_logger->log_vector3("plots/imu_bias/gyro",
                                       Eigen::Vector3d(kf->imu_bias.gyroscope()),
+                                      timestamp);
+
+            // state velocity covariance
+            Eigen::Vector3d velocity_cov = kf->velocity_cov.diagonal().array();
+            rerun_logger->log_vector3("plots/velocity_cov", velocity_cov,
+                                      timestamp);
+
+            // radar velocity covariance
+            Eigen::Vector3d radar_velocity_cov =
+                kf->radar_velocity_cov.diagonal().array();
+            rerun_logger->log_vector3("plots/radar_velocity_cov",
+                                      radar_velocity_cov, timestamp);
+
+            // position covariance (last 3 elements of pose_cov diagonal)
+            Eigen::Vector3d position_cov =
+                kf->pose_cov.block<3, 3>(3, 3).diagonal().array();
+            rerun_logger->log_vector3("plots/position_cov", position_cov,
+                                      timestamp);
+
+            // orientation covariance (first 3 elements of pose_cov diagonal)
+            Eigen::Vector3d orientation_cov =
+                kf->pose_cov.block<3, 3>(0, 0).diagonal().array();
+            rerun_logger->log_vector3("plots/orientation_cov", orientation_cov,
                                       timestamp);
           }
         }

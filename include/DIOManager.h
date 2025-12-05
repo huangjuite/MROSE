@@ -1,3 +1,4 @@
+#pragma once
 
 // std includes
 #include <deque>
@@ -18,19 +19,14 @@
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
-#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
-#include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
+#include "ControledSmoother.h"
 #include "RadarVelocityEstimatorBase.h"
 #include "StaticInitializer.h"
 #include "VelocityPoseMeasurementFactor.h"
 #include "params.h"
 #include "rplrio_types.h"
-
-using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
-using gtsam::symbol_shorthand::V; // Vel   (xdot,ydot,zdot)
-using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 
 typedef VelocityPoseMeasurementFactor RadarFactor;
 
@@ -62,12 +58,13 @@ private:
   gtsam::NavState prev_state;
   gtsam::NavState prop_state;
   gtsam::imuBias::ConstantBias prev_bias;
+  gtsam::noiseModel::Diagonal::shared_ptr marginalizationPoseModel;
 
   std::vector<std::shared_ptr<DIOKeyframe>> latest_states;
 
   // optimizer & graph
   gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
-  std::unique_ptr<gtsam::IncrementalFixedLagSmoother> smootherISAM2;
+  std::unique_ptr<ControledSmoother> smootherISAM2;
   std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
 
   void graph_init(const Eigen::Quaterniond &rotation,
@@ -87,7 +84,7 @@ public:
 
   void feed_imu(std::shared_ptr<rplrio::IMU> imu_data);
 
-  std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> get_latest_states();
+  const std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>>& get_latest_states() const;
 
   std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
 };

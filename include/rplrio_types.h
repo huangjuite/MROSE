@@ -1,5 +1,4 @@
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
 #include <Eigen/Eigen>
 #include <Eigen/src/Core/Matrix.h>
@@ -85,6 +84,7 @@ template <class PointType> struct Keyframe {
 
   gtsam::NavState state;
   gtsam::Matrix pose_cov;
+  gtsam::Matrix3 velocity_cov;
   gtsam::imuBias::ConstantBias imu_bias;
 
   typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
@@ -94,5 +94,3 @@ template <class PointType> struct Keyframe {
 };
 
 }; // namespace rplrio
-
-#endif

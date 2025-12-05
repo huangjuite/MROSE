@@ -27,7 +27,6 @@ log_level: debug # options: debug, info, warn, error, fatal
 odom:
   imu: imu0
   radar: [xwr]
-  target_frame_rate: 20.0 # Hz
   doppler_inlier_thresh: 0.124
   optimization_window: 5.0 # seconds
   bv_use_huber: true

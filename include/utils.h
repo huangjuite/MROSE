@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 // PCL includes
 #include <pcl/point_cloud.h>
@@ -88,5 +87,3 @@ Params get_params(std::string cfg_path);
 builtin_interfaces::msg::Time create_stamp_from_seconds(double seconds);
 
 } // namespace rplrio
-
-#endif

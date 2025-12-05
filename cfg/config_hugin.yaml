@@ -28,7 +28,6 @@ odom:
   imu: imu0
   radar: [radar_1]
   doppler_inlier_thresh: 0.124
-  target_frame_rate: 13.0 # Hz
   optimization_window: 4.0 # seconds
   bv_use_huber: true
   bv_huber_k: 0.5

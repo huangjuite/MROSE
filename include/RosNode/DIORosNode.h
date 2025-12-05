@@ -34,7 +34,6 @@ private:
   typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
   typedef typename pcl::PointCloud<PointType> Pcl;
 
-  double last_radar_time_ = -1.0;
   std::string imu_frame_id_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
@@ -52,7 +51,7 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> br;
 
   void publish_all(
-      const std::shared_ptr<const rplrio::Keyframe<PointType>> keyframe);
+      const std::shared_ptr<rplrio::Keyframe<PointType>> keyframe);
 
 public:
   DIORosNode();

@@ -1,5 +1,4 @@
-#ifndef PARAMS_H
-#define PARAMS_H
+#pragma once
 
 #include <Eigen/Dense>
 #include <gtsam/navigation/CombinedImuFactor.h>
@@ -10,6 +9,16 @@ typedef std::shared_ptr<gtsam::PreintegratedCombinedMeasurements::Params>
     ImuParam_ptr;
 
 namespace rplrio {
+
+enum class LogLevel {
+  TRACE = 0,
+  DEBUG = 1,
+  INFO = 2,
+  WARN = 3,
+  ERROR = 4,
+  CRITICAL = 5
+};
+
 struct RadarParams {
   std::string topic;
   Eigen::Matrix4d T_r_i;
@@ -44,18 +53,10 @@ struct Params {
   double doppler_inlier_thresh;
   std::unordered_map<std::string, RadarParams> radars;
   std::vector<std::string> radar_list;
-  float target_frame_rate;
-
-  // mapping
-  double process_voxel_size;
-  double map_snr_thresh;
-  double render_rate;
 
   // logging
-  int log_level = 2; // 0=trace, 1=debug, 2=info, 3=warn, 4=error, 5=critical
+  LogLevel log_level = LogLevel::INFO;
 };
 
 ImuParam_ptr imuParams(Params param);
 }; // namespace rplrio
-
-#endif

@@ -29,8 +29,6 @@ FetchContent_MakeAvailable(rerun_sdk)
 find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Keyframe.msg"
-  "srv/GetMap.srv"
-  "srv/Registration.srv"
   DEPENDENCIES geometry_msgs sensor_msgs
 )
 
@@ -41,15 +39,12 @@ add_library(rio SHARED
   src/utils.cpp
 
   src/VelocityPoseMeasurementFactor.cpp
-
   src/RadarVelocityEstimatorCeres.cpp
-
   src/StaticInitializer.cpp
-
+  src/ControledSmoother.cpp
   src/DIOManager.cpp
 
   src/RosNode/DIORosNode.cpp
-  src/RosNode/MapRosNode.cpp
   src/RosNode/RerunLogger.cpp
 
 )
@@ -82,9 +77,6 @@ ament_target_dependencies(rio
 add_executable(runDIO app/runDIO.cpp)
 target_link_libraries(runDIO rio)
 
-add_executable(runMapping app/runMapping.cpp)
-target_link_libraries(runMapping rio)
-
 add_executable(test_velocity_estimator app/test_vest.cpp)
 target_link_libraries(test_velocity_estimator rio)
 
@@ -113,7 +105,6 @@ install(DIRECTORY include/
 
 install(TARGETS
   runDIO
-  runMapping
   test_velocity_estimator
   bagDIO
   DESTINATION lib/${PROJECT_NAME}

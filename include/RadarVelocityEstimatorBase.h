@@ -1,5 +1,4 @@
-#ifndef RADAR_VEST_BASE_H
-#define RADAR_VEST_BASE_H
+#pragma once
 
 // PCL includes
 #include <stdlib.h>
@@ -27,8 +26,8 @@ protected:
   }
 
 public:
-  RadarVelocityEstimatorBase() {};
-  ~RadarVelocityEstimatorBase() {};
+  RadarVelocityEstimatorBase(){};
+  ~RadarVelocityEstimatorBase(){};
 
   void set_initial_velocity(Eigen::Vector3d init_v) {
     this->initial_v = init_v;
@@ -53,5 +52,3 @@ public:
   virtual Eigen::Matrix3d get_covariance(PclConstPtr radar_pc,
                                          Eigen::Vector3d velocity) = 0;
 };
-
-#endif
