@@ -1,5 +1,4 @@
 #include "RosNode/RerunLogger.h"
-#include <iostream>
 
 namespace rplrio {
 

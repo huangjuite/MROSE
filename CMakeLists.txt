@@ -77,9 +77,6 @@ ament_target_dependencies(rio
 add_executable(runDIO app/runDIO.cpp)
 target_link_libraries(runDIO rio)
 
-add_executable(test_velocity_estimator app/test_vest.cpp)
-target_link_libraries(test_velocity_estimator rio)
-
 add_executable(bagDIO app/bagDIO.cpp)
 target_link_libraries(bagDIO rio)
 ament_target_dependencies(bagDIO
@@ -105,7 +102,6 @@ install(DIRECTORY include/
 
 install(TARGETS
   runDIO
-  test_velocity_estimator
   bagDIO
   DESTINATION lib/${PROJECT_NAME}
 )

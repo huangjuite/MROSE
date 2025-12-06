@@ -3,6 +3,8 @@
 #include <chrono>
 #include <errno.h>
 #include <fcntl.h>
+#include <fstream>
+#include <iomanip>
 #include <signal.h>
 #include <termios.h>
 #include <thread>
@@ -17,12 +19,11 @@
 #include <rosbag2_storage/storage_options.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <yaml-cpp/yaml.h>
 
 #include "RadarPointType.h"
 #include "RosNode/DIORosNode.h"
 #include "RosNode/RerunLogger.h"
-
-typedef pcl::PointHugin PointType;
 
 // Signal handler for clean shutdown
 std::atomic<bool> g_shutdown_requested(false);
@@ -85,30 +86,32 @@ void check_keyboard_input() {
   }
 }
 
-int main(int argc, char *argv[]) {
+std::string getPointTypeFromConfig(const std::string &config_path) {
+  try {
+    YAML::Node config = YAML::LoadFile(config_path);
+    if (config["point_type"]) {
+      return config["point_type"].as<std::string>();
+    }
+  } catch (const YAML::Exception &e) {
+    std::cerr << "Error reading config file: " << e.what() << std::endl;
+  }
+  return "";
+}
+
+template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   // Setup signal handlers
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
 
-  rclcpp::init(argc, argv);
-
-  if (argc < 2) {
-    std::cerr << "Usage: " << argv[0] << " <bag_file_path> [logging_method]"
-              << std::endl;
-    std::cerr
-        << "  logging_method: spawn (default), serve, save, connect, or none"
-        << std::endl;
-    return 1;
-  }
-
   std::string bag_path = argv[1];
   std::string logging_method = (argc >= 3) ? argv[2] : "none";
+  std::string save_path = (argc >= 4) ? argv[3] : "/tmp/rio_trajectory.txt";
 
   // Create the node
   auto node = std::make_shared<DIORosNode<PointType>>();
-  auto T_i_b =
-      gtsam::Pose3(gtsam::Rot3(node->params.R_i_b),
-                   gtsam::Point3(node->params.T_i_b.block<3, 1>(0, 3)));
+  auto T_i_b = gtsam::Pose3(
+      gtsam::Rot3(node->params.R_i_b),
+      gtsam::Point3(node->params.T_i_b.template block<3, 1>(0, 3)));
 
   // Initialize Rerun logger only if logging is enabled
   std::unique_ptr<rplrio::RerunLogger> rerun_logger = nullptr;
@@ -182,10 +185,9 @@ int main(int argc, char *argv[]) {
     radar_topics.push_back(node->params.radars[r].topic);
   }
 
-  // Read and process messages
-
   // Store all poses for trajectory logging
   std::vector<Eigen::Vector3d> path_positions;
+  std::vector<Eigen::Quaterniond> path_orientations;
   std::vector<double> path_timestamps;
 
   // Point cloud for incrementally growing trajectory
@@ -224,27 +226,30 @@ int main(int argc, char *argv[]) {
 
         node->cb_radar(pc_msg);
 
-        // Log keyframes to Rerun
-        if (rerun_logger) {
-          auto& states = node->dio_manager->get_latest_states();
-          for (auto kf : states) {
-            double timestamp = kf->stamp;
-            auto current_pose = kf->state.pose();
+        // Process keyframes for trajectory and logging
+        auto &states = node->dio_manager->get_latest_states();
+        for (auto kf : states) {
+          double timestamp = kf->stamp;
+          auto current_pose = kf->state.pose();
 
-            current_pose = current_pose.compose(T_i_b);
+          current_pose = current_pose.compose(T_i_b);
 
+          Eigen::Vector3d position = current_pose.translation();
+          Eigen::Quaterniond orientation(
+              current_pose.rotation().toQuaternion());
+
+          // Always save trajectory data
+          path_positions.push_back(position);
+          path_orientations.push_back(orientation);
+          path_timestamps.push_back(timestamp);
+
+          // Log to Rerun only if logger is enabled
+          if (rerun_logger) {
             // Log pose
-            Eigen::Vector3d position = current_pose.translation();
-            Eigen::Quaterniond orientation(
-                current_pose.rotation().toQuaternion());
             rerun_logger->log_pose("world/base_link", position, orientation,
                                    timestamp);
             rerun_logger->log_pose("world/base_link/imu", T_i_b.translation(),
                                    T_i_b.rotation().toQuaternion(), timestamp);
-
-            // trajectory
-            path_positions.push_back(position);
-            path_timestamps.push_back(timestamp);
 
             // Log the trajectory
             pcl::PointXYZ point;
@@ -295,21 +300,20 @@ int main(int argc, char *argv[]) {
 
             // position covariance (last 3 elements of pose_cov diagonal)
             Eigen::Vector3d position_cov =
-                kf->pose_cov.block<3, 3>(3, 3).diagonal().array();
+                kf->pose_cov.template block<3, 3>(3, 3).diagonal().array();
             rerun_logger->log_vector3("plots/position_cov", position_cov,
                                       timestamp);
 
             // orientation covariance (first 3 elements of pose_cov diagonal)
             Eigen::Vector3d orientation_cov =
-                kf->pose_cov.block<3, 3>(0, 0).diagonal().array();
+                kf->pose_cov.template block<3, 3>(0, 0).diagonal().array();
             rerun_logger->log_vector3("plots/orientation_cov", orientation_cov,
                                       timestamp);
           }
         }
       }
     } catch (const std::exception &e) {
-      RCLCPP_ERROR(node->get_logger(),
-                   "Failed to deserialize message from topic '%s': %s",
+      RCLCPP_ERROR(node->get_logger(), "Failed to process topic '%s': %s",
                    bag_message->topic_name.c_str(), e.what());
       continue;
     }
@@ -326,6 +330,87 @@ int main(int argc, char *argv[]) {
     RCLCPP_INFO(node->get_logger(), "Finished processing bag file");
   }
 
+  // Save trajectory to file
+  if (!path_positions.empty()) {
+    std::ofstream traj_file(save_path);
+    if (traj_file.is_open()) {
+      traj_file << std::fixed << std::setprecision(9);
+      for (size_t i = 0; i < path_positions.size(); ++i) {
+        const auto &pos = path_positions[i];
+        const auto &quat = path_orientations[i];
+        traj_file << path_timestamps[i] << " " << pos.x() << " " << pos.y()
+                  << " " << pos.z() << " " << quat.x() << " " << quat.y() << " "
+                  << quat.z() << " " << quat.w() << "\n";
+      }
+      traj_file.close();
+      RCLCPP_INFO(node->get_logger(), "Trajectory saved to: %s (%zu poses)",
+                  save_path.c_str(), path_positions.size());
+    } else {
+      RCLCPP_ERROR(node->get_logger(), "Failed to open trajectory file: %s",
+                   save_path.c_str());
+    }
+  }
+
   rclcpp::shutdown();
   return 0;
+}
+
+int main(int argc, char *argv[]) {
+  if (argc < 2) {
+    std::cerr << "Usage: " << argv[0]
+              << " <bag_file_path> [logging_method] [save_path]" << std::endl;
+    std::cerr
+        << "  logging_method: spawn (default), serve, save, connect, or none"
+        << std::endl;
+    std::cerr << "  save_path: Path to save trajectory file (default: "
+                 "/tmp/trajectory.txt)"
+              << std::endl;
+    return 1;
+  }
+
+  // Initialize ROS first to get parameters
+  rclcpp::init(argc, argv);
+
+  // Create temporary node to read config parameter
+  auto temp_node = rclcpp::Node::make_shared(
+      "temp_node", rclcpp::NodeOptions()
+                       .allow_undeclared_parameters(true)
+                       .automatically_declare_parameters_from_overrides(true));
+
+  std::string config_path;
+  if (temp_node->has_parameter("config")) {
+    config_path = temp_node->get_parameter("config").as_string();
+  } else {
+    std::cerr << "Error: config parameter not specified" << std::endl;
+    rclcpp::shutdown();
+    return 1;
+  }
+
+  temp_node.reset();
+
+  std::string point_type = getPointTypeFromConfig(config_path);
+
+  if (point_type.empty()) {
+    std::cerr << "Error: point_type not found in config file: " << config_path
+              << std::endl;
+    std::cerr << "Available types: PointXYZD, PointXYZSD, PointHugin"
+              << std::endl;
+    rclcpp::shutdown();
+    return 1;
+  }
+
+  if (point_type == "PointXYZD") {
+    return runBagDIO<pcl::PointXYZD>(argc, argv);
+  } else if (point_type == "PointXYZSD") {
+    return runBagDIO<pcl::PointXYZSD>(argc, argv);
+  } else if (point_type == "PointHugin") {
+    return runBagDIO<pcl::PointHugin>(argc, argv);
+  } else {
+    std::cerr << "Error: Unknown point type '" << point_type << "'"
+              << std::endl;
+    std::cerr << "Available types: PointXYZD, PointXYZSD, PointHugin"
+              << std::endl;
+    rclcpp::shutdown();
+    return 1;
+  }
 }

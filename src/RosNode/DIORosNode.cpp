@@ -142,6 +142,10 @@ void DIORosNode<PointType>::cb_radar(
   radar_pc.reset(new Pcl);
   pcl::fromROSMsg(*pc_msg, *radar_pc);
 
+  if (radar_pc->empty()) {
+    return;
+  }
+
   dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
       radar_pc, radar_t, params.radars[pc_msg->header.frame_id]));
 
