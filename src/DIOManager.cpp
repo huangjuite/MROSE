@@ -1,5 +1,6 @@
 #include "DIOManager.h"
 #include "RadarPointType.h"
+#include <gtsam/inference/Symbol.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 using gtsam::symbol_shorthand::B; // Bias  (ax,ay,az,gx,gy,gz)
@@ -87,11 +88,15 @@ void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
 
 template <class PointType> void DIOManager<PointType>::update() {
   // remove out of date radar measurements
-  while (!radar_que.empty() &&
-         radar_que.front()->stamp < imu_que.front()->stamp) {
+  while (!radar_que.empty() && radar_que.front()->stamp < pre_imu_t - 1e-6) {
+    logger_->debug("out of date: {}, {:.6f}", radar_que.front()->frame_id,
+                   radar_que.front()->stamp);
+    logger_->debug("imu front {:.6f}, pre: {:.6f}", imu_que.front()->stamp,
+                   pre_imu_t);
     radar_que.pop_front();
   }
 
+  // IMU did not catch up yet
   if (radar_que.empty() || radar_que.front()->stamp > imu_que.back()->stamp) {
     return;
   }
@@ -101,38 +106,48 @@ template <class PointType> void DIOManager<PointType>::update() {
   radar_que.pop_front();
 
   // integrate imu measurements
-  std::shared_ptr<rplrio::IMU> last_imu;
   size_t imu_size = 0;
-  logger_->debug("------------------------------");
-  logger_->debug("key frame {}", radar_msg->param.topic);
-  logger_->debug("stamp: {:.6f}", radar_stamp);
-  logger_->debug("imu queue size: {}", imu_que.size());
-
-  while (!imu_que.empty() && radar_stamp > imu_que.front()->stamp) {
+  while (!imu_que.empty() && (imu_que.front()->stamp - radar_stamp) < 1e-6) {
     auto imu_data = imu_que.front();
     double dt = imu_data->stamp - pre_imu_t;
     preintegrated->integrateMeasurement(imu_data->acc, imu_data->gyro, dt);
     pre_imu_t = imu_data->stamp;
-
     last_imu = imu_data;
     imu_que.pop_front();
     imu_size++;
   }
-  logger_->debug("imu integrated: {}", imu_size);
 
-  auto next_imu = imu_que.front();
-  rplrio::IMU interp;
-  bool interp_success =
-      rplrio::IMU::interpolate(interp, radar_stamp, *last_imu, *next_imu);
-  if (interp_success) {
-    preintegrated->integrateMeasurement(interp.acc, interp.gyro,
-                                        interp.stamp - pre_imu_t);
-    pre_imu_t = interp.stamp;
+  logger_->info("------------------------------");
+  logger_->info("key frame {}", radar_msg->frame_id);
+  logger_->info("imu queue size: {}", imu_que.size());
+  logger_->info("radar queue size: {}", radar_que.size());
+  logger_->info("imu integrated: {}", imu_size);
+
+  // close to previous key frame
+  if (imu_size == 0) {
+    logger_->debug("only add radar.");
+    auto keyframe = optimize(*radar_msg, *last_imu);
+    latest_states.emplace_back(keyframe);
+  } else { // new key frame
+
+    auto next_imu = imu_que.front();
+    rplrio::IMU interp;
+
+    bool interp_success =
+        rplrio::IMU::interpolate(interp, radar_stamp, *last_imu, *next_imu);
+    if (interp_success) {
+      preintegrated->integrateMeasurement(interp.acc, interp.gyro,
+                                          interp.stamp - pre_imu_t);
+      pre_imu_t = interp.stamp;
+      *last_imu = interp;
+    }
+
+    step++;
+    auto keyframe = optimize(*radar_msg, *last_imu);
+    latest_states.emplace_back(keyframe);
   }
 
-  step++;
-  auto keyframe = optimize(*radar_msg);
-  latest_states.emplace_back(keyframe);
+  logger_->info("step: {}, time: {:.6f}", step + 1, radar_stamp);
 
   // recurisvely update until latest radar data is processed
   update();
@@ -140,27 +155,29 @@ template <class PointType> void DIOManager<PointType>::update() {
 
 template <class PointType>
 std::shared_ptr<rplrio::Keyframe<PointType>>
-DIOManager<PointType>::optimize(const DIORadar &radar) {
+DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
   double current_t = radar.stamp;
 
   // combined IMU factor
   // ---------------------------------------------------------------------------
-  auto preint_imu_combined =
-      dynamic_cast<const gtsam::PreintegratedCombinedMeasurements &>(
-          *preintegrated);
-  gtsam::CombinedImuFactor imu_factor(X(step - 1), V(step - 1), X(step),
-                                      V(step), B(step - 1), B(step),
-                                      preint_imu_combined);
-  graph->add(imu_factor);
+  if (preintegrated->deltaTij() > 1e-6) {
+    auto preint_imu_combined =
+        dynamic_cast<const gtsam::PreintegratedCombinedMeasurements &>(
+            *preintegrated);
+    gtsam::CombinedImuFactor imu_factor(X(step - 1), V(step - 1), X(step),
+                                        V(step), B(step - 1), B(step),
+                                        preint_imu_combined);
+    graph->add(imu_factor);
 
-  prop_state = preintegrated->predict(prev_state, prev_bias);
-  initial_values.insert(X(step), prop_state.pose());
-  initial_values.insert(V(step), prop_state.v());
-  initial_values.insert(B(step), prev_bias);
+    prop_state = preintegrated->predict(prev_state, prev_bias);
+    initial_values.insert(X(step), prop_state.pose());
+    initial_values.insert(V(step), prop_state.v());
+    initial_values.insert(B(step), prev_bias);
 
-  key_timestamps[X(step)] = current_t;
-  key_timestamps[V(step)] = current_t;
-  key_timestamps[B(step)] = current_t;
+    key_timestamps[X(step)] = current_t;
+    key_timestamps[V(step)] = current_t;
+    key_timestamps[B(step)] = current_t;
+  }
 
   // ------------------------------------------------------------------------------------
   gtsam::Vector3 measured_v;
@@ -188,7 +205,9 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
     rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
   }
 
-  graph->add(RadarFactor(V(step), X(step), measured_v, rv_noise));
+  RadarFactor rfac(V(step), X(step), B(step), measured_v, imu.gyro,
+                   radar.param.T_r_i, rv_noise);
+  graph->add(rfac);
 
   // optimize
   // ----------------------------------------------------------------------------
@@ -201,28 +220,33 @@ DIOManager<PointType>::optimize(const DIORadar &radar) {
 
   //-----------------------------------------------------------------------------
   // Overwrite the beginning of the preintegration for the next step.
-  prev_state = gtsam::NavState(
-      smootherISAM2->calculateEstimate<gtsam::Pose3>(X(step)),
-      smootherISAM2->calculateEstimate<gtsam::Vector3>(V(step)));
+  auto opt_x = smootherISAM2->calculateEstimate<gtsam::Pose3>(X(step));
+  auto opt_v = smootherISAM2->calculateEstimate<gtsam::Vector3>(V(step));
+
+  prev_state = gtsam::NavState(opt_x, opt_v);
   prev_bias =
       smootherISAM2->calculateEstimate<gtsam::imuBias::ConstantBias>(B(step));
   preintegrated->resetIntegrationAndSetBias(prev_bias);
 
   gtsam::Matrix x_cov = smootherISAM2->marginalCovariance(X(step));
   gtsam::Matrix v_cov = smootherISAM2->marginalCovariance(V(step));
+  auto v_err = rfac.evaluateError(opt_v, opt_x, prev_bias, {}, {}, {});
 
   // key frame informations
   // -----------------------------------------------------------------------------
-  auto key_frame = std::make_shared<DIOKeyframe>();
-  key_frame->stamp = current_t;
-  key_frame->seq = step;
-  key_frame->state = prev_state;
-  key_frame->imu_bias = prev_bias;
-  key_frame->pose_cov = x_cov;
-  key_frame->velocity_cov = v_cov;
-  key_frame->radar_points = radar_inlier;
-  key_frame->radar_velocity = measured_v;
-  key_frame->radar_velocity_cov = radar_velocity_cov;
+  auto key_frame = std::make_shared<DIOKeyframe>(
+      DIOKeyframe{.stamp = current_t,
+                  .seq = static_cast<uint>(step),
+                  .name = radar.frame_id,
+                  .state = prev_state,
+                  .pose_cov = x_cov,
+                  .velocity_cov = v_cov,
+                  .v_err = v_err,
+                  .imu = imu,
+                  .imu_bias = prev_bias,
+                  .radar_points = radar_inlier,
+                  .radar_velocity = measured_v,
+                  .radar_velocity_cov = radar_velocity_cov});
 
   return key_frame;
 }
@@ -241,10 +265,11 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       pre_imu_t = initializer->get_first_stamp();
       graph_init(init_r, bias_a, bias_g, pre_imu_t);
       imu_que = initializer->get_imu_queue();
+      auto rot_mat = init_r.toRotationMatrix();
+
       logger_->info("static init");
       logger_->info("bias acc: {}, {}, {}", bias_a[0], bias_a[1], bias_a[2]);
       logger_->info("bias gyro: {}, {}, {}", bias_g[0], bias_g[1], bias_g[2]);
-      auto rot_mat = init_r.toRotationMatrix();
       logger_->info("rotation:");
       logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(0, 0),
                     rot_mat(0, 1), rot_mat(0, 2));

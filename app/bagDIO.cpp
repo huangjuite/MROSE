@@ -4,7 +4,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fstream>
+#include <gtsam/base/Matrix.h>
 #include <iomanip>
+#include <memory>
 #include <signal.h>
 #include <termios.h>
 #include <thread>
@@ -24,6 +26,8 @@
 #include "RadarPointType.h"
 #include "RosNode/DIORosNode.h"
 #include "RosNode/RerunLogger.h"
+#include "params.h"
+#include "rplrio_types.h"
 
 // Signal handler for clean shutdown
 std::atomic<bool> g_shutdown_requested(false);
@@ -228,7 +232,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
 
         // Process keyframes for trajectory and logging
         auto &states = node->dio_manager->get_latest_states();
-        for (auto kf : states) {
+        for (std::shared_ptr<rplrio::Keyframe<PointType>> kf : states) {
           double timestamp = kf->stamp;
           auto current_pose = kf->state.pose();
 
@@ -264,7 +268,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
             // Log radar inlier points
             if (kf->radar_points && !kf->radar_points->empty()) {
               rerun_logger->log_point_cloud<PointType>(
-                  "world/base_link/imu/radar_inliers", kf->radar_points,
+                  "world/base_link/imu/" + kf->name, kf->radar_points,
                   timestamp);
             }
 
@@ -273,19 +277,26 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
                                       Eigen::Vector3d(kf->radar_velocity),
                                       timestamp);
 
-            // Log velocity error (state velocity - radar velocity)
-            gtsam::Vector3 v_err =
-                kf->state.bodyVelocity() - kf->radar_velocity;
-            rerun_logger->log_vector3("plots/v_err", Eigen::Vector3d(v_err),
-                                      timestamp);
+            // Log velocity error
+            gtsam::Vector3 v_rot =
+                gtsam::skewSymmetric(
+                    kf->imu_bias.correctGyroscope(kf->imu.gyro)) *
+                node->params.radars[kf->name].T_r_i.block(0, 3, 3, 1);
+
+            // v_err += v_rot;
+            rerun_logger->log_vector3("plots/v_rot", v_rot, timestamp);
+            rerun_logger->log_vector3("plots/v_err", kf->v_err, timestamp);
+
+            // Log IMU raw data
+            rerun_logger->log_vector3("plots/imu/gyro",
+                                      Eigen::Vector3d(kf->imu.gyro), timestamp);
 
             // Log IMU bias
             rerun_logger->log_vector3(
                 "plots/imu_bias/accel",
                 Eigen::Vector3d(kf->imu_bias.accelerometer()), timestamp);
             rerun_logger->log_vector3("plots/imu_bias/gyro",
-                                      Eigen::Vector3d(kf->imu_bias.gyroscope()),
-                                      timestamp);
+                                      kf->imu_bias.gyroscope(), timestamp);
 
             // state velocity covariance
             Eigen::Vector3d velocity_cov = kf->velocity_cov.diagonal().array();

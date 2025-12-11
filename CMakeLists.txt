@@ -39,6 +39,7 @@ add_library(rio SHARED
   src/utils.cpp
 
   src/VelocityPoseMeasurementFactor.cpp
+  src/VelocityPoseBiasFactor.cpp
   src/RadarVelocityEstimatorCeres.cpp
   src/StaticInitializer.cpp
   src/ControledSmoother.cpp

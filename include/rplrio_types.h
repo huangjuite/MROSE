@@ -2,6 +2,7 @@
 
 #include <Eigen/Eigen>
 #include <Eigen/src/Core/Matrix.h>
+#include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/NavState.h>
@@ -58,37 +59,42 @@ struct Odom {
 };
 
 template <class PointType> struct Radar {
-  typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
-  myPcPtr pc;
+  std::string frame_id;
   double stamp;
   RadarParams param;
   Eigen::Vector3d vel;
+  typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
+  myPcPtr pc;
 
-  Radar(myPcPtr p, double t, RadarParams params) {
+  Radar(myPcPtr p, double t, RadarParams params, std::string name) {
     stamp = t;
     pc = p;
     param = params;
+    this->frame_id = name;
   }
 
-  Radar(myPcPtr p, double t, RadarParams params, Eigen::Vector3d v) {
+  Radar(Eigen::Vector3d v, double t, RadarParams params, std::string name) {
     stamp = t;
-    pc = p;
     param = params;
     vel = v;
+    this->frame_id = name;
   }
 };
 
 template <class PointType> struct Keyframe {
   double stamp;
   uint seq;
+  std::string name;
 
   gtsam::NavState state;
   gtsam::Matrix pose_cov;
   gtsam::Matrix3 velocity_cov;
+  gtsam::Vector3 v_err;
+
+  IMU imu;
   gtsam::imuBias::ConstantBias imu_bias;
 
-  typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
-  myPcPtr radar_points;
+  typename pcl::PointCloud<PointType>::Ptr radar_points;
   gtsam::Vector3 radar_velocity;
   gtsam::Matrix3 radar_velocity_cov;
 };

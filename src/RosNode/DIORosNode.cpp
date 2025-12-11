@@ -93,8 +93,7 @@ void DIORosNode<PointType>::publish_all(
 
   if (pub_err->get_subscription_count() > 0) {
     geometry_msgs::msg::Twist v_err;
-    gtsam::Vector3 verr =
-        keyframe->state.bodyVelocity() - keyframe->radar_velocity;
+    gtsam::Vector3 verr =keyframe->v_err;
     v_err.linear.x = verr(0);
     v_err.linear.y = verr(1);
     v_err.linear.z = verr(2);
@@ -143,13 +142,16 @@ void DIORosNode<PointType>::cb_radar(
   pcl::fromROSMsg(*pc_msg, *radar_pc);
 
   if (radar_pc->empty()) {
+    RCLCPP_WARN(get_logger(), "%s msg has 0 points",
+                pc_msg->header.frame_id.c_str());
     return;
   }
 
   dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
-      radar_pc, radar_t, params.radars[pc_msg->header.frame_id]));
+      radar_pc, radar_t, params.radars[pc_msg->header.frame_id],
+      pc_msg->header.frame_id));
 
-  const auto& states = dio_manager->get_latest_states();
+  const auto &states = dio_manager->get_latest_states();
   for (auto kf : states) {
     publish_all(kf);
   }
