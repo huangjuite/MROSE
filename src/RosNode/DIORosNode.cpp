@@ -35,12 +35,19 @@ DIORosNode<PointType>::DIORosNode()
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
       params.imu_topic, 400,
       std::bind(&DIORosNode::cb_imu, this, std::placeholders::_1));
-
+    
   for (auto r : params.radar_list) {
-    sub_radars.push_back(
-        this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            params.radars[r].topic, 20,
-            std::bind(&DIORosNode::cb_radar, this, std::placeholders::_1)));
+    if (params.radars[r].type == "TwistWithCovarianceStamped") {
+      sub_vel.push_back(
+          this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
+              params.radars[r].topic, 20,
+              std::bind(&DIORosNode::cb_vel, this, std::placeholders::_1)));
+    } else {
+      sub_radars.push_back(
+          this->create_subscription<sensor_msgs::msg::PointCloud2>(
+              params.radars[r].topic, 20,
+              std::bind(&DIORosNode::cb_radar, this, std::placeholders::_1)));
+    }
   }
 
   br = std::make_unique<tf2_ros::TransformBroadcaster>(this);
@@ -74,13 +81,15 @@ void DIORosNode<PointType>::publish_all(
   }
 
   if (pub_radar->get_subscription_count() > 0) {
-    sensor_msgs::msg::PointCloud2 inlier_msg;
-    pcl::transformPointCloud(*keyframe->radar_points, *keyframe->radar_points,
-                             T_i_b.matrix());
-    pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
-    inlier_msg.header.stamp = ros_stamp;
-    inlier_msg.header.frame_id = "base_link";
-    pub_radar->publish(inlier_msg);
+    if (keyframe->radar_points && !keyframe->radar_points->empty()) {
+      sensor_msgs::msg::PointCloud2 inlier_msg;
+      pcl::transformPointCloud(*keyframe->radar_points, *keyframe->radar_points,
+                               T_i_b.matrix());
+      pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
+      inlier_msg.header.stamp = ros_stamp;
+      inlier_msg.header.frame_id = "base_link";
+      pub_radar->publish(inlier_msg);
+    }
   }
 
   if (pub_twist->get_subscription_count() > 0) {
@@ -93,7 +102,7 @@ void DIORosNode<PointType>::publish_all(
 
   if (pub_err->get_subscription_count() > 0) {
     geometry_msgs::msg::Twist v_err;
-    gtsam::Vector3 verr =keyframe->v_err;
+    gtsam::Vector3 verr = keyframe->v_err;
     v_err.linear.x = verr(0);
     v_err.linear.y = verr(1);
     v_err.linear.z = verr(2);
@@ -150,6 +159,34 @@ void DIORosNode<PointType>::cb_radar(
   dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
       radar_pc, radar_t, params.radars[pc_msg->header.frame_id],
       pc_msg->header.frame_id));
+
+  const auto &states = dio_manager->get_latest_states();
+  for (auto kf : states) {
+    publish_all(kf);
+  }
+}
+
+template <class PointType>
+void DIORosNode<PointType>::cb_vel(
+    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr
+        vel_msg) {
+
+  double vel_t = rclcpp::Time(vel_msg->header.stamp).seconds();
+
+  gtsam::Vector3 velocity(vel_msg->twist.twist.linear.x,
+                          vel_msg->twist.twist.linear.y,
+                          vel_msg->twist.twist.linear.z);
+
+  gtsam::Matrix3 covariance;
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      covariance(i, j) = vel_msg->twist.covariance[i * 6 + j];
+    }
+  }
+
+  dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
+      velocity, covariance, vel_t, params.radars[vel_msg->header.frame_id],
+      vel_msg->header.frame_id));
 
   const auto &states = dio_manager->get_latest_states();
   for (auto kf : states) {

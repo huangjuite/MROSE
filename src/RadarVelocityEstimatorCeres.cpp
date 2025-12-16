@@ -33,7 +33,7 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
   for (auto p : radar_pc->points) {
     Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
     DopplerCostFunction *cost_function =
-        new DopplerCostFunction(pos, p.doppler, doppler_sigma);
+        new DopplerCostFunction(pos, p.doppler, this->doppler_sigma);
     ceres::ResidualBlockId id = problem.AddResidualBlock(
         cost_function, new ceres::CauchyLoss(cauchy_scale), v_est);
     residual_ids.push_back(id);

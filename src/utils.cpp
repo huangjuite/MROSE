@@ -287,6 +287,11 @@ Params get_params(std::string cfg_path) {
     param.radars[r].topic = config[r]["rostopic"].as<std::string>();
     param.radars[r].doppler_std = config[r]["doppler_sigma"].as<double>();
 
+    // Read type if available
+    if (config[r]["type"]) {
+      param.radars[r].type = config[r]["type"].as<std::string>();
+    }
+
     auto T_r_i_node = config[r]["T_r_i"];
     for (size_t i = 0; i < 4; ++i) {
       for (size_t j = 0; j < 4; ++j) {
@@ -300,6 +305,18 @@ Params get_params(std::string cfg_path) {
   param.lag = config["odom"]["optimization_window"].as<double>();
   param.bv_use_huber = config["odom"]["bv_use_huber"].as<bool>();
   param.bv_huber_k = config["odom"]["bv_huber_k"].as<double>();
+
+  // marginalization sigma
+  if (config["odom"]["marginalization_sigma"]) {
+    auto marg_sigma = config["odom"]["marginalization_sigma"].as<std::vector<double>>();
+    param.marginalization_sigma = Eigen::VectorXd(marg_sigma.size());
+    for (size_t i = 0; i < marg_sigma.size(); ++i) {
+      param.marginalization_sigma(i) = marg_sigma[i];
+    }
+  } else {
+    param.marginalization_sigma = Eigen::VectorXd(6);
+    param.marginalization_sigma << 10, 10, 10, 10, 10, 10;
+  }
 
   // initializer
   param.use_static_init = config["odom"]["use_static_init"].as<bool>();

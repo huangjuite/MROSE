@@ -44,7 +44,6 @@ class RadarVelocityEstimatorCeres
   typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
   typedef typename pcl::PointCloud<PointType> Pcl;
   ceres::Solver::Options options;
-  float doppler_sigma;
   float cauchy_scale;
 
 public:

@@ -39,6 +39,8 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr>
       sub_radars;
+  std::vector<rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr>
+      sub_vel;
 
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_pose;
   rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr
@@ -59,5 +61,6 @@ public:
   rplrio::Params params;
   std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
   void cb_radar(const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg);
+  void cb_vel(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr vel_msg);
   void cb_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu);
 };

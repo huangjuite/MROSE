@@ -81,7 +81,7 @@ void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
 
   // set marginlization model
   marginalizationPoseModel = gtsam::noiseModel::Diagonal::Sigmas(
-      (gtsam::Vector(6) << 10, 10, 10, 10, 10, 10).finished());
+      params.marginalization_sigma);
 
   initialized = true;
 }
@@ -181,22 +181,30 @@ DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
 
   // ------------------------------------------------------------------------------------
   gtsam::Vector3 measured_v;
+  gtsam::Matrix33 radar_velocity_cov;
   gtsam::noiseModel::Base::shared_ptr rv_noise;
+  typename pcl::PointCloud<PointType>::Ptr radar_inlier;
 
-  velocity_estimator->set_initial_velocity(radar.param.R_r_i.transpose() *
-                                           prop_state.bodyVelocity());
-  measured_v = velocity_estimator->optimize(radar.pc);
-  auto radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
+  if (radar.pc) {
+    velocity_estimator->set_initial_velocity(radar.param.R_r_i.transpose() *
+                                             prop_state.bodyVelocity());
+    velocity_estimator->set_doppler_sigma(radar.param.doppler_std);
+    measured_v = velocity_estimator->optimize(radar.pc);
+    radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
+    pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_i);
+    radar_velocity_cov =
+        velocity_estimator->get_covariance(radar.pc, measured_v);
+  } else {
+    measured_v = radar.vel;
+    radar_velocity_cov = radar.vel_cov;
+  }
 
-  gtsam::Matrix radar_velocity_cov =
-      velocity_estimator->get_covariance(radar.pc, measured_v);
-
-  // velocity pose measurement
+  // rotate to IMU frame
   measured_v = radar.param.R_r_i * measured_v;
   radar_velocity_cov =
       radar.param.R_r_i * radar_velocity_cov * radar.param.R_r_i.transpose();
-  pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_i);
 
+  // noise model
   if (params.bv_use_huber) {
     rv_noise = gtsam::noiseModel::Robust::Create(
         gtsam::noiseModel::mEstimator::Huber::Create(params.bv_huber_k),

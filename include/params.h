@@ -21,6 +21,7 @@ enum class LogLevel {
 
 struct RadarParams {
   std::string topic;
+  std::string type = "PointCloud2";
   Eigen::Matrix4d T_r_i;
   Eigen::Matrix3d R_r_i;
   double doppler_std;
@@ -34,6 +35,7 @@ struct Params {
   double lag;
   bool bv_use_huber;
   double bv_huber_k;
+  Eigen::VectorXd marginalization_sigma;
 
   // initializer
   bool use_static_init;

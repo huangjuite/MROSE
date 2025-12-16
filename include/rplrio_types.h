@@ -62,7 +62,10 @@ template <class PointType> struct Radar {
   std::string frame_id;
   double stamp;
   RadarParams param;
-  Eigen::Vector3d vel;
+
+  gtsam::Vector3 vel;
+  gtsam::Matrix33 vel_cov;
+
   typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
   myPcPtr pc;
 
@@ -73,10 +76,12 @@ template <class PointType> struct Radar {
     this->frame_id = name;
   }
 
-  Radar(Eigen::Vector3d v, double t, RadarParams params, std::string name) {
+  Radar(gtsam::Vector3 v, gtsam::Matrix33 cov, double t, RadarParams params,
+        std::string name) {
     stamp = t;
     param = params;
     vel = v;
+    vel_cov = cov;
     this->frame_id = name;
   }
 };
@@ -88,7 +93,7 @@ template <class PointType> struct Keyframe {
 
   gtsam::NavState state;
   gtsam::Matrix pose_cov;
-  gtsam::Matrix3 velocity_cov;
+  gtsam::Matrix33 velocity_cov;
   gtsam::Vector3 v_err;
 
   IMU imu;
@@ -96,7 +101,7 @@ template <class PointType> struct Keyframe {
 
   typename pcl::PointCloud<PointType>::Ptr radar_points;
   gtsam::Vector3 radar_velocity;
-  gtsam::Matrix3 radar_velocity_cov;
+  gtsam::Matrix33 radar_velocity_cov;
 };
 
 }; // namespace rplrio

@@ -31,11 +31,8 @@ odom:
   optimization_window: 5.0 # seconds
   bv_use_huber: true
   bv_huber_k: 0.5
+  marginalization_sigma: [10, 10, 10, 10, 10, 10] # rx, ry, rz, tx, ty, tz
   use_static_init: true
   static_init_window: 6.0 # seconds
   static_init_threshold: 0.3 # acc x y variation
 
-mapping:
-  render_rate: 1.0 # Hz
-  process_voxel_size: 0.5 # meters
-  map_snr_thresh: 1.6 # log dB
