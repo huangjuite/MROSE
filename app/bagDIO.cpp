@@ -250,6 +250,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
           // Log to Rerun only if logger is enabled
           if (rerun_logger) {
             // Log pose
+            // position.z() = 0.0;
             rerun_logger->log_pose("world/base_link", position, orientation,
                                    timestamp);
             rerun_logger->log_pose("world/base_link/imu", T_i_b.translation(),

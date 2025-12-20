@@ -51,7 +51,8 @@ add_library(rio SHARED
 )
 
 target_include_directories(rio PUBLIC
-  include
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )
 
 target_link_libraries(rio
@@ -89,12 +90,23 @@ target_link_libraries(bagDIO "${cpp_typesupport_target}")
 
 # Install
 #############################################
+# Install and export the main library target
 install(
   TARGETS rio
+  EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
+)
+
+# Install rerun_sdk so it's available to downstream packages
+install(
+  TARGETS rerun_sdk
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 install(DIRECTORY include/
@@ -116,5 +128,28 @@ install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
+
+# Export targets for downstream packages
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+
+# Export dependencies so downstream packages can find them
+ament_export_dependencies(
+  Eigen3
+  GTSAM
+  Ceres
+  yaml-cpp
+  fmt
+  rclcpp
+  sensor_msgs
+  pcl_ros
+  visualization_msgs
+  nav_msgs
+)
+
+# Export include directories
+ament_export_include_directories(include)
+
+# Export libraries
+ament_export_libraries(rio)
 
 ament_package()

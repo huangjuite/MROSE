@@ -80,8 +80,8 @@ void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
   graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
 
   // set marginlization model
-  marginalizationPoseModel = gtsam::noiseModel::Diagonal::Sigmas(
-      params.marginalization_sigma);
+  marginalizationPoseModel =
+      gtsam::noiseModel::Diagonal::Sigmas(params.marginalization_sigma);
 
   initialized = true;
 }
@@ -273,6 +273,7 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       pre_imu_t = initializer->get_first_stamp();
       graph_init(init_r, bias_a, bias_g, pre_imu_t);
       imu_que = initializer->get_imu_queue();
+      last_imu = imu_que.front();
       auto rot_mat = init_r.toRotationMatrix();
 
       logger_->info("static init");

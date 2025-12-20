@@ -18,7 +18,7 @@ radar_1:
     - [0.000, 0.000, -1.000, 0.832]
     - [0.000, 0.000, 0.000, 1.000]
   rostopic: /hugin_raf_1/radar_data
-  doppler_sigma: 1 # doppler uncertainty (m/s)
+  doppler_sigma: 0.1 # doppler uncertainty (m/s)
 
 point_type: PointHugin
 
@@ -27,11 +27,11 @@ log_level: debug # options: debug, info, warn, error, fatal
 odom:
   imu: imu0
   radar: [radar_1]
-  doppler_inlier_thresh: 0.124
-  optimization_window: 4.0 # seconds
+  doppler_inlier_thresh: 1
+  optimization_window: 3.0 # seconds
   bv_use_huber: true
-  bv_huber_k: 0.5
-  marginalization_sigma: [10, 10, 10, 10, 10, 10] # rx, ry, rz, tx, ty, tz
+  bv_huber_k: 0.3
+  marginalization_sigma: [1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3] # rx, ry, rz, tx, ty, tz
   use_static_init: true
   static_init_window: 6.0 # seconds
   static_init_threshold: 0.4 # acc variation
