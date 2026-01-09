@@ -110,6 +110,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   std::string bag_path = argv[1];
   std::string logging_method = (argc >= 3) ? argv[2] : "none";
   std::string save_path = (argc >= 4) ? argv[3] : "/tmp/rio_trajectory.txt";
+  std::string velocity_save_path = (argc >= 5) ? argv[4] : "/tmp/rio_velocity.txt";
 
   // Create the node
   auto node = std::make_shared<DIORosNode<PointType>>();
@@ -193,6 +194,12 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   std::vector<Eigen::Vector3d> path_positions;
   std::vector<Eigen::Quaterniond> path_orientations;
   std::vector<double> path_timestamps;
+  std::vector<Eigen::Vector3d> path_velocities;
+
+  // Store velocity data
+  std::vector<double> velocity_timestamps;
+  std::vector<Eigen::Vector3d> state_velocities;
+  std::vector<Eigen::Vector3d> radar_velocities;
 
   // Point cloud for incrementally growing trajectory
   pcl::PointCloud<pcl::PointXYZ>::Ptr path_cloud(
@@ -241,11 +248,21 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
           Eigen::Vector3d position = current_pose.translation();
           Eigen::Quaterniond orientation(
               current_pose.rotation().toQuaternion());
+          Eigen::Vector3d velocity = kf->state.velocity();
 
           // Always save trajectory data
           path_positions.push_back(position);
           path_orientations.push_back(orientation);
           path_timestamps.push_back(timestamp);
+          path_velocities.push_back(velocity);
+
+          // Save velocity data (in body frame)
+          velocity_timestamps.push_back(timestamp);
+          // Rotate state velocity from global to body frame
+          Eigen::Vector3d state_vel_body = current_pose.rotation().matrix().transpose() * Eigen::Vector3d(kf->state.velocity());
+          state_velocities.push_back(state_vel_body);
+          // Radar velocity is already in body frame
+          radar_velocities.push_back(Eigen::Vector3d(kf->radar_velocity));
 
           // Log to Rerun only if logger is enabled
           if (rerun_logger) {
@@ -342,7 +359,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
     RCLCPP_INFO(node->get_logger(), "Finished processing bag file");
   }
 
-  // Save trajectory to file
+  // Save trajectory to file (with velocity in global frame)
   if (!path_positions.empty()) {
     std::ofstream traj_file(save_path);
     if (traj_file.is_open()) {
@@ -350,9 +367,11 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
       for (size_t i = 0; i < path_positions.size(); ++i) {
         const auto &pos = path_positions[i];
         const auto &quat = path_orientations[i];
+        const auto &vel = path_velocities[i];
         traj_file << path_timestamps[i] << " " << pos.x() << " " << pos.y()
                   << " " << pos.z() << " " << quat.x() << " " << quat.y() << " "
-                  << quat.z() << " " << quat.w() << "\n";
+                  << quat.z() << " " << quat.w() << " " << vel.x() << " "
+                  << vel.y() << " " << vel.z() << "\n";
       }
       traj_file.close();
       RCLCPP_INFO(node->get_logger(), "Trajectory saved to: %s (%zu poses)",
@@ -363,6 +382,29 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
     }
   }
 
+  // Save velocity data to file (in body frame)
+  if (!velocity_timestamps.empty()) {
+    std::ofstream vel_file(velocity_save_path);
+    if (vel_file.is_open()) {
+      vel_file << std::fixed << std::setprecision(9);
+      // Write header
+      vel_file << "# timestamp state_vx state_vy state_vz radar_vx radar_vy radar_vz\n";
+      for (size_t i = 0; i < velocity_timestamps.size(); ++i) {
+        const auto &state_vel = state_velocities[i];
+        const auto &radar_vel = radar_velocities[i];
+        vel_file << velocity_timestamps[i] << " "
+                 << state_vel.x() << " " << state_vel.y() << " " << state_vel.z() << " "
+                 << radar_vel.x() << " " << radar_vel.y() << " " << radar_vel.z() << "\n";
+      }
+      vel_file.close();
+      RCLCPP_INFO(node->get_logger(), "Velocity data saved to: %s (%zu frames)",
+                  velocity_save_path.c_str(), velocity_timestamps.size());
+    } else {
+      RCLCPP_ERROR(node->get_logger(), "Failed to open velocity file: %s",
+                   velocity_save_path.c_str());
+    }
+  }
+
   rclcpp::shutdown();
   return 0;
 }
@@ -370,12 +412,15 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0]
-              << " <bag_file_path> [logging_method] [save_path]" << std::endl;
+              << " <bag_file_path> [logging_method] [save_path] [velocity_save_path]" << std::endl;
     std::cerr
         << "  logging_method: spawn (default), serve, save, connect, or none"
         << std::endl;
     std::cerr << "  save_path: Path to save trajectory file (default: "
-                 "/tmp/trajectory.txt)"
+                 "/tmp/rio_trajectory.txt)"
+              << std::endl;
+    std::cerr << "  velocity_save_path: Path to save velocity file (default: "
+                 "/tmp/rio_velocity.txt)"
               << std::endl;
     return 1;
   }

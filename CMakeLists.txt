@@ -22,6 +22,8 @@ find_package(fmt REQUIRED)
 include(FetchContent)
 FetchContent_Declare(rerun_sdk URL
     https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
+# Set position-independent code flag for rerun_sdk
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(rerun_sdk)
 
 # ROS messages and services
