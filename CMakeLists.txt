@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Find dependencies
 #############################################
 find_package(ament_cmake_auto REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 ament_auto_find_build_dependencies()
 
 find_package(Eigen3 REQUIRED)
@@ -18,6 +19,20 @@ find_package(OpenMP REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(fmt REQUIRED)
 
+# nanobind setup
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR
+  RESULT_VARIABLE NB_RESULT)
+if(NB_RESULT OR NOT NB_DIR)
+  message(STATUS "nanobind --cmake_dir failed, using fallback path")
+  set(NB_DIR "/home/rpldocker/.local/lib/python3.10/site-packages/nanobind/cmake")
+endif()
+message(STATUS "nanobind cmake dir: ${NB_DIR}")
+list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+find_package(nanobind CONFIG REQUIRED)
+
 # Download the rerun_sdk
 include(FetchContent)
 FetchContent_Declare(rerun_sdk URL
@@ -25,14 +40,6 @@ FetchContent_Declare(rerun_sdk URL
 # Set position-independent code flag for rerun_sdk
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(rerun_sdk)
-
-# ROS messages and services
-#############################################
-find_package(rosidl_default_generators REQUIRED)
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Keyframe.msg"
-  DEPENDENCIES geometry_msgs sensor_msgs
-)
 
 # Build the library
 #############################################
@@ -87,8 +94,22 @@ ament_target_dependencies(bagDIO
   rosbag2_cpp
   rosbag2_storage
 )
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
-target_link_libraries(bagDIO "${cpp_typesupport_target}")
+
+# Python bindings with nanobind
+#############################################
+nanobind_add_module(_core python/bindings.cpp)
+target_link_libraries(_core PRIVATE rio)
+target_include_directories(_core PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+# Install Python package
+ament_python_install_package(rpl_rio PACKAGE_DIR python/rpl_rio)
+
+# Install nanobind extension into the Python package
+install(TARGETS _core
+  LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/rpl_rio"
+)
 
 # Install
 #############################################

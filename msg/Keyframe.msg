@@ -1,3 +1,0 @@
-geometry_msgs/PoseStamped pose
-sensor_msgs/PointCloud2 radar_points
-uint32 seq
