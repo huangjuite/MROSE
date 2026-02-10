@@ -7,8 +7,8 @@ from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    data_dir_arg = DeclareLaunchArgument(
-        name="data_dir",
+    bag_arg = DeclareLaunchArgument(
+        name="bag",
         default_value="/home/rpldocker/data/nrec/jeep/processed/soergel_0",
         description="Path to the data directory",
     )
@@ -25,13 +25,30 @@ def generate_launch_description():
         description="Config file name (without .yaml extension)",
     )
 
+    traj_save_arg = DeclareLaunchArgument(
+        name="traj_save",
+        default_value="/tmp/trajectory.txt",
+        description="Path to save trajectory output file",
+    )
+
+    vel_save_arg = DeclareLaunchArgument(
+        name="vel_save",
+        default_value="/tmp/velocity.txt",
+        description="Path to save velocity output file",
+    )
+
     def bagDIO_node_setup(context):
         bagDIO_node = Node(
             package="rpl_rio",
             executable="bagDIO",
             output="screen",
             emulate_tty=True,
-            arguments=[LaunchConfiguration("data_dir"), LaunchConfiguration("mode")],
+            arguments=[
+                LaunchConfiguration("bag"),
+                LaunchConfiguration("mode"),
+                LaunchConfiguration("traj_save"),
+                LaunchConfiguration("vel_save"),
+            ],
             parameters=[
                 {
                     "config": os.path.join(
@@ -44,6 +61,12 @@ def generate_launch_description():
         )
         return [bagDIO_node]
 
-    ld = LaunchDescription([data_dir_arg, mode_arg, config_arg])
+    ld = LaunchDescription([
+        bag_arg,
+        mode_arg,
+        config_arg,
+        traj_save_arg,
+        vel_save_arg,
+    ])
     ld.add_action(OpaqueFunction(function=bagDIO_node_setup))
     return ld
