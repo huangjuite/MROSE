@@ -1,13 +1,18 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.16)
+
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 NEW)
+endif()
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
 project(rpl_rio)
 
 add_compile_options(-std=c++17)
-
-# Enable compile commands for clangd in VSCode
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Find dependencies
-#############################################
+# Dependencies
 find_package(ament_cmake_auto REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 ament_auto_find_build_dependencies()
@@ -18,31 +23,16 @@ find_package(Ceres REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(fmt REQUIRED)
+find_package(form REQUIRED)
 
-# nanobind setup
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
-execute_process(
-  COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
-  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR
-  RESULT_VARIABLE NB_RESULT)
-if(NB_RESULT OR NOT NB_DIR)
-  message(STATUS "nanobind --cmake_dir failed, using fallback path")
-  set(NB_DIR "/home/rpldocker/.local/lib/python3.10/site-packages/nanobind/cmake")
-endif()
-message(STATUS "nanobind cmake dir: ${NB_DIR}")
-list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
-find_package(nanobind CONFIG REQUIRED)
-
-# Download the rerun_sdk
 include(FetchContent)
-FetchContent_Declare(rerun_sdk URL
-    https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip)
-# Set position-independent code flag for rerun_sdk
+FetchContent_Declare(rerun_sdk
+  URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(rerun_sdk)
 
-# Build the library
-#############################################
+# Library
 add_library(rio SHARED
   src/params.cpp
   src/utils.cpp
@@ -72,6 +62,7 @@ target_link_libraries(rio
   fmt::fmt
   OpenMP::OpenMP_CXX
   rerun_sdk
+  form::FORM
 )
 
 ament_target_dependencies(rio
@@ -95,23 +86,11 @@ ament_target_dependencies(bagDIO
   rosbag2_storage
 )
 
-# Python bindings with nanobind
-#############################################
-nanobind_add_module(_core python/bindings.cpp)
-target_link_libraries(_core PRIVATE rio)
-target_include_directories(_core PRIVATE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-
-# Install Python package
+# Python bindings
 ament_python_install_package(rpl_rio PACKAGE_DIR python/rpl_rio)
+add_subdirectory(python)
 
-# Install nanobind extension into the Python package
-install(TARGETS _core
-  LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/rpl_rio"
-)
 
-# Install
 #############################################
 # Install and export the main library target
 install(
