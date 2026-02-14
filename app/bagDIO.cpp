@@ -1,7 +1,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <errno.h>
 #include <fcntl.h>
 #include <fstream>
 #include <gtsam/base/Matrix.h>
@@ -26,7 +25,6 @@
 #include "RadarPointType.h"
 #include "RosNode/DIORosNode.h"
 #include "RosNode/RerunLogger.h"
-#include "params.h"
 #include "rplrio_types.h"
 
 // Signal handler for clean shutdown

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 if(POLICY CMP0144)
   cmake_policy(SET CMP0144 NEW)
@@ -47,6 +47,8 @@ add_library(rio SHARED
   src/RosNode/DIORosNode.cpp
   src/RosNode/RerunLogger.cpp
 
+  src/RadarFeatureExtractor.cpp
+
 )
 
 target_include_directories(rio PUBLIC
@@ -86,6 +88,13 @@ ament_target_dependencies(bagDIO
   rosbag2_storage
 )
 
+add_executable(compRIO app/compRIO.cpp)
+target_link_libraries(compRIO rio)
+ament_target_dependencies(compRIO
+  rosbag2_cpp
+  rosbag2_storage
+)
+
 # Python bindings
 ament_python_install_package(rpl_rio PACKAGE_DIR python/rpl_rio)
 add_subdirectory(python)
@@ -118,6 +127,7 @@ install(DIRECTORY include/
 install(TARGETS
   runDIO
   bagDIO
+  compRIO
   DESTINATION lib/${PROJECT_NAME}
 )
 
