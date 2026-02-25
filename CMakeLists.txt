@@ -48,7 +48,7 @@ add_library(rio SHARED
   src/RosNode/RerunLogger.cpp
 
   src/form/RadarFeatureExtractor.cpp
-  src/form/fromRadar.cpp
+  src/form/formRadar.cpp
 
 )
 
@@ -96,6 +96,13 @@ ament_target_dependencies(compRIO
   rosbag2_storage
 )
 
+add_executable(runform app/runform.cpp)
+target_link_libraries(runform rio)
+ament_target_dependencies(runform
+  rosbag2_cpp
+  rosbag2_storage
+)
+
 # Python bindings
 ament_python_install_package(rpl_rio PACKAGE_DIR python/rpl_rio)
 add_subdirectory(python)
@@ -129,6 +136,7 @@ install(TARGETS
   runDIO
   bagDIO
   compRIO
+  runform
   DESTINATION lib/${PROJECT_NAME}
 )
 
