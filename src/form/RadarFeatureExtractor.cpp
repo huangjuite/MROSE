@@ -1,5 +1,5 @@
 #define PCL_NO_PRECOMPILE
-#include "RadarFeatureExtractor.h"
+#include "form/RadarFeatureExtractor.h"
 #include "RadarPointType.h"
 
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
@@ -9,24 +9,23 @@
 namespace rplrio {
 
 template <typename PointT>
-std::vector<bool>
-RadarFeatureExtractor::compute_valid_mask(
+std::vector<bool> RadarFeatureExtractor::compute_valid_mask(
     const typename pcl::PointCloud<PointT>::Ptr &cloud) const {
   const size_t n = cloud->size();
   std::vector<bool> mask(n, true);
 
-  #pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
   for (size_t i = 0; i < n; ++i) {
     const auto &pt = (*cloud)[i];
     if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || !std::isfinite(pt.z)) {
       mask[i] = false;
       continue;
     }
-    double range_sq =
-        static_cast<double>(pt.x) * pt.x +
-        static_cast<double>(pt.y) * pt.y +
-        static_cast<double>(pt.z) * pt.z;
-    if (range_sq < params.min_range_sq || range_sq > params.max_range_sq) {
+    double range_sq = static_cast<double>(pt.x) * pt.x +
+                      static_cast<double>(pt.y) * pt.y +
+                      static_cast<double>(pt.z) * pt.z;
+    if (range_sq < params.min_range * params.min_range ||
+        range_sq > params.max_range * params.max_range) {
       mask[i] = false;
     }
   }
@@ -34,97 +33,65 @@ RadarFeatureExtractor::compute_valid_mask(
 }
 
 template <typename PointT>
-std::vector<double>
-RadarFeatureExtractor::compute_curvature(
+std::vector<double> RadarFeatureExtractor::compute_curvature(
     const typename pcl::PointCloud<PointT>::Ptr &cloud,
     const pcl::KdTreeFLANN<PointT> &kdtree,
-    const std::vector<bool> &valid_mask) const {
+    const std::vector<bool> &valid_mask,
+    std::vector<std::optional<Eigen::Vector3d>> &out_normals) const {
 
   const size_t n = cloud->size();
   std::vector<double> curvature(n, std::numeric_limits<double>::max());
+  out_normals.assign(n, std::nullopt);
 
-  #pragma omp parallel
+#pragma omp parallel
   {
     // Thread-local KNN buffers
     pcl::Indices nn_indices(params.k_neighbors);
     std::vector<float> nn_dists(params.k_neighbors);
 
-    #pragma omp for schedule(dynamic, 64)
+#pragma omp for schedule(dynamic, 64)
     for (size_t i = 0; i < n; ++i) {
-      if (!valid_mask[i]) continue;
+      if (!valid_mask[i])
+        continue;
 
       int found = kdtree.nearestKSearch((*cloud)[i], params.k_neighbors,
                                         nn_indices, nn_dists);
-      if (found < 3) continue;
+      if (found < static_cast<int>(params.min_neighbors_for_normal))
+        continue;
 
-      double cx = 0, cy = 0, cz = 0;
-      int count = 0;
+      // Centroid
+      Eigen::Vector3d centroid = Eigen::Vector3d::Zero();
       for (int j = 0; j < found; ++j) {
-        if (!valid_mask[nn_indices[j]]) continue;
         const auto &nb = (*cloud)[nn_indices[j]];
-        cx += nb.x;
-        cy += nb.y;
-        cz += nb.z;
-        ++count;
+        centroid += Eigen::Vector3d(nb.x, nb.y, nb.z);
       }
-      if (count < 3) continue;
+      centroid /= found;
 
-      cx /= count;
-      cy /= count;
-      cz /= count;
+      // Covariance
+      Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
+      for (int j = 0; j < found; ++j) {
+        const auto &nb = (*cloud)[nn_indices[j]];
+        Eigen::Vector3d diff = Eigen::Vector3d(nb.x, nb.y, nb.z) - centroid;
+        cov += diff * diff.transpose();
+      }
+      cov /= found;
 
-      const auto &pt = (*cloud)[i];
-      double dx = pt.x - cx;
-      double dy = pt.y - cy;
-      double dz = pt.z - cz;
-      curvature[i] = dx * dx + dy * dy + dz * dz;
+      // Eigendecomposition — eigenvalues in ascending order
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(
+          cov, Eigen::ComputeEigenvectors);
+
+      // Smallest eigenvalue as planarity measure; corresponding eigenvector as normal
+      curvature[i] = solver.eigenvalues()(0);
+      out_normals[i] = solver.eigenvectors().col(0).normalized();
     }
   }
   return curvature;
 }
 
 template <typename PointT>
-std::optional<Eigen::Vector3d>
-RadarFeatureExtractor::compute_normal(
-    const PointT &point,
-    const typename pcl::PointCloud<PointT>::Ptr &cloud,
-    const pcl::KdTreeFLANN<PointT> &kdtree) const {
-
-  pcl::Indices nn_indices(params.k_neighbors);
-  std::vector<float> nn_dists(params.k_neighbors);
-
-  int found = kdtree.nearestKSearch(point, params.k_neighbors,
-                                    nn_indices, nn_dists);
-  if (found < static_cast<int>(params.min_neighbors_for_normal)) {
-    return std::nullopt;
-  }
-
-  Eigen::Vector3d centroid = Eigen::Vector3d::Zero();
-  for (int j = 0; j < found; ++j) {
-    const auto &nb = (*cloud)[nn_indices[j]];
-    centroid += Eigen::Vector3d(nb.x, nb.y, nb.z);
-  }
-  centroid /= found;
-
-  Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
-  for (int j = 0; j < found; ++j) {
-    const auto &nb = (*cloud)[nn_indices[j]];
-    Eigen::Vector3d diff = Eigen::Vector3d(nb.x, nb.y, nb.z) - centroid;
-    cov += diff * diff.transpose();
-  }
-  cov /= found;
-
-  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(cov, Eigen::ComputeEigenvectors);
-  Eigen::Vector3d normal = solver.eigenvectors().col(0);
-  normal.normalize();
-  return normal;
-}
-
-template <typename PointT>
 std::tuple<std::vector<form::PlanarFeat>, std::vector<form::PointFeat>>
 RadarFeatureExtractor::extract(
-    const typename pcl::PointCloud<PointT>::Ptr &cloud,
-    size_t scan_idx) const {
+    const typename pcl::PointCloud<PointT>::Ptr &cloud, size_t scan_idx) const {
 
   if (!cloud || cloud->empty()) {
     return {{}, {}};
@@ -134,9 +101,10 @@ RadarFeatureExtractor::extract(
   pcl::KdTreeFLANN<PointT> kdtree;
   kdtree.setInputCloud(cloud);
 
-  // Parallel: valid mask & curvature
+  // Parallel: valid mask, curvature (smallest COV eigenvalue), and normals
   auto valid_mask = compute_valid_mask<PointT>(cloud);
-  auto curvature = compute_curvature<PointT>(cloud, kdtree, valid_mask);
+  std::vector<std::optional<Eigen::Vector3d>> normals;
+  auto curvature = compute_curvature<PointT>(cloud, kdtree, valid_mask, normals);
 
   // Sort indices by curvature (ascending)
   std::vector<size_t> sorted_indices;
@@ -146,10 +114,9 @@ RadarFeatureExtractor::extract(
       sorted_indices.push_back(i);
     }
   }
-  std::sort(sorted_indices.begin(), sorted_indices.end(),
-            [&curvature](size_t a, size_t b) {
-              return curvature[a] < curvature[b];
-            });
+  std::sort(
+      sorted_indices.begin(), sorted_indices.end(),
+      [&curvature](size_t a, size_t b) { return curvature[a] < curvature[b]; });
 
   // --- Phase 1: Greedy select planar candidate indices (serial, cheap) ---
   std::vector<bool> used(cloud->size(), false);
@@ -160,39 +127,35 @@ RadarFeatureExtractor::extract(
   std::vector<float> nn_dists(params.k_neighbors);
 
   for (size_t idx : sorted_indices) {
-    if (planar_candidates.size() >= params.max_planar_feats) break;
-    if (used[idx]) continue;
-    if (curvature[idx] >= params.planar_threshold) break;
+    if (planar_candidates.size() >= params.max_planar_feats)
+      break;
+    if (used[idx])
+      continue;
+    if (curvature[idx] >= params.planar_threshold)
+      break;
 
     planar_candidates.push_back(idx);
 
     // Mark this point and its neighbors as used
     used[idx] = true;
     const auto &pt = (*cloud)[idx];
-    int found = kdtree.nearestKSearch(pt, params.k_neighbors,
-                                      nn_indices, nn_dists);
+    int found =
+        kdtree.nearestKSearch(pt, params.k_neighbors, nn_indices, nn_dists);
     for (int j = 0; j < found; ++j) {
       used[nn_indices[j]] = true;
     }
   }
 
-  // --- Phase 2: Compute normals in parallel for all candidates ---
+  // --- Phase 2: Collect valid planar features (normals already computed) ---
   const size_t num_candidates = planar_candidates.size();
-  std::vector<std::optional<Eigen::Vector3d>> normals(num_candidates);
-
-  #pragma omp parallel for schedule(dynamic, 16)
-  for (size_t i = 0; i < num_candidates; ++i) {
-    const auto &pt = (*cloud)[planar_candidates[i]];
-    normals[i] = compute_normal<PointT>(pt, cloud, kdtree);
-  }
-
-  // --- Phase 3: Collect valid planar features ---
   std::vector<form::PlanarFeat> planar_feats;
   planar_feats.reserve(num_candidates);
   for (size_t i = 0; i < num_candidates; ++i) {
-    if (!normals[i].has_value()) continue;
-    const auto &pt = (*cloud)[planar_candidates[i]];
-    const auto &n = normals[i].value();
+    const size_t idx = planar_candidates[i];
+    if (!normals[idx].has_value())
+      continue;
+    const auto &pt = (*cloud)[idx];
+    const auto &n = normals[idx].value();
     planar_feats.emplace_back(
         static_cast<double>(pt.x), static_cast<double>(pt.y),
         static_cast<double>(pt.z), n.x(), n.y(), n.z(), scan_idx);
@@ -202,13 +165,15 @@ RadarFeatureExtractor::extract(
   std::vector<form::PointFeat> point_feats;
   point_feats.reserve(params.max_point_feats);
   for (size_t idx : sorted_indices) {
-    if (point_feats.size() >= params.max_point_feats) break;
-    if (used[idx]) continue;
+    if (point_feats.size() >= params.max_point_feats)
+      break;
+    if (used[idx])
+      continue;
 
     const auto &pt = (*cloud)[idx];
-    point_feats.emplace_back(
-        static_cast<double>(pt.x), static_cast<double>(pt.y),
-        static_cast<double>(pt.z), scan_idx);
+    point_feats.emplace_back(static_cast<double>(pt.x),
+                             static_cast<double>(pt.y),
+                             static_cast<double>(pt.z), scan_idx);
     used[idx] = true;
   }
 

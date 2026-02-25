@@ -1,15 +1,10 @@
 
 #include <atomic>
-#include <chrono>
-#include <fcntl.h>
 #include <fstream>
 #include <gtsam/base/Matrix.h>
 #include <iomanip>
 #include <memory>
 #include <signal.h>
-#include <termios.h>
-#include <thread>
-#include <unistd.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/serialization.hpp>
@@ -22,72 +17,21 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <yaml-cpp/yaml.h>
 
-#include "RadarFeatureExtractor.h"
+#include <pcl/common/transforms.h>
+
 #include "RadarPointType.h"
 #include "RosNode/DIORosNode.h"
 #include "RosNode/RerunLogger.h"
+#include "form/RadarFeatureExtractor.h"
 #include "rplrio_types.h"
-
 
 // Signal handler for clean shutdown
 std::atomic<bool> g_shutdown_requested(false);
-std::atomic<bool> g_paused(false);
 
 void signal_handler(int signum) {
   (void)signum;
   g_shutdown_requested = true;
   std::cout << "\nShutdown requested, stopping..." << std::endl;
-}
-
-// Set terminal to non-blocking mode
-void set_nonblocking_input(bool enable) {
-  static struct termios old_term, new_term;
-  static int old_flags;
-
-  if (enable) {
-    // Get current terminal settings
-    tcgetattr(STDIN_FILENO, &old_term);
-    new_term = old_term;
-
-    // Disable canonical mode and echo
-    new_term.c_lflag &= ~(ICANON | ECHO);
-
-    // Set read to return immediately with whatever is available
-    new_term.c_cc[VMIN] = 0;
-    new_term.c_cc[VTIME] = 0;
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
-
-    // Set non-blocking
-    old_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, old_flags | O_NONBLOCK);
-  } else {
-    // Restore original settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_term);
-    fcntl(STDIN_FILENO, F_SETFL, old_flags);
-  }
-}
-
-// Check for space key press
-void check_keyboard_input() {
-  char c;
-  ssize_t n = read(STDIN_FILENO, &c, 1);
-  if (n > 0) {
-    if (c == ' ') {
-      g_paused = !g_paused;
-      if (g_paused) {
-        std::cout << "\n[PAUSED] Press space to resume..." << std::endl;
-        std::cout.flush();
-      } else {
-        std::cout << "[RESUMED] Processing bag..." << std::endl;
-        std::cout.flush();
-      }
-    } else if (c == 'q' || c == 'Q') {
-      g_shutdown_requested = true;
-      std::cout << "\nQuit requested..." << std::endl;
-      std::cout.flush();
-    }
-  }
 }
 
 std::string getPointTypeFromConfig(const std::string &config_path) {
@@ -110,7 +54,8 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   std::string bag_path = argv[1];
   std::string logging_method = (argc >= 3) ? argv[2] : "none";
   std::string save_path = (argc >= 4) ? argv[3] : "/tmp/rio_trajectory.txt";
-  std::string velocity_save_path = (argc >= 5) ? argv[4] : "/tmp/rio_velocity.txt";
+  std::string velocity_save_path =
+      (argc >= 5) ? argv[4] : "/tmp/rio_velocity.txt";
 
   // Create the node
   auto node = std::make_shared<DIORosNode<PointType>>();
@@ -169,23 +114,6 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
                 topic.type.c_str());
   }
 
-  // Enable non-blocking keyboard input
-  if (isatty(STDIN_FILENO)) {
-    set_nonblocking_input(true);
-    std::cout << "\n=== Controls ===" << std::endl;
-    std::cout << "  SPACE: Pause/Resume playback" << std::endl;
-    std::cout << "  Q: Quit" << std::endl;
-    std::cout << "  Ctrl+C: Emergency stop" << std::endl;
-    std::cout << "================\n" << std::endl;
-    std::cout.flush();
-  } else {
-    std::cout
-        << "\n[WARNING] Keyboard input disabled (not running in a terminal)"
-        << std::endl;
-    std::cout << "  Use Ctrl+C to stop" << std::endl;
-    std::cout.flush();
-  }
-
   // Serialization objects
   rclcpp::Serialization<sensor_msgs::msg::Imu> imu_serialization;
   rclcpp::Serialization<sensor_msgs::msg::PointCloud2> pc_serialization;
@@ -210,19 +138,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr path_cloud(
       new pcl::PointCloud<pcl::PointXYZ>());
 
-  bool keyboard_enabled = isatty(STDIN_FILENO);
   while (reader.has_next() && !g_shutdown_requested) {
-    // Check for keyboard input only if running in a terminal
-    if (keyboard_enabled) {
-      check_keyboard_input();
-    }
-
-    // If paused, wait and continue checking for input
-    if (g_paused) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      continue;
-    }
-
     auto bag_message = reader.read_next();
 
     try {
@@ -263,12 +179,23 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
           // Save velocity data (in body frame)
           velocity_timestamps.push_back(timestamp);
           // Rotate state velocity from global to body frame
-          Eigen::Vector3d state_vel_body = current_pose.rotation().matrix().transpose() * Eigen::Vector3d(kf->state.velocity());
+          Eigen::Vector3d state_vel_body =
+              current_pose.rotation().matrix().transpose() *
+              Eigen::Vector3d(kf->state.velocity());
           state_velocities.push_back(state_vel_body);
           // Radar velocity is already in body frame
           radar_velocities.push_back(Eigen::Vector3d(kf->radar_velocity));
 
-          
+          // Extract features unconditionally (regardless of Rerun)
+          std::vector<form::PlanarFeat> planar_feats;
+          std::vector<form::PointFeat> point_feats;
+          if (kf->radar_points && !kf->radar_points->empty()) {
+            std::tie(planar_feats, point_feats) =
+                feature_extractor.extract<PointType>(kf->radar_points,
+                                                     scan_idx++);
+            RCLCPP_INFO(node->get_logger(), "Features: %zu planar, %zu point",
+                        planar_feats.size(), point_feats.size());
+          }
 
           // Log to Rerun only if logger is enabled
           if (rerun_logger) {
@@ -289,82 +216,76 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
             rerun_logger->log_point_cloud<pcl::PointXYZ>("world/path",
                                                          path_cloud, timestamp);
 
-            // Log radar inlier points
+            // Log radar inlier points and features
             if (kf->radar_points && !kf->radar_points->empty()) {
+              // Transform to world frame (radar_points are in IMU frame)
+              Eigen::Matrix4f T_w_i =
+                  kf->state.pose().matrix().template cast<float>();
+              auto world_cloud = std::make_shared<pcl::PointCloud<PointType>>();
+              pcl::transformPointCloud(*kf->radar_points, *world_cloud, T_w_i);
               rerun_logger->log_point_cloud<PointType>(
-                  "world/base_link/imu/" + kf->name, kf->radar_points,
-                  timestamp);
-
-              // Extract and log features
-              auto [planar_feats, point_feats] =
-                  feature_extractor.extract<PointType>(kf->radar_points, scan_idx++);
+                  "world/radar/" + kf->name, world_cloud, timestamp);
 
               // Log planar features as points + arrows for normals
               if (!planar_feats.empty()) {
-                std::vector<rerun::Position3D> planar_positions;
-                std::vector<rerun::Position3D> arrow_origins;
-                std::vector<rerun::Vector3D> arrow_vectors;
-                planar_positions.reserve(planar_feats.size());
-                arrow_origins.reserve(planar_feats.size());
-                arrow_vectors.reserve(planar_feats.size());
+                std::vector<rerun::Position3D> world_planar_positions;
+                std::vector<rerun::Position3D> world_arrow_origins;
+                std::vector<rerun::Vector3D> world_arrow_vectors;
+                world_planar_positions.reserve(planar_feats.size());
+                world_arrow_origins.reserve(planar_feats.size());
+                world_arrow_vectors.reserve(planar_feats.size());
+
+                const Eigen::Matrix3f R_w_i = T_w_i.block<3, 3>(0, 0);
+                const Eigen::Vector3f t_w_i = T_w_i.block<3, 1>(0, 3);
 
                 for (const auto &pf : planar_feats) {
-                  planar_positions.emplace_back(
-                      static_cast<float>(pf.x),
-                      static_cast<float>(pf.y),
-                      static_cast<float>(pf.z));
-                  arrow_origins.emplace_back(
-                      static_cast<float>(pf.x),
-                      static_cast<float>(pf.y),
-                      static_cast<float>(pf.z));
-                  arrow_vectors.emplace_back(
-                      static_cast<float>(pf.nx * 0.3),
-                      static_cast<float>(pf.ny * 0.3),
-                      static_cast<float>(pf.nz * 0.3));
+                  Eigen::Vector3f p_w =
+                      R_w_i * Eigen::Vector3f(pf.x, pf.y, pf.z) + t_w_i;
+                  Eigen::Vector3f n_w =
+                      R_w_i * Eigen::Vector3f(pf.nx, pf.ny, pf.nz);
+                  world_planar_positions.emplace_back(p_w.x(), p_w.y(),
+                                                      p_w.z());
+                  world_arrow_origins.emplace_back(p_w.x(), p_w.y(), p_w.z());
+                  world_arrow_vectors.emplace_back(
+                      n_w.x() * 0.3f, n_w.y() * 0.3f, n_w.z() * 0.3f);
                 }
 
                 rerun_logger->stream().set_time_timestamp_secs_since_epoch(
                     "timestamp", timestamp);
                 rerun_logger->stream().log(
-                    "world/base_link/imu/" + kf->name + "/planar",
-                    rerun::Points3D(planar_positions)
+                    "world/radar/" + kf->name + "/planar",
+                    rerun::Points3D(world_planar_positions)
                         .with_colors({{0, 255, 0, 255}})
                         .with_radii({0.05f}));
                 rerun_logger->stream().log(
-                    "world/base_link/imu/" + kf->name + "/normals",
-                    rerun::Arrows3D::from_vectors(arrow_vectors)
-                        .with_origins(arrow_origins)
+                    "world/radar/" + kf->name + "/normals",
+                    rerun::Arrows3D::from_vectors(world_arrow_vectors)
+                        .with_origins(world_arrow_origins)
                         .with_colors({{0, 200, 0, 255}}));
               }
 
               // Log point features
               if (!point_feats.empty()) {
+                const Eigen::Matrix3f R_w_i = T_w_i.block<3, 3>(0, 0);
+                const Eigen::Vector3f t_w_i = T_w_i.block<3, 1>(0, 3);
+
                 std::vector<rerun::Position3D> point_positions;
                 point_positions.reserve(point_feats.size());
 
                 for (const auto &pf : point_feats) {
-                  point_positions.emplace_back(
-                      static_cast<float>(pf.x),
-                      static_cast<float>(pf.y),
-                      static_cast<float>(pf.z));
+                  Eigen::Vector3f p_w =
+                      R_w_i * Eigen::Vector3f(pf.x, pf.y, pf.z) + t_w_i;
+                  point_positions.emplace_back(p_w.x(), p_w.y(), p_w.z());
                 }
 
                 rerun_logger->stream().set_time_timestamp_secs_since_epoch(
                     "timestamp", timestamp);
-                rerun_logger->stream().log(
-                    "world/base_link/imu/" + kf->name + "/points",
-                    rerun::Points3D(point_positions)
-                        .with_colors({{255, 0, 0, 255}})
-                        .with_radii({0.05f}));
+                rerun_logger->stream().log("world/radar/" + kf->name +
+                                               "/points",
+                                           rerun::Points3D(point_positions)
+                                               .with_colors({{255, 0, 0, 255}})
+                                               .with_radii({0.05f}));
               }
-
-              // Log feature counts
-              rerun_logger->log_scalar(
-                  "plots/features/planar_count",
-                  static_cast<double>(planar_feats.size()), timestamp);
-              rerun_logger->log_scalar(
-                  "plots/features/point_count",
-                  static_cast<double>(point_feats.size()), timestamp);
             }
 
             // Log radar velocity
@@ -425,11 +346,6 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
     }
   }
 
-  // Restore terminal settings
-  if (keyboard_enabled) {
-    set_nonblocking_input(false);
-  }
-
   if (g_shutdown_requested) {
     RCLCPP_INFO(node->get_logger(), "Processing interrupted by user");
   } else {
@@ -465,13 +381,15 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
     if (vel_file.is_open()) {
       vel_file << std::fixed << std::setprecision(9);
       // Write header
-      vel_file << "# timestamp state_vx state_vy state_vz radar_vx radar_vy radar_vz\n";
+      vel_file << "# timestamp state_vx state_vy state_vz radar_vx radar_vy "
+                  "radar_vz\n";
       for (size_t i = 0; i < velocity_timestamps.size(); ++i) {
         const auto &state_vel = state_velocities[i];
         const auto &radar_vel = radar_velocities[i];
-        vel_file << velocity_timestamps[i] << " "
-                 << state_vel.x() << " " << state_vel.y() << " " << state_vel.z() << " "
-                 << radar_vel.x() << " " << radar_vel.y() << " " << radar_vel.z() << "\n";
+        vel_file << velocity_timestamps[i] << " " << state_vel.x() << " "
+                 << state_vel.y() << " " << state_vel.z() << " "
+                 << radar_vel.x() << " " << radar_vel.y() << " "
+                 << radar_vel.z() << "\n";
       }
       vel_file.close();
       RCLCPP_INFO(node->get_logger(), "Velocity data saved to: %s (%zu frames)",
@@ -488,8 +406,10 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
-    std::cerr << "Usage: " << argv[0]
-              << " <bag_file_path> [logging_method] [save_path] [velocity_save_path]" << std::endl;
+    std::cerr
+        << "Usage: " << argv[0]
+        << " <bag_file_path> [logging_method] [save_path] [velocity_save_path]"
+        << std::endl;
     std::cerr
         << "  logging_method: spawn (default), serve, save, connect, or none"
         << std::endl;

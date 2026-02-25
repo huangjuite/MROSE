@@ -47,7 +47,8 @@ add_library(rio SHARED
   src/RosNode/DIORosNode.cpp
   src/RosNode/RerunLogger.cpp
 
-  src/RadarFeatureExtractor.cpp
+  src/form/RadarFeatureExtractor.cpp
+  src/form/fromRadar.cpp
 
 )
 

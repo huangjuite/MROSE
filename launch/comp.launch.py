@@ -9,7 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     bag_arg = DeclareLaunchArgument(
         name="bag",
-        default_value="/home/rpldocker/data/nrec/jeep/processed/soergel_0",
+        default_value="/home/rpldocker/data/radar/competition_data/data/01_campus_training_localized/rosbag/01_campus_training_localized/",
         description="Path to the data directory",
     )
 
@@ -21,7 +21,7 @@ def generate_launch_description():
 
     config_arg = DeclareLaunchArgument(
         name="config",
-        default_value="config_jeep",
+        default_value="config_hugin_triple",
         description="Config file name (without .yaml extension)",
     )
 
@@ -61,12 +61,14 @@ def generate_launch_description():
         )
         return [bagDIO_node]
 
-    ld = LaunchDescription([
-        bag_arg,
-        mode_arg,
-        config_arg,
-        traj_save_arg,
-        vel_save_arg,
-    ])
+    ld = LaunchDescription(
+        [
+            bag_arg,
+            mode_arg,
+            config_arg,
+            traj_save_arg,
+            vel_save_arg,
+        ]
+    )
     ld.add_action(OpaqueFunction(function=bagDIO_node_setup))
     return ld
