@@ -107,6 +107,9 @@ void bind_diomanager(nb::module_ &m, const char *name) {
         .def_prop_ro("imu_bias_gyro", [](const KeyframeT &kf) {
             return Eigen::Vector3d(kf.imu_bias.gyroscope());
         })
+        .def_prop_ro("imu_bias_cov", [](const KeyframeT &kf) {
+            return Eigen::MatrixXd(kf.imu_bias_cov);
+        })
         .def_prop_ro("radar_velocity", [](const KeyframeT &kf) {
             return Eigen::Vector3d(kf.radar_velocity);
         })

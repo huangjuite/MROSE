@@ -238,6 +238,7 @@ DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
 
   gtsam::Matrix x_cov = smootherISAM2->marginalCovariance(X(step));
   gtsam::Matrix v_cov = smootherISAM2->marginalCovariance(V(step));
+  gtsam::Matrix b_cov = smootherISAM2->marginalCovariance(B(step));
   auto v_err = rfac.evaluateError(opt_v, opt_x, prev_bias, {}, {}, {});
 
   // key frame informations
@@ -252,6 +253,7 @@ DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
                   .v_err = v_err,
                   .imu = imu,
                   .imu_bias = prev_bias,
+                  .imu_bias_cov = b_cov,
                   .radar_points = radar_inlier,
                   .radar_velocity = measured_v,
                   .radar_velocity_cov = radar_velocity_cov});
