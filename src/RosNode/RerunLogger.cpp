@@ -129,10 +129,28 @@ void RerunLogger::log_vector3(const std::string &entity_path,
     rec_->set_time_timestamp_secs_since_epoch("timestamp", timestamp);
   }
 
-  // Log each component as a separate scalar
   rec_->log(entity_path + "/x", rerun::Scalars(vec.x()));
   rec_->log(entity_path + "/y", rerun::Scalars(vec.y()));
   rec_->log(entity_path + "/z", rerun::Scalars(vec.z()));
+}
+
+void RerunLogger::setup_vector3_series(const std::string &entity_path,
+                                       const std::string &label_x,
+                                       const std::string &label_y,
+                                       const std::string &label_z) {
+  if (!initialized_) {
+    return;
+  }
+
+  rec_->log_static(entity_path + "/x",
+                   rerun::SeriesLines().with_colors(rerun::Rgba32{255, 0, 0})
+                       .with_names(rerun::components::Name(label_x)));
+  rec_->log_static(entity_path + "/y",
+                   rerun::SeriesLines().with_colors(rerun::Rgba32{0, 255, 0})
+                       .with_names(rerun::components::Name(label_y)));
+  rec_->log_static(entity_path + "/z",
+                   rerun::SeriesLines().with_colors(rerun::Rgba32{0, 0, 255})
+                       .with_names(rerun::components::Name(label_z)));
 }
 
 } // namespace rplrio

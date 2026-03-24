@@ -20,9 +20,8 @@
 #include <pcl/common/transforms.h>
 
 #include "RadarPointType.h"
-#include "RosNode/DIORosNode.h"
 #include "RosNode/RerunLogger.h"
-#include "form/RadarFeatureExtractor.h"
+#include "RosNode/RIORosNode.h"
 #include "rplrio_types.h"
 
 // Signal handler for clean shutdown
@@ -58,7 +57,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
       (argc >= 5) ? argv[4] : "/tmp/rio_velocity.txt";
 
   // Create the node
-  auto node = std::make_shared<DIORosNode<PointType>>();
+  auto node = std::make_shared<RIORosNode<PointType>>();
   auto T_i_b = gtsam::Pose3(
       gtsam::Rot3(node->params.R_i_b),
       gtsam::Point3(node->params.T_i_b.template block<3, 1>(0, 3)));
@@ -67,13 +66,20 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   std::unique_ptr<rplrio::RerunLogger> rerun_logger = nullptr;
   if (logging_method != "none") {
     rerun_logger =
-        std::make_unique<rplrio::RerunLogger>("bagDIO", logging_method);
-  }
+        std::make_unique<rplrio::RerunLogger>("bagRIO", logging_method);
 
-  // Initialize radar feature extractor
-  rplrio::RadarFeatureExtractor::Params feat_params;
-  rplrio::RadarFeatureExtractor feature_extractor(feat_params);
-  size_t scan_idx = 0;
+    // Set up RGB color coding (R=x, G=y, B=z) for all vector3 plot series
+    rerun_logger->setup_vector3_series("plots/radar_velocity");
+    rerun_logger->setup_vector3_series("plots/v_rot");
+    rerun_logger->setup_vector3_series("plots/v_err");
+    rerun_logger->setup_vector3_series("plots/imu/gyro");
+    rerun_logger->setup_vector3_series("plots/imu_bias/accel");
+    rerun_logger->setup_vector3_series("plots/imu_bias/gyro");
+    rerun_logger->setup_vector3_series("plots/velocity_cov");
+    rerun_logger->setup_vector3_series("plots/radar_velocity_cov");
+    rerun_logger->setup_vector3_series("plots/position_cov");
+    rerun_logger->setup_vector3_series("plots/orientation_cov");
+  }
 
   // Setup bag reader
   rosbag2_cpp::Reader reader;
@@ -159,7 +165,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
         node->cb_radar(pc_msg);
 
         // Process keyframes for trajectory and logging
-        auto &states = node->dio_manager->get_latest_states();
+        auto &states = node->rio_manager->get_latest_states();
         for (std::shared_ptr<rplrio::Keyframe<PointType>> kf : states) {
           double timestamp = kf->stamp;
           auto current_pose = kf->state.pose();
@@ -186,16 +192,6 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
           // Radar velocity is already in body frame
           radar_velocities.push_back(Eigen::Vector3d(kf->radar_velocity));
 
-          // Extract features unconditionally (regardless of Rerun)
-          std::vector<form::PlanarFeat> planar_feats;
-          std::vector<form::PointFeat> point_feats;
-          if (kf->radar_points && !kf->radar_points->empty()) {
-            std::tie(planar_feats, point_feats) =
-                feature_extractor.extract<PointType>(kf->radar_points,
-                                                     scan_idx++);
-            RCLCPP_INFO(node->get_logger(), "Features: %zu planar, %zu point",
-                        planar_feats.size(), point_feats.size());
-          }
 
           // Log to Rerun only if logger is enabled
           if (rerun_logger) {
@@ -226,66 +222,6 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
               rerun_logger->log_point_cloud<PointType>(
                   "world/radar/" + kf->name, world_cloud, timestamp);
 
-              // Log planar features as points + arrows for normals
-              if (!planar_feats.empty()) {
-                std::vector<rerun::Position3D> world_planar_positions;
-                std::vector<rerun::Position3D> world_arrow_origins;
-                std::vector<rerun::Vector3D> world_arrow_vectors;
-                world_planar_positions.reserve(planar_feats.size());
-                world_arrow_origins.reserve(planar_feats.size());
-                world_arrow_vectors.reserve(planar_feats.size());
-
-                const Eigen::Matrix3f R_w_i = T_w_i.block<3, 3>(0, 0);
-                const Eigen::Vector3f t_w_i = T_w_i.block<3, 1>(0, 3);
-
-                for (const auto &pf : planar_feats) {
-                  Eigen::Vector3f p_w =
-                      R_w_i * Eigen::Vector3f(pf.x, pf.y, pf.z) + t_w_i;
-                  Eigen::Vector3f n_w =
-                      R_w_i * Eigen::Vector3f(pf.nx, pf.ny, pf.nz);
-                  world_planar_positions.emplace_back(p_w.x(), p_w.y(),
-                                                      p_w.z());
-                  world_arrow_origins.emplace_back(p_w.x(), p_w.y(), p_w.z());
-                  world_arrow_vectors.emplace_back(
-                      n_w.x() * 0.3f, n_w.y() * 0.3f, n_w.z() * 0.3f);
-                }
-
-                rerun_logger->stream().set_time_timestamp_secs_since_epoch(
-                    "timestamp", timestamp);
-                rerun_logger->stream().log(
-                    "world/radar/" + kf->name + "/planar",
-                    rerun::Points3D(world_planar_positions)
-                        .with_colors({{0, 255, 0, 255}})
-                        .with_radii({0.05f}));
-                rerun_logger->stream().log(
-                    "world/radar/" + kf->name + "/normals",
-                    rerun::Arrows3D::from_vectors(world_arrow_vectors)
-                        .with_origins(world_arrow_origins)
-                        .with_colors({{0, 200, 0, 255}}));
-              }
-
-              // Log point features
-              if (!point_feats.empty()) {
-                const Eigen::Matrix3f R_w_i = T_w_i.block<3, 3>(0, 0);
-                const Eigen::Vector3f t_w_i = T_w_i.block<3, 1>(0, 3);
-
-                std::vector<rerun::Position3D> point_positions;
-                point_positions.reserve(point_feats.size());
-
-                for (const auto &pf : point_feats) {
-                  Eigen::Vector3f p_w =
-                      R_w_i * Eigen::Vector3f(pf.x, pf.y, pf.z) + t_w_i;
-                  point_positions.emplace_back(p_w.x(), p_w.y(), p_w.z());
-                }
-
-                rerun_logger->stream().set_time_timestamp_secs_since_epoch(
-                    "timestamp", timestamp);
-                rerun_logger->stream().log("world/radar/" + kf->name +
-                                               "/points",
-                                           rerun::Points3D(point_positions)
-                                               .with_colors({{255, 0, 0, 255}})
-                                               .with_radii({0.05f}));
-              }
             }
 
             // Log radar velocity
@@ -336,6 +272,68 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
                 kf->pose_cov.template block<3, 3>(0, 0).diagonal().array();
             rerun_logger->log_vector3("plots/orientation_cov", orientation_cov,
                                       timestamp);
+
+            // Log keypoint map in world frame
+            {
+              const auto &values = node->rio_manager->m_constraints.get_values();
+              const double voxel_width =
+                  node->rio_manager->form_params.matcher.max_dist_matching;
+              const auto planar_world_map =
+                  std::get<0>(node->rio_manager->m_keypoint_map)
+                      .to_voxel_map(values, voxel_width);
+              std::vector<rerun::Position3D> map_positions;
+              for (const auto &[coords, points] : planar_world_map) {
+                for (const auto &p : points) {
+                  map_positions.push_back(rerun::Position3D(
+                      static_cast<float>(p.x), static_cast<float>(p.y),
+                      static_cast<float>(p.z)));
+                }
+              }
+              if (!map_positions.empty()) {
+                rerun_logger->stream().set_time_timestamp_secs_since_epoch(
+                    "timestamp", timestamp);
+                rerun_logger->stream().log("world/keypoint_map",
+                                           rerun::Points3D(map_positions));
+              }
+            }
+
+            // Log keypoints in world frame
+            const auto &kps = node->rio_manager->get_latest_keypoints();
+            const gtsam::Pose3 T_w_i = kf->state.pose();
+            {
+              const auto &planar = std::get<0>(kps);
+              if (!planar.empty()) {
+                std::vector<rerun::Position3D> positions;
+                positions.reserve(planar.size());
+                for (const auto &p : planar) {
+                  const Eigen::Vector3d pw = T_w_i * p.vec3();
+                  positions.push_back(rerun::Position3D(
+                      static_cast<float>(pw.x()), static_cast<float>(pw.y()),
+                      static_cast<float>(pw.z())));
+                }
+                rerun_logger->stream().set_time_timestamp_secs_since_epoch(
+                    "timestamp", timestamp);
+                rerun_logger->stream().log("world/keypoints/planar",
+                                           rerun::Points3D(positions));
+              }
+            }
+            {
+              const auto &pts = std::get<1>(kps);
+              if (!pts.empty()) {
+                std::vector<rerun::Position3D> positions;
+                positions.reserve(pts.size());
+                for (const auto &p : pts) {
+                  const Eigen::Vector3d pw = T_w_i * p.vec3();
+                  positions.push_back(rerun::Position3D(
+                      static_cast<float>(pw.x()), static_cast<float>(pw.y()),
+                      static_cast<float>(pw.z())));
+                }
+                rerun_logger->stream().set_time_timestamp_secs_since_epoch(
+                    "timestamp", timestamp);
+                rerun_logger->stream().log("world/keypoints/point",
+                                           rerun::Points3D(positions));
+              }
+            }
           }
         }
       }

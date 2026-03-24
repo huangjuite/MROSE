@@ -49,6 +49,12 @@ public:
   void log_vector3(const std::string &entity_path, const Eigen::Vector3d &vec,
                    double timestamp = -1.0);
 
+  // Call once (static) to assign RGB color coding and labels to a vector3 path.
+  void setup_vector3_series(const std::string &entity_path,
+                            const std::string &label_x = "x",
+                            const std::string &label_y = "y",
+                            const std::string &label_z = "z");
+
   bool is_initialized() const { return initialized_; }
 
   rerun::RecordingStream &stream() { return *rec_; }

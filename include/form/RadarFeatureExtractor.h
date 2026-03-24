@@ -23,7 +23,7 @@ public:
 
     // Feature limits per scan
     size_t max_planar_feats = 300;
-    size_t max_point_feats = 50;
+    size_t max_point_feats = 0;
 
     // Range filter (in meters)
     double min_range = 1.0;

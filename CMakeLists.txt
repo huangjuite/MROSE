@@ -43,12 +43,15 @@ add_library(rio SHARED
   src/StaticInitializer.cpp
   src/ControledSmoother.cpp
   src/DIOManager.cpp
+  src/RIOManager.cpp
 
   src/RosNode/DIORosNode.cpp
+  src/RosNode/RIORosNode.cpp
   src/RosNode/RerunLogger.cpp
 
   src/form/RadarFeatureExtractor.cpp
   src/form/formRadar.cpp
+  src/form/RIOConstraintManager.cpp
 
 )
 
