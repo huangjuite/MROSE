@@ -19,10 +19,10 @@
 
 #include <pcl/common/transforms.h>
 
-#include "RadarPointType.h"
-#include "RosNode/RerunLogger.h"
-#include "RosNode/RIORosNode.h"
-#include "rplrio_types.h"
+#include "core/RadarPointType.hpp"
+#include "node/RerunLogger.hpp"
+#include "node/RIORosNode.hpp"
+#include "core/rplrio_types.hpp"
 
 // Signal handler for clean shutdown
 std::atomic<bool> g_shutdown_requested(false);

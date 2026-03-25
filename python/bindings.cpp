@@ -7,12 +7,12 @@
 #include <nanobind/stl/unordered_map.h>
 #include <nanobind/stl/optional.h>
 
-#include "DIOManager.h"
-#include "RadarVelocityEstimatorCeres.h"
-#include "RadarPointType.h"
-#include "params.h"
-#include "rplrio_types.h"
-#include "utils.h"
+#include "manager/DIOManager.hpp"
+#include "radar/RadarVelocityEstimatorCeres.hpp"
+#include "core/RadarPointType.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
+#include "core/utils.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;

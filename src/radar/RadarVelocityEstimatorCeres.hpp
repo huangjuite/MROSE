@@ -1,7 +1,7 @@
 #pragma once
 
 // PCL includes
-#include "RadarVelocityEstimatorBase.h"
+#include "radar/RadarVelocityEstimatorBase.hpp"
 #include <ceres/ceres.h>
 #include <ceres/solver.h>
 #include <ceres/types.h>

@@ -1,36 +1,27 @@
 #pragma once
 
-// std includes
 #include <deque>
 #include <memory>
 #include <vector>
 
-// spdlog includes
 #include <spdlog/spdlog.h>
 
-// PCL includes
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-// GTSAM includes.
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
-#include "ControledSmoother.h"
-#include "RadarVelocityEstimatorBase.h"
-#include "StaticInitializer.h"
-#include "VelocityPoseMeasurementFactor.h"
-#include "VelocityPoseBiasFactor.h"
-#include "params.h"
-#include "rplrio_types.h"
-
-// typedef VelocityPoseMeasurementFactor RadarFactor;
-typedef VelocityPoseBiasFactor RadarFactor;
+#include "optimization/ISAMOptimizer.hpp"
+#include "radar/RadarVelocityEstimatorBase.hpp"
+#include "core/StaticInitializer.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
 
 namespace rplrio {
 template <class PointType> class DIOManager {
@@ -42,41 +33,21 @@ private:
   std::shared_ptr<spdlog::logger> logger_;
 
   double pre_imu_t = 0;
-  int step = 0;
-  int imu_count = 0;
-  bool correct_now = false;
   bool initialized = false;
 
   // radar
   std::deque<std::shared_ptr<DIORadar>> radar_que;
 
-  // imu settings
-  std::shared_ptr<gtsam::PreintegrationType> preintegrated;
+  // imu
   std::deque<std::shared_ptr<rplrio::IMU>> imu_que;
   std::shared_ptr<rplrio::IMU> last_imu;
   std::shared_ptr<StaticInitializer> initializer;
 
-  // states
-  gtsam::Values initial_values;
-  gtsam::NavState prev_state;
-  gtsam::NavState prop_state;
-  gtsam::imuBias::ConstantBias prev_bias;
-  gtsam::noiseModel::Diagonal::shared_ptr marginalizationPoseModel;
-
   std::vector<std::shared_ptr<DIOKeyframe>> latest_states;
 
-  // optimizer & graph
-  gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
-  std::unique_ptr<ControledSmoother> smootherISAM2;
-  std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
+  std::unique_ptr<ISAMOptimizer<PointType>> optimizer;
 
-  void graph_init(const Eigen::Quaterniond &rotation,
-                  const Eigen::Vector3d &bias_acc,
-                  const Eigen::Vector3d &bias_gyro, const double &stamp);
   void update();
-
-  std::shared_ptr<DIOKeyframe> optimize(const DIORadar &radar,
-                                        const rplrio::IMU &imu);
 
 public:
   DIOManager(rplrio::Params params,
@@ -85,7 +56,6 @@ public:
   ~DIOManager();
 
   void feed_radar(std::shared_ptr<DIORadar> radar);
-
   void feed_imu(std::shared_ptr<rplrio::IMU> imu_data);
 
   const std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> &

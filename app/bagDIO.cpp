@@ -1,14 +1,10 @@
 
 #include <atomic>
-#include <chrono>
-#include <fcntl.h>
 #include <fstream>
 #include <gtsam/base/Matrix.h>
 #include <iomanip>
 #include <memory>
 #include <signal.h>
-#include <termios.h>
-#include <thread>
 #include <unistd.h>
 
 #include <rclcpp/rclcpp.hpp>
@@ -22,70 +18,18 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <yaml-cpp/yaml.h>
 
-#include "RadarPointType.h"
-#include "RosNode/DIORosNode.h"
-#include "RosNode/RerunLogger.h"
-#include "rplrio_types.h"
+#include "core/RadarPointType.hpp"
+#include "node/DIORosNode.hpp"
+#include "node/RerunLogger.hpp"
+#include "core/rplrio_types.hpp"
 
 // Signal handler for clean shutdown
 std::atomic<bool> g_shutdown_requested(false);
-std::atomic<bool> g_paused(false);
 
 void signal_handler(int signum) {
   (void)signum;
   g_shutdown_requested = true;
   std::cout << "\nShutdown requested, stopping..." << std::endl;
-}
-
-// Set terminal to non-blocking mode
-void set_nonblocking_input(bool enable) {
-  static struct termios old_term, new_term;
-  static int old_flags;
-
-  if (enable) {
-    // Get current terminal settings
-    tcgetattr(STDIN_FILENO, &old_term);
-    new_term = old_term;
-
-    // Disable canonical mode and echo
-    new_term.c_lflag &= ~(ICANON | ECHO);
-
-    // Set read to return immediately with whatever is available
-    new_term.c_cc[VMIN] = 0;
-    new_term.c_cc[VTIME] = 0;
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
-
-    // Set non-blocking
-    old_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, old_flags | O_NONBLOCK);
-  } else {
-    // Restore original settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_term);
-    fcntl(STDIN_FILENO, F_SETFL, old_flags);
-  }
-}
-
-// Check for space key press
-void check_keyboard_input() {
-  char c;
-  ssize_t n = read(STDIN_FILENO, &c, 1);
-  if (n > 0) {
-    if (c == ' ') {
-      g_paused = !g_paused;
-      if (g_paused) {
-        std::cout << "\n[PAUSED] Press space to resume..." << std::endl;
-        std::cout.flush();
-      } else {
-        std::cout << "[RESUMED] Processing bag..." << std::endl;
-        std::cout.flush();
-      }
-    } else if (c == 'q' || c == 'Q') {
-      g_shutdown_requested = true;
-      std::cout << "\nQuit requested..." << std::endl;
-      std::cout.flush();
-    }
-  }
 }
 
 std::string getPointTypeFromConfig(const std::string &config_path) {
@@ -162,23 +106,6 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
                 topic.type.c_str());
   }
 
-  // Enable non-blocking keyboard input
-  if (isatty(STDIN_FILENO)) {
-    set_nonblocking_input(true);
-    std::cout << "\n=== Controls ===" << std::endl;
-    std::cout << "  SPACE: Pause/Resume playback" << std::endl;
-    std::cout << "  Q: Quit" << std::endl;
-    std::cout << "  Ctrl+C: Emergency stop" << std::endl;
-    std::cout << "================\n" << std::endl;
-    std::cout.flush();
-  } else {
-    std::cout
-        << "\n[WARNING] Keyboard input disabled (not running in a terminal)"
-        << std::endl;
-    std::cout << "  Use Ctrl+C to stop" << std::endl;
-    std::cout.flush();
-  }
-
   // Serialization objects
   rclcpp::Serialization<sensor_msgs::msg::Imu> imu_serialization;
   rclcpp::Serialization<sensor_msgs::msg::PointCloud2> pc_serialization;
@@ -203,19 +130,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr path_cloud(
       new pcl::PointCloud<pcl::PointXYZ>());
 
-  bool keyboard_enabled = isatty(STDIN_FILENO);
   while (reader.has_next() && !g_shutdown_requested) {
-    // Check for keyboard input only if running in a terminal
-    if (keyboard_enabled) {
-      check_keyboard_input();
-    }
-
-    // If paused, wait and continue checking for input
-    if (g_paused) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      continue;
-    }
-
     auto bag_message = reader.read_next();
 
     try {
@@ -281,11 +196,16 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
             rerun_logger->log_point_cloud<pcl::PointXYZ>("world/path",
                                                          path_cloud, timestamp);
 
-            // Log radar inlier points
+            // Log radar inlier points in world frame
             if (kf->radar_points && !kf->radar_points->empty()) {
+              const Eigen::Matrix4f T_w_i =
+                  kf->state.pose().matrix().template cast<float>();
+              auto world_radar_cloud =
+                  std::make_shared<pcl::PointCloud<PointType>>();
+              pcl::transformPointCloud(*kf->radar_points, *world_radar_cloud,
+                                       T_w_i);
               rerun_logger->log_point_cloud<PointType>(
-                  "world/base_link/imu/" + kf->name, kf->radar_points,
-                  timestamp);
+                  "world/radar/" + kf->name, world_radar_cloud, timestamp);
             }
 
             // Log radar velocity
@@ -344,11 +264,6 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
                    bag_message->topic_name.c_str(), e.what());
       continue;
     }
-  }
-
-  // Restore terminal settings
-  if (keyboard_enabled) {
-    set_nonblocking_input(false);
   }
 
   if (g_shutdown_requested) {

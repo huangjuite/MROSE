@@ -1,6 +1,6 @@
 #define PCL_NO_PRECOMPILE
-#include "form/RadarFeatureExtractor.h"
-#include "RadarPointType.h"
+#include "form/RadarFeatureExtractor.hpp"
+#include "core/RadarPointType.hpp"
 
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
 

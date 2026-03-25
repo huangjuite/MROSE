@@ -1,4 +1,4 @@
-#include "StaticInitializer.h"
+#include "core/StaticInitializer.hpp"
 #include <spdlog/spdlog.h>
 
 StaticInitializer::StaticInitializer(float init_window, float acc_var_thresh,

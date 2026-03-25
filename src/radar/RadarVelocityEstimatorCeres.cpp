@@ -1,5 +1,5 @@
-#include "RadarVelocityEstimatorCeres.h"
-#include "RadarPointType.h"
+#include "radar/RadarVelocityEstimatorCeres.hpp"
+#include "core/RadarPointType.hpp"
 #include <optional>
 
 template <typename PointType>

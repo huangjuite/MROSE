@@ -18,11 +18,11 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 // RIO includes
-#include "RadarPointType.h"
-#include "RadarVelocityEstimatorCeres.h"
-#include "RIOManager.h"
-#include "params.h"
-#include "rplrio_types.h"
+#include "core/RadarPointType.hpp"
+#include "radar/RadarVelocityEstimatorCeres.hpp"
+#include "manager/RIOManager.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
 
 template <class PointType> class RIORosNode : public rclcpp::Node {
 private:

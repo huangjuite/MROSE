@@ -29,25 +29,25 @@ include(FetchContent)
 FetchContent_Declare(rerun_sdk
   URL https://github.com/rerun-io/rerun/releases/latest/download/rerun_cpp_sdk.zip
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(rerun_sdk)
 
 # Library
-add_library(rio SHARED
-  src/params.cpp
-  src/utils.cpp
+add_library(rio
+  src/core/params.cpp
+  src/core/utils.cpp
 
-  src/VelocityPoseMeasurementFactor.cpp
-  src/VelocityPoseBiasFactor.cpp
-  src/RadarVelocityEstimatorCeres.cpp
-  src/StaticInitializer.cpp
-  src/ControledSmoother.cpp
-  src/DIOManager.cpp
-  src/RIOManager.cpp
+  src/factors/VelocityPoseMeasurementFactor.cpp
+  src/factors/VelocityPoseBiasFactor.cpp
+  src/radar/RadarVelocityEstimatorCeres.cpp
+  src/core/StaticInitializer.cpp
+  src/optimization/ControledSmoother.cpp
+  src/optimization/ISAMOptimizer.cpp
+  src/manager/DIOManager.cpp
+  src/manager/RIOManager.cpp
 
-  src/RosNode/DIORosNode.cpp
-  src/RosNode/RIORosNode.cpp
-  src/RosNode/RerunLogger.cpp
+  src/node/DIORosNode.cpp
+  src/node/RIORosNode.cpp
+  src/node/RerunLogger.cpp
 
   src/form/RadarFeatureExtractor.cpp
   src/form/formRadar.cpp
@@ -56,7 +56,7 @@ add_library(rio SHARED
 )
 
 target_include_directories(rio PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -131,8 +131,9 @@ install(
   RUNTIME DESTINATION bin
 )
 
-install(DIRECTORY include/
+install(DIRECTORY src/
   DESTINATION include
+  FILES_MATCHING PATTERN "*.hpp"
 )
 
 install(TARGETS
@@ -171,7 +172,7 @@ ament_export_dependencies(
 )
 
 # Export include directories
-ament_export_include_directories(include)
+ament_export_include_directories(src)
 
 # Export libraries
 ament_export_libraries(rio)

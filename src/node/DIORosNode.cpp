@@ -1,6 +1,6 @@
-#include "RosNode/DIORosNode.h"
-#include "RadarPointType.h"
-#include "utils.h"
+#include "node/DIORosNode.hpp"
+#include "core/RadarPointType.hpp"
+#include "core/utils.hpp"
 
 template <class PointType>
 DIORosNode<PointType>::DIORosNode()

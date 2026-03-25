@@ -1,7 +1,7 @@
 #define PCL_NO_PRECOMPILE
-#include "form/formRadar.h"
+#include "form/formRadar.hpp"
 #include "form/utils.hpp"
-#include "RadarPointType.h"
+#include "core/RadarPointType.hpp"
 
 namespace rplrio {
 

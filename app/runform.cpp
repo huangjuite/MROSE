@@ -19,10 +19,10 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "RadarPointType.h"
-#include "RosNode/RerunLogger.h"
-#include "form/formRadar.h"
-#include "utils.h"
+#include "core/RadarPointType.hpp"
+#include "node/RerunLogger.hpp"
+#include "form/formRadar.hpp"
+#include "core/utils.hpp"
 
 std::atomic<bool> g_shutdown_requested(false);
 

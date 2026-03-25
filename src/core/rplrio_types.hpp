@@ -8,7 +8,7 @@
 #include <gtsam/navigation/NavState.h>
 #include <pcl/point_cloud.h>
 
-#include "params.h"
+#include "core/params.hpp"
 
 namespace rplrio {
 struct IMU {

@@ -1,5 +1,5 @@
-#include "DIOManager.h"
-#include "RadarPointType.h"
+#include "manager/RIOManager.hpp"
+#include "core/RadarPointType.hpp"
 #include <gtsam/inference/Symbol.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -10,9 +10,17 @@ using gtsam::symbol_shorthand::X; // Pose3 (x,y,z,r,p,y)
 namespace rplrio {
 
 template <class PointType>
-DIOManager<PointType>::DIOManager(
+RIOManager<PointType>::RIOManager(
     rplrio::Params params,
-    std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator) {
+    std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator,
+    RadarEstimator::Params form_params)
+    : form_params(form_params), m_extractor(form_params.extraction),
+      m_constraints(form_params.constraints),
+      m_matcher{form::Matcher<form::PlanarFeat>(form_params.matcher, 0),
+                form::Matcher<form::PointFeat>(form_params.matcher, 0)},
+      m_keyscanner(form_params.scans),
+      m_keypoint_map{form::KeypointMap<form::PlanarFeat>(form_params.map),
+                     form::KeypointMap<form::PointFeat>(form_params.map)} {
 
   logger_ = spdlog::stdout_color_mt("rplrio");
   logger_->set_pattern("[%^%l%$] %v");
@@ -23,12 +31,6 @@ DIOManager<PointType>::DIOManager(
 
   velocity_estimator->set_inlier_thresh(params.doppler_inlier_thresh);
 
-  // optimizer init
-  gtsam::ISAM2Params parameters;
-  parameters.relinearizeThreshold = 0.01;
-  parameters.relinearizeSkip = 1;
-  smootherISAM2 = std::make_unique<ControledSmoother>(params.lag, parameters);
-
   // imu init
   if (params.use_static_init) {
     initialized = false;
@@ -38,7 +40,7 @@ DIOManager<PointType>::DIOManager(
 }
 
 template <class PointType>
-void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
+void RIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
                                        const Eigen::Vector3d &bias_acc,
                                        const Eigen::Vector3d &bias_gyro,
                                        const double &stamp) {
@@ -53,40 +55,17 @@ void DIOManager<PointType>::graph_init(const Eigen::Quaterniond &rotation,
       rplrio::imuParams(params), prior_imu_bias);
   assert(preintegrated);
 
-  // pose init
-  initial_values.insert(X(0), prior_pose);
-  initial_values.insert(V(0), prior_velocity);
-  initial_values.insert(B(0), prior_imu_bias);
-  key_timestamps[X(0)] = stamp;
-  key_timestamps[V(0)] = stamp;
-  key_timestamps[B(0)] = stamp;
-
   prev_state = gtsam::NavState(prior_pose, prior_velocity);
   prop_state = prev_state;
   prev_bias = prior_imu_bias;
 
-  // prior noise model
-  auto pose_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
-      (gtsam::Vector(6) << 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3)
-          .finished()); // rad,rad,rad,m, m, m
-  auto velocity_noise_model =
-      gtsam::noiseModel::Isotropic::Sigma(3, 1e-3); // m/s
-  auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
-
-  // Add all prior
-  graph = std::make_unique<gtsam::NonlinearFactorGraph>();
-  graph->addPrior(X(0), prior_pose, pose_noise_model);
-  graph->addPrior(V(0), prior_velocity, velocity_noise_model);
-  graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
-
-  // set marginlization model
-  marginalizationPoseModel =
-      gtsam::noiseModel::Diagonal::Sigmas(params.marginalization_sigma);
+  // Initialize constraint manager with step 0
+  m_constraints.step(prior_pose, prior_velocity, prior_imu_bias);
 
   initialized = true;
 }
 
-template <class PointType> void DIOManager<PointType>::update() {
+template <class PointType> void RIOManager<PointType>::update() {
   // remove out of date radar measurements
   while (!radar_que.empty() && radar_que.front()->stamp < pre_imu_t - 1e-6) {
     logger_->debug("out of date: {}, {:.6f}", radar_que.front()->frame_id,
@@ -142,12 +121,11 @@ template <class PointType> void DIOManager<PointType>::update() {
       *last_imu = interp;
     }
 
-    step++;
     auto keyframe = optimize(*radar_msg, *last_imu);
     latest_states.emplace_back(keyframe);
   }
 
-  logger_->info("step: {}, time: {:.6f}", step + 1, radar_stamp);
+  logger_->info("time: {:.6f}", radar_stamp);
 
   // recurisvely update until latest radar data is processed
   update();
@@ -155,28 +133,13 @@ template <class PointType> void DIOManager<PointType>::update() {
 
 template <class PointType>
 std::shared_ptr<rplrio::Keyframe<PointType>>
-DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
+RIOManager<PointType>::optimize(const RIORadar &radar, const rplrio::IMU &imu) {
   double current_t = radar.stamp;
 
   // combined IMU factor
   // ---------------------------------------------------------------------------
   if (preintegrated->deltaTij() > 1e-6) {
-    auto preint_imu_combined =
-        dynamic_cast<const gtsam::PreintegratedCombinedMeasurements &>(
-            *preintegrated);
-    gtsam::CombinedImuFactor imu_factor(X(step - 1), V(step - 1), X(step),
-                                        V(step), B(step - 1), B(step),
-                                        preint_imu_combined);
-    graph->add(imu_factor);
-
     prop_state = preintegrated->predict(prev_state, prev_bias);
-    initial_values.insert(X(step), prop_state.pose());
-    initial_values.insert(V(step), prop_state.v());
-    initial_values.insert(B(step), prev_bias);
-
-    key_timestamps[X(step)] = current_t;
-    key_timestamps[V(step)] = current_t;
-    key_timestamps[B(step)] = current_t;
   }
 
   // ------------------------------------------------------------------------------------
@@ -185,19 +148,13 @@ DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
   gtsam::noiseModel::Base::shared_ptr rv_noise;
   typename pcl::PointCloud<PointType>::Ptr radar_inlier;
 
-  if (radar.pc) {
-    velocity_estimator->set_initial_velocity(radar.param.R_r_i.transpose() *
-                                             prop_state.bodyVelocity());
-    velocity_estimator->set_doppler_sigma(radar.param.doppler_std);
-    measured_v = velocity_estimator->optimize(radar.pc);
-    radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
-    pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_i);
-    radar_velocity_cov =
-        velocity_estimator->get_covariance(radar.pc, measured_v);
-  } else {
-    measured_v = radar.vel;
-    radar_velocity_cov = radar.vel_cov;
-  }
+  velocity_estimator->set_initial_velocity(radar.param.R_r_i.transpose() *
+                                           prop_state.bodyVelocity());
+  velocity_estimator->set_doppler_sigma(radar.param.doppler_std);
+  measured_v = velocity_estimator->optimize(radar.pc);
+  radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
+  pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_i);
+  radar_velocity_cov = velocity_estimator->get_covariance(radar.pc, measured_v);
 
   // rotate to IMU frame
   measured_v = radar.param.R_r_i * measured_v;
@@ -213,38 +170,115 @@ DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
     rv_noise = gtsam::noiseModel::Gaussian::Covariance(radar_velocity_cov);
   }
 
-  RadarFactor rfac(V(step), X(step), B(step), measured_v, imu.gyro,
-                   radar.param.T_r_i, rv_noise);
-  graph->add(rfac);
-
-  // optimize
   // ----------------------------------------------------------------------------
-  smootherISAM2->update(*graph, initial_values, key_timestamps,
-                        marginalizationPoseModel);
+  // form: register scan for scan-to-map matching
 
-  graph->resize(0);
-  initial_values.clear();
-  key_timestamps.clear();
+  // Step constraint manager with propagated IMU state
+  const auto scan_idx =
+      m_constraints.step(prop_state.pose(), prop_state.v(), prev_bias);
+  auto &scan_constraints = m_constraints.get_current_constraints();
+
+  // Add IMU factor now that we have consecutive scan indices
+  if (preintegrated->deltaTij() > 1e-6) {
+    auto preint_imu_combined =
+        dynamic_cast<const gtsam::PreintegratedCombinedMeasurements &>(
+            *preintegrated);
+    gtsam::CombinedImuFactor imu_factor(X(scan_idx - 1), V(scan_idx - 1),
+                                        X(scan_idx), V(scan_idx), B(scan_idx - 1),
+                                        B(scan_idx), preint_imu_combined);
+    m_constraints.add_imu_factor(imu_factor);
+  }
+
+  // Add body velocity factor
+  RadarFactor rfac(V(scan_idx), X(scan_idx), B(scan_idx), measured_v, imu.gyro,
+                   radar.param.T_r_i, rv_noise);
+  m_constraints.add_body_velocity_factor(rfac);
+
+  // ----------------------------------------------------------------------------
+  // Extract Features
+  const auto keypoints = m_extractor.extract<PointType>(radar_inlier, scan_idx);
+  latest_keypoints = keypoints;
+  const auto num_keypoints =
+      std::get<0>(keypoints).size() + std::get<1>(keypoints).size();
+  logger_->info("extracted {} planar and {} point features",
+                std::get<0>(keypoints).size(), std::get<1>(keypoints).size());
+
+  // Generate World Map
+  auto planar_map = std::get<0>(m_keypoint_map)
+                        .to_voxel_map(m_constraints.get_values(),
+                                      form_params.matcher.max_dist_matching);
+  // auto point_map = std::get<1>(m_keypoint_map)
+  //                      .to_voxel_map(m_constraints.get_values(),
+  //                                    form_params.matcher.max_dist_matching);
+
+  // ICP loop
+  gtsam::Values new_values;
+  auto estimates = [&](size_t i) { return m_constraints.get_pose(i); };
+  size_t icp_steps = 0;
+  for (size_t idx = 0; idx < form_params.matcher.max_num_rematches; ++idx) {
+    auto before = m_constraints.get_current_pose();
+
+    std::get<0>(m_matcher).template match<0>(planar_map, std::get<0>(keypoints),
+                                             estimates, scan_constraints);
+    // std::get<1>(m_matcher).template match<1>(point_map, std::get<1>(keypoints),
+    //                                          estimates, scan_constraints);
+
+    new_values = m_constraints.optimize(true);
+    const auto after = new_values.at<gtsam::Pose3>(X(scan_idx));
+    const auto diff = before.localCoordinates(after).norm();
+    icp_steps = idx + 1;
+    if (diff < form_params.matcher.new_pose_threshold) {
+      break;
+    }
+    m_constraints.update_current_pose(after);
+  }
+  logger_->info("ICP steps: {}", icp_steps);
+
+  // Full Nonlinear Optimization (feature + IMU + body velocity factors)
+  new_values = m_constraints.optimize(false);
+  m_constraints.update_values(new_values);
+
+  // Map insertions
+  std::get<0>(m_keypoint_map).insert_matches(std::get<0>(m_matcher).get_matches());
+  // std::get<1>(m_keypoint_map).insert_matches(std::get<1>(m_matcher).get_matches());
+
+  // Keyscan selection
+  const auto connections = [&](form::ScanIndex i) {
+    return m_constraints.num_recent_connections(i, m_keyscanner.oldest_rf());
+  };
+  auto marg_scans = m_keyscanner.step(scan_idx, num_keypoints, connections);
+
+  // Marginalization
+  {
+    std::string indices;
+    for (const auto &idx : marg_scans) {
+      indices += std::to_string(idx) + " ";
+    }
+    logger_->info("marginalizing {} scans: [{}]", marg_scans.size(), indices);
+  }
+  m_constraints.marginalize(marg_scans);
+  std::get<0>(m_keypoint_map).remove(marg_scans);
+  // std::get<1>(m_keypoint_map).remove(marg_scans);
 
   //-----------------------------------------------------------------------------
-  // Overwrite the beginning of the preintegration for the next step.
-  auto opt_x = smootherISAM2->calculateEstimate<gtsam::Pose3>(X(step));
-  auto opt_v = smootherISAM2->calculateEstimate<gtsam::Vector3>(V(step));
+  // Extract optimized state and reset preintegration for next step.
+  auto opt_x = new_values.at<gtsam::Pose3>(X(scan_idx));
+  auto opt_v = new_values.at<gtsam::Vector3>(V(scan_idx));
 
   prev_state = gtsam::NavState(opt_x, opt_v);
-  prev_bias =
-      smootherISAM2->calculateEstimate<gtsam::imuBias::ConstantBias>(B(step));
+  prev_bias = new_values.at<gtsam::imuBias::ConstantBias>(B(scan_idx));
   preintegrated->resetIntegrationAndSetBias(prev_bias);
 
-  gtsam::Matrix x_cov = smootherISAM2->marginalCovariance(X(step));
-  gtsam::Matrix v_cov = smootherISAM2->marginalCovariance(V(step));
+  // TODO: compute velocity covariance from the optimization result
+  gtsam::Matrix x_cov = gtsam::Matrix::Zero(6, 6);
+  gtsam::Matrix v_cov = gtsam::Matrix::Zero(3, 3);
   auto v_err = rfac.evaluateError(opt_v, opt_x, prev_bias, {}, {}, {});
 
   // key frame informations
   // -----------------------------------------------------------------------------
-  auto key_frame = std::make_shared<DIOKeyframe>(
-      DIOKeyframe{.stamp = current_t,
-                  .seq = static_cast<uint>(step),
+  auto key_frame = std::make_shared<RIOKeyframe>(
+      RIOKeyframe{.stamp = current_t,
+                  .seq = static_cast<uint>(scan_idx),
                   .name = radar.frame_id,
                   .state = prev_state,
                   .pose_cov = x_cov,
@@ -260,7 +294,7 @@ DIOManager<PointType>::optimize(const DIORadar &radar, const rplrio::IMU &imu) {
 }
 
 template <class PointType>
-void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
+void RIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
 
   if (params.use_static_init && !initialized) {
     bool init_success = initializer->init_update(imu_data);
@@ -280,12 +314,12 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
       logger_->info("bias acc: {}, {}, {}", bias_a[0], bias_a[1], bias_a[2]);
       logger_->info("bias gyro: {}, {}, {}", bias_g[0], bias_g[1], bias_g[2]);
       logger_->info("rotation:");
-      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(0, 0),
-                    rot_mat(0, 1), rot_mat(0, 2));
-      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(1, 0),
-                    rot_mat(1, 1), rot_mat(1, 2));
-      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(2, 0),
-                    rot_mat(2, 1), rot_mat(2, 2));
+      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(0, 0), rot_mat(0, 1),
+                    rot_mat(0, 2));
+      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(1, 0), rot_mat(1, 1),
+                    rot_mat(1, 2));
+      logger_->info("  [{:9.6f}, {:9.6f}, {:9.6f}]", rot_mat(2, 0), rot_mat(2, 1),
+                    rot_mat(2, 2));
 
       update();
     }
@@ -304,7 +338,7 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
 }
 
 template <class PointType>
-void DIOManager<PointType>::feed_radar(std::shared_ptr<DIORadar> radar) {
+void RIOManager<PointType>::feed_radar(std::shared_ptr<RIORadar> radar) {
 
   radar_que.emplace_back(radar);
 
@@ -321,15 +355,15 @@ void DIOManager<PointType>::feed_radar(std::shared_ptr<DIORadar> radar) {
 
 template <class PointType>
 const std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> &
-DIOManager<PointType>::get_latest_states() const {
+RIOManager<PointType>::get_latest_states() const {
   return latest_states;
 }
 
-template <class PointType> DIOManager<PointType>::~DIOManager() {}
+template <class PointType> RIOManager<PointType>::~RIOManager() {}
 
-template class DIOManager<pcl::PointXYZD>;
-template class DIOManager<pcl::PointXYZSD>;
-template class DIOManager<pcl::PointXYZSDW>;
-template class DIOManager<pcl::PointHugin>;
+template class RIOManager<pcl::PointXYZD>;
+template class RIOManager<pcl::PointXYZSD>;
+template class RIOManager<pcl::PointXYZSDW>;
+template class RIOManager<pcl::PointHugin>;
 
 } // namespace rplrio

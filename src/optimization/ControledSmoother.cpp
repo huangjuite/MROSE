@@ -1,12 +1,11 @@
-#include "ControledSmoother.h"
+#include "optimization/ControledSmoother.hpp"
 #include <gtsam/nonlinear/BayesTreeMarginalizationHelper.h>
 
 namespace rplrio {
 
 ControledSmoother::ControledSmoother(double lag,
                                      const gtsam::ISAM2Params &params)
-    : IncrementalFixedLagSmoother(lag, params) {
-}
+    : IncrementalFixedLagSmoother(lag, params) {}
 
 FixedLagSmoother::Result ControledSmoother::update(
     NonlinearFactorGraph &newFactors, const Values &newTheta,

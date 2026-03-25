@@ -1,4 +1,4 @@
-#include "form/RIOConstraintManager.h"
+#include "form/RIOConstraintManager.hpp"
 #include "form/optimization/gtsam.hpp"
 
 using gtsam::symbol_shorthand::B;

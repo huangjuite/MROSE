@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VelocityPoseBiasFactor.h"
+#include "factors/VelocityPoseBiasFactor.hpp"
 #include "form/optimization/constraints.hpp"
 
 #include <gtsam/inference/Symbol.h>

@@ -21,11 +21,11 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 // RIO includes
-#include "DIOManager.h"
-#include "RadarPointType.h"
-#include "RadarVelocityEstimatorCeres.h"
-#include "params.h"
-#include "rplrio_types.h"
+#include "manager/DIOManager.hpp"
+#include "core/RadarPointType.hpp"
+#include "radar/RadarVelocityEstimatorCeres.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
 
 template <class PointType> class DIORosNode : public rclcpp::Node {
 private:

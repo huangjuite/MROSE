@@ -1,6 +1,6 @@
-#include "RosNode/RIORosNode.h"
-#include "RadarPointType.h"
-#include "utils.h"
+#include "node/RIORosNode.hpp"
+#include "core/RadarPointType.hpp"
+#include "core/utils.hpp"
 
 template <class PointType>
 RIORosNode<PointType>::RIORosNode()

@@ -1,11 +1,11 @@
 
-#include "RosNode/DIORosNode.h"
+#include "node/DIORosNode.hpp"
 #include <rclcpp/rclcpp.hpp>
 #include <iostream>
 #include <string>
 #include <yaml-cpp/yaml.h>
 
-#include "RadarPointType.h"
+#include "core/RadarPointType.hpp"
 
 template<typename PointType>
 void runNode() {

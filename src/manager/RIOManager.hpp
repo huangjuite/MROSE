@@ -19,13 +19,13 @@
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
-#include "RadarVelocityEstimatorBase.h"
-#include "StaticInitializer.h"
-#include "VelocityPoseBiasFactor.h"
-#include "form/RIOConstraintManager.h"
-#include "form/formRadar.h"
-#include "params.h"
-#include "rplrio_types.h"
+#include "radar/RadarVelocityEstimatorBase.hpp"
+#include "core/StaticInitializer.hpp"
+#include "factors/VelocityPoseBiasFactor.hpp"
+#include "form/RIOConstraintManager.hpp"
+#include "form/formRadar.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
 
 // typedef VelocityPoseMeasurementFactor RadarFactor;
 typedef VelocityPoseBiasFactor RadarFactor;
