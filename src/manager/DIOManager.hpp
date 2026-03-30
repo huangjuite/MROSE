@@ -1,43 +1,31 @@
 #pragma once
 
-// std includes
 #include <deque>
 #include <memory>
 #include <vector>
 
-// spdlog includes
 #include <spdlog/spdlog.h>
 
-// PCL includes
-#include <pcl/common/transforms.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-
-// GTSAM includes.
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
-#include "ControledSmoother.h"
-#include "RadarVelocityEstimatorBase.h"
-#include "StaticInitializer.h"
-#include "VelocityPoseMeasurementFactor.h"
-#include "VelocityPoseBiasFactor.h"
-#include "params.h"
-#include "rplrio_types.h"
+#include "manager/ControledSmoother.hpp"
+#include "velocity/RadarVelocityEstimatorBase.hpp"
+#include "manager/StaticInitializer.hpp"
+#include "factor/VelocityPoseMeasurementFactor.hpp"
+#include "factor/VelocityPoseBiasFactor.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
 
-// typedef VelocityPoseMeasurementFactor RadarFactor;
 typedef VelocityPoseBiasFactor RadarFactor;
 
 namespace rplrio {
-template <class PointType> class DIOManager {
-private:
-  typedef rplrio::Keyframe<PointType> DIOKeyframe;
-  typedef rplrio::Radar<PointType> DIORadar;
 
+class DIOManager {
+private:
   rplrio::Params params;
   std::shared_ptr<spdlog::logger> logger_;
 
@@ -48,12 +36,12 @@ private:
   bool initialized = false;
 
   // radar
-  std::deque<std::shared_ptr<DIORadar>> radar_que;
+  std::deque<std::shared_ptr<Radar>> radar_que;
 
   // imu settings
   std::shared_ptr<gtsam::PreintegrationType> preintegrated;
-  std::deque<std::shared_ptr<rplrio::IMU>> imu_que;
-  std::shared_ptr<rplrio::IMU> last_imu;
+  std::deque<std::shared_ptr<IMU>> imu_que;
+  std::shared_ptr<IMU> last_imu;
   std::shared_ptr<StaticInitializer> initializer;
 
   // states
@@ -63,7 +51,7 @@ private:
   gtsam::imuBias::ConstantBias prev_bias;
   gtsam::noiseModel::Diagonal::shared_ptr marginalizationPoseModel;
 
-  std::vector<std::shared_ptr<DIOKeyframe>> latest_states;
+  std::vector<std::shared_ptr<Keyframe>> latest_states;
 
   // optimizer & graph
   gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
@@ -75,22 +63,20 @@ private:
                   const Eigen::Vector3d &bias_gyro, const double &stamp);
   void update();
 
-  std::shared_ptr<DIOKeyframe> optimize(const DIORadar &radar,
-                                        const rplrio::IMU &imu);
+  std::shared_ptr<Keyframe> optimize(const Radar &radar, const IMU &imu);
 
 public:
   DIOManager(rplrio::Params params,
-             std::shared_ptr<RadarVelocityEstimatorBase<PointType>>
-                 velocity_estimator);
+             std::shared_ptr<RadarVelocityEstimatorBase> velocity_estimator);
   ~DIOManager();
 
-  void feed_radar(std::shared_ptr<DIORadar> radar);
+  void feed_radar(std::shared_ptr<Radar> radar);
 
-  void feed_imu(std::shared_ptr<rplrio::IMU> imu_data);
+  void feed_imu(std::shared_ptr<IMU> imu_data);
 
-  const std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> &
-  get_latest_states() const;
+  const std::vector<std::shared_ptr<Keyframe>> &get_latest_states() const;
 
-  std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
+  std::shared_ptr<RadarVelocityEstimatorBase> velocity_estimator;
 };
+
 } // namespace rplrio

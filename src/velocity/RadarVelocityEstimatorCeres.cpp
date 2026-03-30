@@ -1,9 +1,7 @@
-#include "RadarVelocityEstimatorCeres.h"
-#include "RadarPointType.h"
+#include "velocity/RadarVelocityEstimatorCeres.hpp"
 #include <optional>
 
-template <typename PointType>
-RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
+RadarVelocityEstimatorCeres::RadarVelocityEstimatorCeres(
     std::optional<ceres::Solver::Options> options,
     std::optional<float> doppler_sigma, std::optional<float> cauchy_scale) {
 
@@ -19,9 +17,8 @@ RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
     this->cauchy_scale = cauchy_scale.value();
 }
 
-template <typename PointType>
 Eigen::Vector3d
-RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
+RadarVelocityEstimatorCeres::optimize(const rplrio::PointCloudPtr &radar_pc) {
   double v_est[3] = {this->initial_v[0], this->initial_v[1],
                      this->initial_v[2]};
 
@@ -30,7 +27,7 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
 
   problem.AddParameterBlock(v_est, 3);
 
-  for (auto p : radar_pc->points) {
+  for (const auto &p : *radar_pc) {
     Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
     DopplerCostFunction *cost_function =
         new DopplerCostFunction(pos, p.doppler, this->doppler_sigma);
@@ -42,8 +39,6 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
   ceres::Solver::Summary summary;
   Solve(options, &problem, &summary);
 
-  // std::cout << summary.FullReport() << std::endl;
-
   ceres::Covariance::Options cov_opt;
   ceres::Covariance covariance(cov_opt);
 
@@ -54,24 +49,10 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
   covariance.GetCovarianceBlock(v_est, v_est, cov);
   this->covariance_matrix = Eigen::Matrix3d(cov);
 
-  // ceres::Problem::EvaluateOptions eval_opt;
-  // eval_opt.residual_blocks = residual_ids;
-  // double total_cost = 0.0;
-  // std::vector<double> residuals;
-  // problem.Evaluate(eval_opt, &total_cost, &residuals, nullptr, nullptr);
-
-  // std::cout << residuals.size() << std::endl;
-
   return Eigen::Vector3d(v_est);
 }
 
-template <typename PointType>
-Eigen::Matrix3d RadarVelocityEstimatorCeres<PointType>::get_covariance(
-    PclConstPtr radar_pc, Eigen::Vector3d velocity) {
+Eigen::Matrix3d RadarVelocityEstimatorCeres::get_covariance(
+    const rplrio::PointCloudPtr &radar_pc, Eigen::Vector3d velocity) {
   return this->covariance_matrix;
 }
-
-// Template instantiation
-template class RadarVelocityEstimatorCeres<pcl::PointHugin>;
-template class RadarVelocityEstimatorCeres<pcl::PointXYZSD>;
-template class RadarVelocityEstimatorCeres<pcl::PointXYZD>;

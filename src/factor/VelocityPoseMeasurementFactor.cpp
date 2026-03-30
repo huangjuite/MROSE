@@ -1,4 +1,4 @@
-#include "VelocityPoseMeasurementFactor.h"
+#include "factor/VelocityPoseMeasurementFactor.hpp"
 
 VelocityPoseMeasurementFactor::VelocityPoseMeasurementFactor(
     gtsam::Key v_key, gtsam::Key p_key, gtsam::Vector3 measure,

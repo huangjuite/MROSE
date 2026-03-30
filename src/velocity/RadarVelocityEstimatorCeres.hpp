@@ -1,7 +1,6 @@
 #pragma once
 
-// PCL includes
-#include "RadarVelocityEstimatorBase.h"
+#include "velocity/RadarVelocityEstimatorBase.hpp"
 #include <ceres/ceres.h>
 #include <ceres/solver.h>
 #include <ceres/types.h>
@@ -37,12 +36,7 @@ public:
   };
 };
 
-template <typename PointType>
-class RadarVelocityEstimatorCeres
-    : public RadarVelocityEstimatorBase<PointType> {
-  typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;
-  typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
-  typedef typename pcl::PointCloud<PointType> Pcl;
+class RadarVelocityEstimatorCeres : public RadarVelocityEstimatorBase {
   ceres::Solver::Options options;
   float cauchy_scale;
 
@@ -51,7 +45,7 @@ public:
       std::optional<ceres::Solver::Options> options = std::nullopt,
       std::optional<float> doppler_sigma = 0.124,
       std::optional<float> cauchy_scale = 1.0);
-  Eigen::Vector3d optimize(PclConstPtr radar_pc);
-  Eigen::Matrix3d get_covariance(PclConstPtr radar_pc,
+  Eigen::Vector3d optimize(const rplrio::PointCloudPtr &radar_pc);
+  Eigen::Matrix3d get_covariance(const rplrio::PointCloudPtr &radar_pc,
                                  Eigen::Vector3d velocity);
 };

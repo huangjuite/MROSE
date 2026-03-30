@@ -1,10 +1,5 @@
 #pragma once
 
-// PCL includes
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-
 // ROS includes
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -21,8 +16,8 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/ImuBias.h>
 
-#include "RadarPointType.h"
-#include "params.h"
+#include "core/RadarPointType.hpp"
+#include "core/params.hpp"
 #include <Eigen/Dense>
 #include <array>
 #include <builtin_interfaces/msg/time.hpp>
@@ -72,17 +67,6 @@ geometry_msgs::msg::PoseStamped toROSPoseStamped(const gtsam::Pose2 gtsam_pose,
 geometry_msgs::msg::TransformStamped
 toROSTransform(const gtsam::Pose3 gtsam_pose, std::string frame_id,
                std::string child_id, std_msgs::msg::Header::_stamp_type stamp);
-
-pcl::PointCloud<pcl::PointXYZSD>
-from_xrio_type(pcl::PointCloud<pcl::PointXYZSNV> &radar_xrio);
-
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZSD>::Ptr pc);
-
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZSDW>::Ptr pc);
-
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZI>::Ptr pc);
-
-Params get_params(std::string cfg_path);
 
 builtin_interfaces::msg::Time create_stamp_from_seconds(double seconds);
 

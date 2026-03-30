@@ -1,6 +1,5 @@
-#include "utils.h"
+#include "utils.hpp"
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
-#include <yaml-cpp/yaml.h>
 
 namespace rplrio {
 
@@ -218,39 +217,6 @@ toROSTransform(const gtsam::Pose3 gtsam_pose, std::string frame_id,
   return tr;
 }
 
-pcl::PointCloud<pcl::PointXYZSD>
-from_xrio_type(pcl::PointCloud<pcl::PointXYZSNV> &radar_xrio) {
-  pcl::PointCloud<pcl::PointXYZSD> radar_rpl;
-  radar_rpl.resize(radar_xrio.size());
-  for (size_t i = 0; i < radar_xrio.points.size(); i++) {
-    radar_rpl.points[i].x = radar_xrio.points[i].x;
-    radar_rpl.points[i].y = radar_xrio.points[i].y;
-    radar_rpl.points[i].z = radar_xrio.points[i].z;
-    radar_rpl.points[i].snr = radar_xrio.points[i].snr_db;
-    radar_rpl.points[i].doppler = radar_xrio.points[i].v_doppler_mps;
-  }
-
-  return radar_rpl;
-}
-
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZSD>::Ptr pc) {
-  for (size_t i = 0; i < pc->size(); i++) {
-    pc->points[i].snr = log(pc->points[i].snr);
-  }
-}
-
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZSDW>::Ptr pc) {
-  for (size_t i = 0; i < pc->size(); i++) {
-    pc->points[i].snr = log(pc->points[i].snr);
-  }
-}
-
-void logdB_SNR(pcl::PointCloud<pcl::PointXYZI>::Ptr pc) {
-  for (size_t i = 0; i < pc->size(); i++) {
-    pc->points[i].intensity = log(pc->points[i].intensity);
-  }
-}
-
 builtin_interfaces::msg::Time create_stamp_from_seconds(double seconds) {
   builtin_interfaces::msg::Time time_msg;
   time_msg.sec = static_cast<int32_t>(seconds);
@@ -258,91 +224,4 @@ builtin_interfaces::msg::Time create_stamp_from_seconds(double seconds) {
   return time_msg;
 }
 
-Params get_params(std::string cfg_path) {
-  Params param;
-  YAML::Node config = YAML::LoadFile(cfg_path);
-
-  // imu
-  std::string imu_;
-  imu_ = config["odom"]["imu"].as<std::string>();
-  param.imu_topic = config[imu_]["rostopic"].as<std::string>();
-  param.acc_noise = config[imu_]["accelerometer_noise_density"].as<double>();
-  param.acc_rw = config[imu_]["accelerometer_random_walk"].as<double>();
-  param.gyro_noise = config[imu_]["gyroscope_noise_density"].as<double>();
-  param.gyro_rw = config[imu_]["gyroscope_random_walk"].as<double>();
-  param.gravity = config[imu_]["gravity"].as<double>();
-
-  // Load 4x4 matrix T_i_b from YAML
-  auto T_i_b_node = config[imu_]["T_i_b"];
-  for (size_t i = 0; i < 4; ++i) {
-    for (size_t j = 0; j < 4; ++j) {
-      param.T_i_b(i, j) = T_i_b_node[i][j].as<double>();
-    }
-  }
-  param.R_i_b = param.T_i_b.block(0, 0, 3, 3);
-
-  // radar
-  param.radar_list = config["odom"]["radar"].as<std::vector<std::string>>();
-  for (std::string r : param.radar_list) {
-    param.radars[r].topic = config[r]["rostopic"].as<std::string>();
-    param.radars[r].doppler_std = config[r]["doppler_sigma"].as<double>();
-
-    // Read type if available
-    if (config[r]["type"]) {
-      param.radars[r].type = config[r]["type"].as<std::string>();
-    }
-
-    auto T_r_i_node = config[r]["T_r_i"];
-    for (size_t i = 0; i < 4; ++i) {
-      for (size_t j = 0; j < 4; ++j) {
-        param.radars[r].T_r_i(i, j) = T_r_i_node[i][j].as<double>();
-      }
-    }
-    param.radars[r].R_r_i = param.radars[r].T_r_i.block(0, 0, 3, 3);
-  }
-
-  // odom
-  param.lag = config["odom"]["optimization_window"].as<double>();
-  param.bv_use_huber = config["odom"]["bv_use_huber"].as<bool>();
-  param.bv_huber_k = config["odom"]["bv_huber_k"].as<double>();
-
-  // marginalization sigma
-  if (config["odom"]["marginalization_sigma"]) {
-    auto marg_sigma = config["odom"]["marginalization_sigma"].as<std::vector<double>>();
-    param.marginalization_sigma = Eigen::VectorXd(marg_sigma.size());
-    for (size_t i = 0; i < marg_sigma.size(); ++i) {
-      param.marginalization_sigma(i) = marg_sigma[i];
-    }
-  } else {
-    param.marginalization_sigma = Eigen::VectorXd(6);
-    param.marginalization_sigma << 10, 10, 10, 10, 10, 10;
-  }
-
-  // initializer
-  param.use_static_init = config["odom"]["use_static_init"].as<bool>();
-  param.doppler_inlier_thresh =
-      config["odom"]["doppler_inlier_thresh"].as<double>();
-  param.init_window = config["odom"]["static_init_window"].as<double>();
-  param.init_thres = config["odom"]["static_init_threshold"].as<double>();
-
-  // logging
-  if (config["log_level"]) {
-    std::string log_level_str = config["log_level"].as<std::string>();
-    if (log_level_str == "trace") {
-      param.log_level = LogLevel::TRACE;
-    } else if (log_level_str == "debug") {
-      param.log_level = LogLevel::DEBUG;
-    } else if (log_level_str == "info") {
-      param.log_level = LogLevel::INFO;
-    } else if (log_level_str == "warn") {
-      param.log_level = LogLevel::WARN;
-    } else if (log_level_str == "error") {
-      param.log_level = LogLevel::ERROR;
-    } else if (log_level_str == "fatal" || log_level_str == "critical") {
-      param.log_level = LogLevel::CRITICAL;
-    }
-  }
-
-  return param;
-}
 } // namespace rplrio

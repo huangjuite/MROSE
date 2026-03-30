@@ -5,7 +5,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-#include "rplrio_types.h"
+#include "core/rplrio_types.hpp"
 
 class StaticInitializer {
 private:

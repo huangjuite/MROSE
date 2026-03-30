@@ -61,4 +61,7 @@ struct Params {
 };
 
 ImuParam_ptr imuParams(Params param);
+
+Params get_params(const std::string &cfg_path);
+
 }; // namespace rplrio

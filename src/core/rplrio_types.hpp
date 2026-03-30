@@ -7,11 +7,11 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/NavState.h>
-#include <pcl/point_cloud.h>
-
-#include "params.h"
+#include "core/params.hpp"
+#include "core/RadarPointType.hpp"
 
 namespace rplrio {
+
 struct IMU {
   Eigen::Vector3d acc;
   Eigen::Vector3d gyro;
@@ -59,7 +59,7 @@ struct Odom {
   bool operator<(double right) { return stamp < right; }
 };
 
-template <class PointType> struct Radar {
+struct Radar {
   std::string frame_id;
   double stamp;
   RadarParams param;
@@ -67,10 +67,10 @@ template <class PointType> struct Radar {
   gtsam::Vector3 vel;
   gtsam::Matrix33 vel_cov;
 
-  typedef typename pcl::PointCloud<PointType>::Ptr myPcPtr;
-  myPcPtr pc;
+  PointCloudPtr pc;
 
-  Radar(myPcPtr p, double t, RadarParams params, std::string name) {
+  Radar(PointCloudPtr p, double t, RadarParams params,
+        std::string name) {
     stamp = t;
     pc = p;
     param = params;
@@ -87,7 +87,7 @@ template <class PointType> struct Radar {
   }
 };
 
-template <class PointType> struct Keyframe {
+struct Keyframe {
   double stamp;
   uint seq;
   std::string name;
@@ -101,9 +101,9 @@ template <class PointType> struct Keyframe {
   gtsam::imuBias::ConstantBias imu_bias;
   gtsam::Matrix66 imu_bias_cov;
 
-  typename pcl::PointCloud<PointType>::Ptr radar_points;
+  PointCloudPtr radar_points;
   gtsam::Vector3 radar_velocity;
   gtsam::Matrix33 radar_velocity_cov;
 };
 
-}; // namespace rplrio
+} // namespace rplrio

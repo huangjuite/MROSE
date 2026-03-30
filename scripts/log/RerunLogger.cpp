@@ -1,4 +1,5 @@
-#include "RosNode/RerunLogger.h"
+#include "log/RerunLogger.hpp"
+#include <spdlog/spdlog.h>
 
 namespace rplrio {
 
@@ -17,19 +18,18 @@ RerunLogger::RerunLogger(const std::string &app_id,
     } else if (spawn_method == "server") {
       auto result = rec_->serve_grpc();
       if (result.is_ok()) {
-        std::cout << "Rerun gRPC server started at: " << result.value
-                  << std::endl;
+        spdlog::info("Rerun gRPC server started at: {}", result.value);
       } else {
         result.error.exit_on_failure();
       }
     } else {
-      std::cerr << "Unknown spawn method: " << spawn_method << std::endl;
+      spdlog::error("Unknown spawn method: {}", spawn_method);
       throw std::invalid_argument("Unknown spawn method: " + spawn_method);
     }
 
     initialized_ = true;
   } catch (const std::exception &e) {
-    std::cerr << "Failed to initialize RerunLogger: " << e.what() << std::endl;
+    spdlog::error("Failed to initialize RerunLogger: {}", e.what());
     throw;
   }
 }
@@ -64,6 +64,53 @@ void RerunLogger::log_pose(const std::string &entity_path,
               static_cast<float>(orientation.w())));
 
   rec_->log(entity_path, rerun_transform);
+}
+
+void RerunLogger::log_point_cloud(const std::string &entity_path,
+                                  const PointCloudPtr &cloud,
+                                  double timestamp) {
+  if (!initialized_ || !cloud || cloud->empty()) {
+    return;
+  }
+
+  std::vector<rerun::Position3D> positions;
+  positions.reserve(cloud->size());
+
+  for (const auto &point : *cloud) {
+    positions.push_back(rerun::Position3D(point.x, point.y, point.z));
+  }
+
+  if (timestamp > 0.0) {
+    rec_->set_time_timestamp_secs_since_epoch("timestamp", timestamp);
+  }
+
+  rec_->log(entity_path, rerun::Points3D(positions));
+}
+
+void RerunLogger::log_point_cloud_with_colors(const std::string &entity_path,
+                                              const PointCloudPtr &cloud,
+                                              const std::vector<uint32_t> &colors,
+                                              double timestamp) {
+  if (!initialized_ || !cloud || cloud->empty()) {
+    return;
+  }
+
+  std::vector<rerun::Position3D> positions;
+  positions.reserve(cloud->size());
+
+  for (const auto &point : *cloud) {
+    positions.push_back(rerun::Position3D(point.x, point.y, point.z));
+  }
+
+  if (timestamp > 0.0) {
+    rec_->set_time_timestamp_secs_since_epoch("timestamp", timestamp);
+  }
+
+  if (!colors.empty() && colors.size() == cloud->size()) {
+    rec_->log(entity_path, rerun::Points3D(positions).with_colors(colors));
+  } else {
+    rec_->log(entity_path, rerun::Points3D(positions));
+  }
 }
 
 void RerunLogger::log_transform3d(const std::string &entity_path,

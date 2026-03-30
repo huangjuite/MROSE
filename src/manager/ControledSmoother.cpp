@@ -1,4 +1,4 @@
-#include "ControledSmoother.h"
+#include "manager/ControledSmoother.hpp"
 #include <gtsam/nonlinear/BayesTreeMarginalizationHelper.h>
 
 namespace rplrio {

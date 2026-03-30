@@ -1,8 +1,7 @@
+#pragma once
 
-// std includes
 #include <memory>
 
-// ROS includes
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/detail/path__struct.hpp>
@@ -14,26 +13,12 @@
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker.hpp>
 
-// PCL includes
-#include <pcl/common/transforms.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
+#include "manager/DIOManager.hpp"
+#include "core/params.hpp"
+#include "core/rplrio_types.hpp"
 
-// RIO includes
-#include "DIOManager.h"
-#include "RadarPointType.h"
-#include "RadarVelocityEstimatorCeres.h"
-#include "params.h"
-#include "rplrio_types.h"
-
-template <class PointType> class DIORosNode : public rclcpp::Node {
+class DIORosNode : public rclcpp::Node {
 private:
-  typedef RadarVelocityEstimatorCeres<PointType> VestType;
-  typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;
-  typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
-  typedef typename pcl::PointCloud<PointType> Pcl;
-
   std::string imu_frame_id_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
@@ -52,14 +37,13 @@ private:
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> br;
 
-  void publish_all(
-      const std::shared_ptr<rplrio::Keyframe<PointType>> keyframe);
+  void publish_all(const std::shared_ptr<rplrio::Keyframe> &keyframe);
 
 public:
   DIORosNode();
   ~DIORosNode();
   rplrio::Params params;
-  std::unique_ptr<rplrio::DIOManager<PointType>> dio_manager;
+  std::unique_ptr<rplrio::DIOManager> dio_manager;
   void cb_radar(const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg);
   void cb_vel(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr vel_msg);
   void cb_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu);

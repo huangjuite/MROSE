@@ -17,7 +17,7 @@ set_property(TARGET rio PROPERTY POSITION_INDEPENDENT_CODE ON)
 nanobind_add_module(_core bindings.cpp)
 target_link_libraries(_core PRIVATE rio)
 target_include_directories(_core PRIVATE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
 # Install nanobind extension into the Python package

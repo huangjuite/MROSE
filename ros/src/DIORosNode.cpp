@@ -1,9 +1,13 @@
-#include "RosNode/DIORosNode.h"
-#include "RadarPointType.h"
-#include "utils.h"
+#include "DIORosNode.hpp"
+#include "RosPointType.hpp"
+#include "utils.hpp"
+#include "velocity/RadarVelocityEstimatorCeres.hpp"
 
-template <class PointType>
-DIORosNode<PointType>::DIORosNode()
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+DIORosNode::DIORosNode()
     : rclcpp::Node("radar_odometry",
                    rclcpp::NodeOptions()
                        .allow_undeclared_parameters(true)
@@ -13,10 +17,9 @@ DIORosNode<PointType>::DIORosNode()
   RCLCPP_INFO(get_logger(), "config: %s", cfg.as_string().c_str());
   params = rplrio::get_params(cfg.as_string());
 
-  dio_manager = std::make_unique<rplrio::DIOManager<PointType>>(
-      params, std::make_shared<VestType>());
+  dio_manager = std::make_unique<rplrio::DIOManager>(
+      params, std::make_shared<RadarVelocityEstimatorCeres>());
 
-  // ros init
   pub_twist =
       this->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
           "rio/velocity", 1);
@@ -35,7 +38,7 @@ DIORosNode<PointType>::DIORosNode()
   sub_imu = this->create_subscription<sensor_msgs::msg::Imu>(
       params.imu_topic, 400,
       std::bind(&DIORosNode::cb_imu, this, std::placeholders::_1));
-    
+
   for (auto r : params.radar_list) {
     if (params.radars[r].type == "TwistWithCovarianceStamped") {
       sub_vel.push_back(
@@ -55,9 +58,7 @@ DIORosNode<PointType>::DIORosNode()
   RCLCPP_INFO(get_logger(), "radar odometry node initialized.");
 }
 
-template <class PointType>
-void DIORosNode<PointType>::publish_all(
-    const std::shared_ptr<rplrio::Keyframe<PointType>> keyframe) {
+void DIORosNode::publish_all(const std::shared_ptr<rplrio::Keyframe> &keyframe) {
 
   auto current_pose = keyframe->state.pose();
   auto T_i_b = gtsam::Pose3(gtsam::Rot3(params.R_i_b),
@@ -82,10 +83,17 @@ void DIORosNode<PointType>::publish_all(
 
   if (pub_radar->get_subscription_count() > 0) {
     if (keyframe->radar_points && !keyframe->radar_points->empty()) {
+      const Eigen::Matrix4d &T = T_i_b.matrix();
+      pcl::PointCloud<pcl::PointXYZ> inlier_xyz;
+      inlier_xyz.reserve(keyframe->radar_points->size());
+      for (const auto &p : *keyframe->radar_points) {
+        Eigen::Vector4d pt(p.x, p.y, p.z, 1.0);
+        Eigen::Vector4d pt_t = T * pt;
+        inlier_xyz.push_back(
+            pcl::PointXYZ(pt_t[0], pt_t[1], pt_t[2]));
+      }
       sensor_msgs::msg::PointCloud2 inlier_msg;
-      pcl::transformPointCloud(*keyframe->radar_points, *keyframe->radar_points,
-                               T_i_b.matrix());
-      pcl::toROSMsg(*(keyframe->radar_points), inlier_msg);
+      pcl::toROSMsg(inlier_xyz, inlier_msg);
       inlier_msg.header.stamp = ros_stamp;
       inlier_msg.header.frame_id = "base_link";
       pub_radar->publish(inlier_msg);
@@ -113,14 +121,12 @@ void DIORosNode<PointType>::publish_all(
     pub_bias->publish(rplrio::toROStwist(keyframe->imu_bias));
   }
 
-  // broadcast transformation
   geometry_msgs::msg::TransformStamped transform_stamped =
       rplrio::toROSTransform(current_pose, "map", "base_link", ros_stamp);
   br->sendTransform(transform_stamped);
 }
 
-template <class PointType>
-void DIORosNode<PointType>::cb_imu(
+void DIORosNode::cb_imu(
     const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg) {
   double imu_t = rclcpp::Time(imu_msg->header.stamp).seconds();
 
@@ -140,34 +146,37 @@ void DIORosNode<PointType>::cb_imu(
   dio_manager->feed_imu(std::make_shared<rplrio::IMU>(acc, omega, imu_t));
 }
 
-template <class PointType>
-void DIORosNode<PointType>::cb_radar(
+void DIORosNode::cb_radar(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg) {
 
   double radar_t = rclcpp::Time(pc_msg->header.stamp).seconds();
 
-  PclPtr radar_pc;
-  radar_pc.reset(new Pcl);
-  pcl::fromROSMsg(*pc_msg, *radar_pc);
+  pcl::PointCloud<pcl::PointXYZDoppler> pcl_cloud;
+  pcl::fromROSMsg(*pc_msg, pcl_cloud);
 
-  if (radar_pc->empty()) {
+  if (pcl_cloud.empty()) {
     RCLCPP_WARN(get_logger(), "%s msg has 0 points",
                 pc_msg->header.frame_id.c_str());
     return;
   }
 
-  dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
-      radar_pc, radar_t, params.radars[pc_msg->header.frame_id],
+  auto cloud = std::make_shared<rplrio::PointCloud>();
+  cloud->reserve(pcl_cloud.size());
+  for (const auto &p : pcl_cloud) {
+    cloud->push_back({p.x, p.y, p.z, p.doppler});
+  }
+
+  dio_manager->feed_radar(std::make_shared<rplrio::Radar>(
+      cloud, radar_t, params.radars[pc_msg->header.frame_id],
       pc_msg->header.frame_id));
 
   const auto &states = dio_manager->get_latest_states();
-  for (auto kf : states) {
+  for (const auto &kf : states) {
     publish_all(kf);
   }
 }
 
-template <class PointType>
-void DIORosNode<PointType>::cb_vel(
+void DIORosNode::cb_vel(
     const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr
         vel_msg) {
 
@@ -184,18 +193,14 @@ void DIORosNode<PointType>::cb_vel(
     }
   }
 
-  dio_manager->feed_radar(std::make_shared<rplrio::Radar<PointType>>(
+  dio_manager->feed_radar(std::make_shared<rplrio::Radar>(
       velocity, covariance, vel_t, params.radars[vel_msg->header.frame_id],
       vel_msg->header.frame_id));
 
   const auto &states = dio_manager->get_latest_states();
-  for (auto kf : states) {
+  for (const auto &kf : states) {
     publish_all(kf);
   }
 }
 
-template <class PointType> DIORosNode<PointType>::~DIORosNode() {}
-
-template class DIORosNode<pcl::PointXYZD>;
-template class DIORosNode<pcl::PointXYZSD>;
-template class DIORosNode<pcl::PointHugin>;
+DIORosNode::~DIORosNode() {}
