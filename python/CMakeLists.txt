@@ -21,6 +21,10 @@ target_include_directories(_core PRIVATE
 )
 
 # Install nanobind extension into the Python package
+if(NOT DEFINED PYTHON_INSTALL_DIR)
+  set(PYTHON_INSTALL_DIR ".")
+endif()
+
 install(TARGETS _core
   LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/rpl_rio"
 )

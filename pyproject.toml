@@ -1,0 +1,19 @@
+[build-system]
+requires = ["scikit-build-core>=0.10.0", "nanobind>=2.4.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "rpl-rio"
+version = "0.1.0"
+description = "Radar-Inertial Odometry Python interface"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Ray", email = "juiteh@andrew.cmu.edu" }]
+dependencies = ["numpy", "pyyaml"]
+
+[tool.scikit-build]
+wheel.packages = ["python/rpl_rio"]
+
+[tool.scikit-build.cmake]
+version = ">=3.16"
+args = ["-DBUILD_PYTHON_BINDINGS=ON"]

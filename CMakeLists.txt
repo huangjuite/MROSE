@@ -33,7 +33,6 @@ target_link_libraries(rio
   yaml-cpp
   fmt::fmt
   OpenMP::OpenMP_CXX
-  rerun_sdk
 )
 
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
