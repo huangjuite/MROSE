@@ -82,6 +82,16 @@ Params get_params(const std::string &cfg_path) {
   }
 
   param.use_static_init = config["odom"]["use_static_init"].as<bool>();
+  param.init_bias_acc = config["odom"]["init_bias_acc"]
+      ? Eigen::Vector3d(config["odom"]["init_bias_acc"][0].as<double>(),
+                        config["odom"]["init_bias_acc"][1].as<double>(),
+                        config["odom"]["init_bias_acc"][2].as<double>())
+      : Eigen::Vector3d::Zero();
+  param.init_bias_gyro = config["odom"]["init_bias_gyro"]
+      ? Eigen::Vector3d(config["odom"]["init_bias_gyro"][0].as<double>(),
+                        config["odom"]["init_bias_gyro"][1].as<double>(),
+                        config["odom"]["init_bias_gyro"][2].as<double>())
+      : Eigen::Vector3d::Zero();
   param.doppler_inlier_thresh =
       config["odom"]["doppler_inlier_thresh"].as<double>();
   param.init_window = config["odom"]["static_init_window"].as<double>();

@@ -127,16 +127,18 @@ void DIOManager::update() {
     latest_states.emplace_back(keyframe);
   } else { // new key frame
 
-    auto next_imu = imu_que.front();
-    rplrio::IMU interp;
+    if (!imu_que.empty()) {
+      auto next_imu = imu_que.front();
+      rplrio::IMU interp;
 
-    bool interp_success =
-        rplrio::IMU::interpolate(interp, radar_stamp, *last_imu, *next_imu);
-    if (interp_success) {
-      preintegrated->integrateMeasurement(interp.acc, interp.gyro,
-                                          interp.stamp - pre_imu_t);
-      pre_imu_t = interp.stamp;
-      *last_imu = interp;
+      bool interp_success =
+          rplrio::IMU::interpolate(interp, radar_stamp, *last_imu, *next_imu);
+      if (interp_success) {
+        preintegrated->integrateMeasurement(interp.acc, interp.gyro,
+                                            interp.stamp - pre_imu_t);
+        pre_imu_t = interp.stamp;
+        *last_imu = interp;
+      }
     }
 
     step++;
@@ -298,8 +300,8 @@ void DIOManager::feed_imu(std::shared_ptr<IMU> imu_data) {
     }
   } else if (!params.use_static_init && !initialized) {
 
-    Eigen::Vector3d bias_a = Eigen::Vector3d::Zero();
-    Eigen::Vector3d bias_g = Eigen::Vector3d::Zero();
+    Eigen::Vector3d bias_a = params.init_bias_acc;
+    Eigen::Vector3d bias_g = params.init_bias_gyro;
     Eigen::Quaterniond init_r = Eigen::Quaterniond::Identity();
 
     pre_imu_t = imu_data->stamp;

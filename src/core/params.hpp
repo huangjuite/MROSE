@@ -41,6 +41,8 @@ struct Params {
   bool use_static_init;
   double init_window;
   double init_thres;
+  Eigen::Vector3d init_bias_acc;
+  Eigen::Vector3d init_bias_gyro;
 
   // imu
   Eigen::Matrix4d T_i_b;
