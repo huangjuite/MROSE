@@ -1,12 +1,12 @@
 #include "manager/ControledSmoother.hpp"
+#include <gtsam/geometry/Point3.h>
 #include <gtsam/nonlinear/BayesTreeMarginalizationHelper.h>
 
 namespace rplrio {
 
 ControledSmoother::ControledSmoother(double lag,
                                      const gtsam::ISAM2Params &params)
-    : IncrementalFixedLagSmoother(lag, params) {
-}
+    : IncrementalFixedLagSmoother(lag, params) {}
 
 FixedLagSmoother::Result ControledSmoother::update(
     NonlinearFactorGraph &newFactors, const Values &newTheta,
@@ -32,6 +32,9 @@ FixedLagSmoother::Result ControledSmoother::update(
     Symbol sym(k);
     if (sym.chr() == 'x') {
       Pose3 x_est = calculateEstimate<Pose3>(k);
+      x_est =
+          Pose3(x_est.rotation(), gtsam::Point3(x_est.translation().x(),
+                                                x_est.translation().y(), 0));
       newFactors.addPrior(sym, x_est, marginalizationPoseModel);
     }
   }
