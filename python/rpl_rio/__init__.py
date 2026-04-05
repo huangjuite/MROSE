@@ -99,19 +99,20 @@ class DIOManager:
         params: _rio.Params,
         doppler_sigma: float = 0.124,
         cauchy_scale: float = 1.0,
+        verbose: bool = False,
     ):
         """Initialize DIOManager.
 
         Args:
             params: DIO parameters (from get_params or manually constructed)
-            velocity_estimator: Custom velocity estimator (default: Ceres-based)
             doppler_sigma: Doppler noise std (if using default estimator)
             cauchy_scale: Cauchy loss scale (if using default estimator)
+            verbose: Set C++ log level to debug (default: warn).
         """
         velocity_estimator = RadarVelocityEstimatorCeres(
             doppler_sigma=doppler_sigma, cauchy_scale=cauchy_scale
         )
-
+        params.log_level = _rio.LogLevel.DEBUG if verbose else _rio.LogLevel.WARN
         self._manager = _rio.DIOManager(params, velocity_estimator)
         self._params = params
         self._vel_estimator = velocity_estimator
@@ -122,6 +123,7 @@ class DIOManager:
         config_path: Union[str, Path],
         doppler_sigma: float = 0.124,
         cauchy_scale: float = 1.0,
+        verbose: bool = False,
     ) -> DIOManager:
         """Create DIOManager from a YAML config file.
 
@@ -129,6 +131,7 @@ class DIOManager:
             config_path: Path to YAML config file
             doppler_sigma: Doppler noise std
             cauchy_scale: Cauchy loss scale
+            verbose: Set C++ log level to debug (default: warn).
 
         Returns:
             Configured DIOManager instance
@@ -138,6 +141,7 @@ class DIOManager:
             params=params,
             doppler_sigma=doppler_sigma,
             cauchy_scale=cauchy_scale,
+            verbose=verbose,
         )
 
     def feed_imu(
