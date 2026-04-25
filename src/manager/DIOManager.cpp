@@ -132,12 +132,18 @@ void DIOManager<PointType>::feed_imu(std::shared_ptr<rplrio::IMU> imu_data) {
 template <class PointType>
 void DIOManager<PointType>::feed_radar(std::shared_ptr<DIORadar> radar) {
   radar_que.emplace_back(radar);
+  latest_states.clear();
 
   if (!initialized) {
+    auto kf = std::make_shared<DIOKeyframe>();
+    kf->stamp = radar->stamp;
+    kf->state = gtsam::NavState();
+    kf->radar_points = std::make_shared<pcl::PointCloud<PointType>>();
+    pcl::transformPointCloud(*radar->pc, *kf->radar_points, radar->param.T_r_i);
+    latest_states.emplace_back(kf);
     return;
   }
 
-  latest_states.clear();
   update();
 }
 
