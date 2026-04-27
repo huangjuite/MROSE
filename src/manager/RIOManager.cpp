@@ -286,6 +286,7 @@ RIOManager<PointType>::optimize(const RIORadar &radar, const rplrio::IMU &imu) {
                   .v_err = v_err,
                   .imu = imu,
                   .imu_bias = prev_bias,
+                  .imu_bias_cov = b_cov,
                   .radar_points = radar_inlier,
                   .radar_velocity = measured_v,
                   .radar_velocity_cov = radar_velocity_cov});

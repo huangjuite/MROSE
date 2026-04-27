@@ -2,6 +2,7 @@
 
 #include <Eigen/Eigen>
 #include <Eigen/src/Core/Matrix.h>
+#include <gtsam/base/Matrix.h>
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
@@ -98,6 +99,7 @@ template <class PointType> struct Keyframe {
 
   IMU imu;
   gtsam::imuBias::ConstantBias imu_bias;
+  gtsam::Matrix66 imu_bias_cov;
 
   typename pcl::PointCloud<PointType>::Ptr radar_points;
   gtsam::Vector3 radar_velocity;

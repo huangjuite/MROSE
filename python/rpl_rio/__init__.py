@@ -80,6 +80,7 @@ class KeyframeData:
     imu_gyro: NDArray[np.float64]  # (3,)
     imu_bias_acc: NDArray[np.float64]  # (3,)
     imu_bias_gyro: NDArray[np.float64]  # (3,)
+    imu_bias_cov: NDArray[np.float64]  # (6, 6)
     radar_velocity: NDArray[np.float64]  # (3,)
     radar_velocity_cov: NDArray[np.float64]  # (3, 3)
     point_cloud: NDArray[np.float32]  # (N, num_fields)
@@ -101,6 +102,7 @@ class KeyframeData:
             imu_gyro=np.array(kf.imu_gyro),
             imu_bias_acc=np.array(kf.imu_bias_acc),
             imu_bias_gyro=np.array(kf.imu_bias_gyro),
+            imu_bias_cov=np.array(kf.imu_bias_cov),
             radar_velocity=np.array(kf.radar_velocity),
             radar_velocity_cov=np.array(kf.radar_velocity_cov),
             point_cloud=np.array(kf.point_cloud),
