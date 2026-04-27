@@ -47,8 +47,6 @@ NB_MODULE(_core, m) {
 
   nb::class_<rplrio::RadarParams>(m, "RadarParams")
       .def(nb::init<>())
-      .def_rw("topic", &rplrio::RadarParams::topic)
-      .def_rw("type", &rplrio::RadarParams::type)
       .def_rw("T_r_i", &rplrio::RadarParams::T_r_i)
       .def_rw("R_r_i", &rplrio::RadarParams::R_r_i)
       .def_rw("doppler_std", &rplrio::RadarParams::doppler_std)
@@ -57,7 +55,6 @@ NB_MODULE(_core, m) {
 
   nb::class_<rplrio::Params>(m, "Params")
       .def(nb::init<>())
-      .def_rw("imu_topic", &rplrio::Params::imu_topic)
       .def_rw("lag", &rplrio::Params::lag)
       .def_rw("bv_use_huber", &rplrio::Params::bv_use_huber)
       .def_rw("bv_huber_k", &rplrio::Params::bv_huber_k)

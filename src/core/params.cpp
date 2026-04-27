@@ -38,7 +38,6 @@ Params get_params(const std::string &cfg_path) {
 
   // imu
   std::string imu_ = config["odom"]["imu"].as<std::string>();
-  param.imu_topic = config[imu_]["rostopic"].as<std::string>();
   param.acc_noise = config[imu_]["accelerometer_noise_density"].as<double>();
   param.acc_rw = config[imu_]["accelerometer_random_walk"].as<double>();
   param.gyro_noise = config[imu_]["gyroscope_noise_density"].as<double>();
@@ -54,10 +53,7 @@ Params get_params(const std::string &cfg_path) {
   // radar
   param.radar_list = config["odom"]["radar"].as<std::vector<std::string>>();
   for (const std::string &r : param.radar_list) {
-    param.radars[r].topic = config[r]["rostopic"].as<std::string>();
     param.radars[r].doppler_std = config[r]["doppler_sigma"].as<double>();
-    if (config[r]["type"])
-      param.radars[r].type = config[r]["type"].as<std::string>();
     auto T_r_i_node = config[r]["T_r_i"];
     for (size_t i = 0; i < 4; ++i)
       for (size_t j = 0; j < 4; ++j)

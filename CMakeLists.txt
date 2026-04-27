@@ -1,13 +1,13 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 project(rpl_rio)
 
 add_compile_options(-std=c++17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Eigen3 REQUIRED)
 find_package(GTSAM REQUIRED)
 find_package(Ceres REQUIRED)
-find_package(OpenMP REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(fmt REQUIRED)
 
@@ -32,7 +32,6 @@ target_link_libraries(rio
   ceres
   yaml-cpp
   fmt::fmt
-  OpenMP::OpenMP_CXX
 )
 
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
