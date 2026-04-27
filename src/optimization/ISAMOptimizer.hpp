@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <memory>
 
 #include <pcl/common/transforms.h>
@@ -41,6 +42,8 @@ public:
   std::shared_ptr<rplrio::Keyframe<PointType>>
   optimize(const rplrio::Radar<PointType> &radar, const rplrio::IMU &imu);
 
+  void set_timing_csv(std::ofstream *csv) { timing_csv_ = csv; }
+
 private:
   rplrio::Params params_;
   std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator_;
@@ -50,6 +53,7 @@ private:
   gtsam::Values initial_values_;
   gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps_;
   gtsam::noiseModel::Diagonal::shared_ptr marginalization_pose_model_;
+  std::ofstream *timing_csv_ = nullptr;
 };
 
 } // namespace rplrio

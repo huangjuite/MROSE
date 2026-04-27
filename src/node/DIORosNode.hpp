@@ -23,13 +23,13 @@
 // RIO includes
 #include "manager/DIOManager.hpp"
 #include "core/RadarPointType.hpp"
-#include "radar/RadarVelocityEstimatorCeres.hpp"
+#include "radar/RadarVelocityEstimatorEigen.hpp"
 #include "core/params.hpp"
 #include "core/rplrio_types.hpp"
 
 template <class PointType> class DIORosNode : public rclcpp::Node {
 private:
-  typedef RadarVelocityEstimatorCeres<PointType> VestType;
+  typedef RadarVelocityEstimatorEigen<PointType> VestType;
   typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;
   typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
   typedef typename pcl::PointCloud<PointType> Pcl;

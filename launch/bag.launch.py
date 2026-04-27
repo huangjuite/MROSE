@@ -37,6 +37,12 @@ def generate_launch_description():
         description="Path to save velocity output file",
     )
 
+    timing_save_arg = DeclareLaunchArgument(
+        name="timing_save",
+        default_value="",
+        description="Path to save timing CSV output file (empty to disable)",
+    )
+
     def bagDIO_node_setup(context):
         bagDIO_node = Node(
             package="rpl_rio",
@@ -48,6 +54,7 @@ def generate_launch_description():
                 LaunchConfiguration("mode"),
                 LaunchConfiguration("traj_save"),
                 LaunchConfiguration("vel_save"),
+                LaunchConfiguration("timing_save"),
             ],
             parameters=[
                 {
@@ -67,6 +74,7 @@ def generate_launch_description():
         config_arg,
         traj_save_arg,
         vel_save_arg,
+        timing_save_arg,
     ])
     ld.add_action(OpaqueFunction(function=bagDIO_node_setup))
     return ld
