@@ -24,6 +24,7 @@
 #include "manager/DIOManager.hpp"
 #include "core/RadarPointType.hpp"
 #include "radar/RadarVelocityEstimatorEigen.hpp"
+#include "radar/RadarVelocityEstimatorCeres.hpp"
 #include "core/params.hpp"
 #include "core/rplrio_types.hpp"
 

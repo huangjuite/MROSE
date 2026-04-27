@@ -322,6 +322,8 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
     }
   }
 
+  RCLCPP_INFO(node->get_logger(), "runBagDIO Finished.");
+
   rclcpp::shutdown();
   return 0;
 }

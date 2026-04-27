@@ -12,7 +12,7 @@ RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
   if (options.has_value())
     this->options = options.value();
   else
-    this->options.linear_solver_type = ceres::DENSE_QR;
+    this->options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
 
   if (doppler_sigma.has_value())
     this->doppler_sigma = doppler_sigma.value();
@@ -27,23 +27,25 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
   double v_est[3] = {this->initial_v[0], this->initial_v[1],
                      this->initial_v[2]};
 
-  ceres::Problem problem;
-  std::vector<ceres::ResidualBlockId> residual_ids;
-  residual_ids.reserve(radar_pc->points.size());
+  // By Default ceres takes ownership and will deallocate at destructor
+  ceres::Problem::Options problem_opts_;
+  problem_opts_.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+  problem_opts_.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+  ceres::Problem problem(problem_opts_);
 
   problem.AddParameterBlock(v_est, 3);
 
   auto timer_logger = spdlog::get("rplrio");
-
+  std::vector<DopplerCostFunction> cost_fn_pool_(radar_pc->points.size());
+  ceres::CauchyLoss cauchy_loss(cauchy_scale);
   {
     rplrio::ScopedTimer t(timer_logger, "ceres_populate", this->timing_csv_);
-    for (auto & p : radar_pc->points) {
+    for (size_t idx = 0; idx < radar_pc->points.size(); ++idx) {
+      const auto & p = radar_pc->points[idx];
       Eigen::Vector3d pos(p.x, p.y, p.z);
-      DopplerCostFunction *cost_function =
-          new DopplerCostFunction(pos, p.doppler, this->doppler_sigma);
+      cost_fn_pool_[idx].setValues(pos, p.doppler, this->doppler_sigma);
       ceres::ResidualBlockId id = problem.AddResidualBlock(
-          cost_function, new ceres::CauchyLoss(cauchy_scale), v_est);
-      residual_ids.push_back(id);
+          &cost_fn_pool_[idx], &cauchy_loss, v_est);
     }
   }
 

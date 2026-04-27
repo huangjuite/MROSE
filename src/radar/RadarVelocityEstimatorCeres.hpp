@@ -14,6 +14,8 @@ private:
   double s_ = 1;
 
 public:
+  DopplerCostFunction() {}
+
   DopplerCostFunction(Eigen::Vector3d pos, float doppler, double sigma) {
     p_ = -pos / pos.norm();
     d_ = double(doppler);
@@ -21,6 +23,13 @@ public:
   };
 
   ~DopplerCostFunction() {};
+
+  void setValues(Eigen::Vector3d pos, float doppler, double sigma) {
+    p_ = -pos / pos.norm();
+    d_ = double(doppler);
+    s_ = sigma;
+  }
+
   bool Evaluate(double const *const *parameters, double *residuals,
                 double **jacobians) const {
     const double *v = parameters[0];
