@@ -39,6 +39,7 @@ add_library(rio
   src/factors/VelocityPoseMeasurementFactor.cpp
   src/factors/VelocityPoseBiasFactor.cpp
   src/radar/RadarVelocityEstimatorCeres.cpp
+  src/radar/RadarVelocityEstimatorEigen.cpp
   src/core/StaticInitializer.cpp
   src/optimization/ControledSmoother.cpp
   src/optimization/ISAMOptimizer.cpp

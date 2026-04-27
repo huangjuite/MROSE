@@ -1,6 +1,8 @@
 #include "radar/RadarVelocityEstimatorCeres.hpp"
 #include "core/RadarPointType.hpp"
+#include "core/ScopedTimer.hpp"
 #include <optional>
+#include <spdlog/spdlog.h>
 
 template <typename PointType>
 RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
@@ -27,32 +29,44 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
 
   ceres::Problem problem;
   std::vector<ceres::ResidualBlockId> residual_ids;
+  residual_ids.reserve(radar_pc->points.size());
 
   problem.AddParameterBlock(v_est, 3);
 
-  for (auto p : radar_pc->points) {
-    Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
-    DopplerCostFunction *cost_function =
-        new DopplerCostFunction(pos, p.doppler, this->doppler_sigma);
-    ceres::ResidualBlockId id = problem.AddResidualBlock(
-        cost_function, new ceres::CauchyLoss(cauchy_scale), v_est);
-    residual_ids.push_back(id);
+  auto timer_logger = spdlog::get("rplrio");
+
+  {
+    rplrio::ScopedTimer t(timer_logger, "ceres_populate", this->timing_csv_);
+    for (auto & p : radar_pc->points) {
+      Eigen::Vector3d pos(p.x, p.y, p.z);
+      DopplerCostFunction *cost_function =
+          new DopplerCostFunction(pos, p.doppler, this->doppler_sigma);
+      ceres::ResidualBlockId id = problem.AddResidualBlock(
+          cost_function, new ceres::CauchyLoss(cauchy_scale), v_est);
+      residual_ids.push_back(id);
+    }
   }
 
   ceres::Solver::Summary summary;
-  Solve(options, &problem, &summary);
+  {
+    rplrio::ScopedTimer t(timer_logger, "ceres_solve", this->timing_csv_);
+    Solve(options, &problem, &summary);
+  }
 
   // std::cout << summary.FullReport() << std::endl;
 
-  ceres::Covariance::Options cov_opt;
-  ceres::Covariance covariance(cov_opt);
+  {
+    rplrio::ScopedTimer t(timer_logger, "ceres_covariance", this->timing_csv_);
+    ceres::Covariance::Options cov_opt;
+    ceres::Covariance covariance(cov_opt);
 
-  std::vector<std::pair<const double *, const double *>> covariance_blocks;
-  covariance_blocks.push_back(std::make_pair(v_est, v_est));
-  covariance.Compute(covariance_blocks, &problem);
-  double cov[3 * 3];
-  covariance.GetCovarianceBlock(v_est, v_est, cov);
-  this->covariance_matrix = Eigen::Matrix3d(cov);
+    std::vector<std::pair<const double *, const double *>> covariance_blocks;
+    covariance_blocks.push_back(std::make_pair(v_est, v_est));
+    covariance.Compute(covariance_blocks, &problem);
+    double cov[3 * 3];
+    covariance.GetCovarianceBlock(v_est, v_est, cov);
+    this->covariance_matrix = Eigen::Matrix3d(cov);
+  }
 
   // ceres::Problem::EvaluateOptions eval_opt;
   // eval_opt.residual_blocks = residual_ids;
