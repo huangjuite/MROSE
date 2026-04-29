@@ -9,6 +9,7 @@
 
 #include "manager/DIOManager.hpp"
 #include "radar/RadarVelocityEstimatorCeres.hpp"
+#include "radar/RadarVelocityEstimatorEigen.hpp"
 #include "core/RadarPointType.hpp"
 #include "core/params.hpp"
 #include "core/rplrio_types.hpp"
@@ -50,12 +51,14 @@ void bind_diomanager(nb::module_ &m, const char *name) {
     using RadarT = rplrio::Radar<PointType>;
     using VelEstBase = RadarVelocityEstimatorBase<PointType>;
     using VelEstCeres = RadarVelocityEstimatorCeres<PointType>;
+    using VelEstEigen = RadarVelocityEstimatorEigen<PointType>;
 
     std::string keyframe_name = std::string("Keyframe_") + name;
     std::string radar_name = std::string("Radar_") + name;
     std::string manager_name = std::string("DIOManager_") + name;
     std::string vel_est_base_name = std::string("RadarVelocityEstimatorBase_") + name;
     std::string vel_est_ceres_name = std::string("RadarVelocityEstimatorCeres_") + name;
+    std::string vel_est_eigen_name = std::string("RadarVelocityEstimatorEigen_") + name;
 
     // Bind RadarVelocityEstimatorBase (abstract) with shared_ptr holder
     nb::class_<VelEstBase>(m, vel_est_base_name.c_str())
@@ -65,8 +68,12 @@ void bind_diomanager(nb::module_ &m, const char *name) {
 
     // Bind RadarVelocityEstimatorCeres
     nb::class_<VelEstCeres, VelEstBase>(m, vel_est_ceres_name.c_str())
-        .def(nb::init<std::optional<ceres::Solver::Options>, std::optional<float>, std::optional<float>>(),
-             "options"_a = std::nullopt, "doppler_sigma"_a = 0.124f, "cauchy_scale"_a = 1.0f);
+        .def(nb::init<std::optional<ceres::Solver::Options>, float, float, float>(),
+             "options"_a = std::nullopt, "doppler_sigma"_a = 0.124f, "cauchy_scale"_a = 1.0f, "min_pt_dist"_a = 0.1f);
+
+    nb::class_<VelEstEigen, VelEstBase>(m, vel_est_eigen_name.c_str())
+        .def(nb::init<float, int, float, double>(),
+             "cauchy_scale"_a = 1.0f, "max_iterations"_a = 10, "min_pt_dist"_a = 0.1f, "convergence_tol"_a = 1e-7);
 
     // Bind Keyframe
     nb::class_<KeyframeT>(m, keyframe_name.c_str())

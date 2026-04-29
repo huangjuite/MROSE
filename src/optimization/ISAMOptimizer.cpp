@@ -1,7 +1,10 @@
 #include "optimization/ISAMOptimizer.hpp"
 #include "core/RadarPointType.hpp"
+#include "core/ScopedTimer.hpp"
 
 #include <gtsam/inference/Symbol.h>
+
+#include <spdlog/spdlog.h>
 
 using gtsam::symbol_shorthand::B;
 using gtsam::symbol_shorthand::V;
@@ -65,6 +68,8 @@ template <class PointType>
 std::shared_ptr<rplrio::Keyframe<PointType>>
 ISAMOptimizer<PointType>::optimize(const rplrio::Radar<PointType> &radar,
                                    const rplrio::IMU &imu) {
+  auto timer_logger = spdlog::get("rplrio");
+  rplrio::ScopedTimer t_total(timer_logger, "isam_optimize_total", timing_csv_);
   double current_t = radar.stamp;
 
   // IMU factor
@@ -97,7 +102,10 @@ ISAMOptimizer<PointType>::optimize(const rplrio::Radar<PointType> &radar,
     velocity_estimator_->set_initial_velocity(radar.param.R_r_i.transpose() *
                                               prop_state.bodyVelocity());
     velocity_estimator_->set_doppler_sigma(radar.param.doppler_std);
-    measured_v = velocity_estimator_->optimize(radar.pc);
+    {
+      rplrio::ScopedTimer t(timer_logger, "velocity_estimation", timing_csv_);
+      measured_v = velocity_estimator_->optimize(radar.pc);
+    }
     radar_inlier = velocity_estimator_->get_inlier(radar.pc, measured_v);
     pcl::transformPointCloud(*radar_inlier, *radar_inlier, radar.param.T_r_i);
     radar_velocity_cov =
@@ -124,8 +132,11 @@ ISAMOptimizer<PointType>::optimize(const rplrio::Radar<PointType> &radar,
   graph_->add(rfac);
 
   // Optimize
-  smoother_->update(*graph_, initial_values_, key_timestamps_,
-                    marginalization_pose_model_);
+  {
+    rplrio::ScopedTimer t(timer_logger, "isam2_update", timing_csv_);
+    smoother_->update(*graph_, initial_values_, key_timestamps_,
+                      marginalization_pose_model_);
+  }
   graph_->resize(0);
   initial_values_.clear();
   key_timestamps_.clear();
@@ -138,8 +149,12 @@ ISAMOptimizer<PointType>::optimize(const rplrio::Radar<PointType> &radar,
       smoother_->calculateEstimate<gtsam::imuBias::ConstantBias>(B(step));
   preintegrated->resetIntegrationAndSetBias(prev_bias);
 
-  gtsam::Matrix x_cov = smoother_->marginalCovariance(X(step));
-  gtsam::Matrix v_cov = smoother_->marginalCovariance(V(step));
+  gtsam::Matrix x_cov, v_cov;
+  {
+    rplrio::ScopedTimer t(timer_logger, "marginal_covariance", timing_csv_);
+    x_cov = smoother_->marginalCovariance(X(step));
+    v_cov = smoother_->marginalCovariance(V(step));
+  }
   auto v_err = rfac.evaluateError(opt_v, opt_x, prev_bias, {}, {}, {});
 
   return std::make_shared<rplrio::Keyframe<PointType>>(

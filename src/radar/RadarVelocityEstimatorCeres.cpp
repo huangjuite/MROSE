@@ -1,22 +1,22 @@
 #include "radar/RadarVelocityEstimatorCeres.hpp"
 #include "core/RadarPointType.hpp"
+#include "core/ScopedTimer.hpp"
 #include <optional>
+#include <spdlog/spdlog.h>
 
 template <typename PointType>
 RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
     std::optional<ceres::Solver::Options> options,
-    std::optional<float> doppler_sigma, std::optional<float> cauchy_scale) {
+    float doppler_sigma, float cauchy_scale, float min_pt_dist) {
 
   if (options.has_value())
     this->options = options.value();
   else
-    this->options.linear_solver_type = ceres::DENSE_QR;
+    this->options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
 
-  if (doppler_sigma.has_value())
-    this->doppler_sigma = doppler_sigma.value();
-
-  if (cauchy_scale.has_value())
-    this->cauchy_scale = cauchy_scale.value();
+  this->cauchy_scale_ = cauchy_scale;
+  this->doppler_sigma_ = doppler_sigma;
+  this->min_pt_dist_ = min_pt_dist;
 }
 
 template <typename PointType>
@@ -25,34 +25,51 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
   double v_est[3] = {this->initial_v[0], this->initial_v[1],
                      this->initial_v[2]};
 
-  ceres::Problem problem;
-  std::vector<ceres::ResidualBlockId> residual_ids;
-
+  // By Default ceres takes ownership and will deallocate at destructor
+  ceres::Problem::Options problem_opts_;
+  problem_opts_.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+  problem_opts_.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
+  ceres::Problem problem(problem_opts_);
   problem.AddParameterBlock(v_est, 3);
 
-  for (auto p : radar_pc->points) {
-    Eigen::Vector3d pos = (Eigen::Vector3d() << p.x, p.y, p.z).finished();
-    DopplerCostFunction *cost_function =
-        new DopplerCostFunction(pos, p.doppler, this->doppler_sigma);
-    ceres::ResidualBlockId id = problem.AddResidualBlock(
-        cost_function, new ceres::CauchyLoss(cauchy_scale), v_est);
-    residual_ids.push_back(id);
+  double min_pt_dist_double = static_cast<double>(this->min_pt_dist_);
+
+  auto timer_logger = spdlog::get("rplrio");
+  std::vector<DopplerCostFunction> cost_fn_pool_(radar_pc->points.size());
+  ceres::CauchyLoss cauchy_loss(cauchy_scale_);
+  {
+    rplrio::ScopedTimer t(timer_logger, "ceres_populate", this->timing_csv_);
+    for (size_t idx = 0; idx < radar_pc->points.size(); ++idx) {
+      const auto & p = radar_pc->points[idx];
+      Eigen::Vector3d pos(p.x, p.y, p.z);
+      if (pos.norm() < min_pt_dist_double) continue;
+
+      cost_fn_pool_[idx].setValues(pos, p.doppler, this->doppler_sigma_);
+      ceres::ResidualBlockId id = problem.AddResidualBlock(
+          &cost_fn_pool_[idx], &cauchy_loss, v_est);
+    }
   }
 
   ceres::Solver::Summary summary;
-  Solve(options, &problem, &summary);
+  {
+    rplrio::ScopedTimer t(timer_logger, "ceres_solve", this->timing_csv_);
+    Solve(options, &problem, &summary);
+  }
 
   // std::cout << summary.FullReport() << std::endl;
 
-  ceres::Covariance::Options cov_opt;
-  ceres::Covariance covariance(cov_opt);
+  {
+    rplrio::ScopedTimer t(timer_logger, "ceres_covariance", this->timing_csv_);
+    ceres::Covariance::Options cov_opt;
+    ceres::Covariance covariance(cov_opt);
 
-  std::vector<std::pair<const double *, const double *>> covariance_blocks;
-  covariance_blocks.push_back(std::make_pair(v_est, v_est));
-  covariance.Compute(covariance_blocks, &problem);
-  double cov[3 * 3];
-  covariance.GetCovarianceBlock(v_est, v_est, cov);
-  this->covariance_matrix = Eigen::Matrix3d(cov);
+    std::vector<std::pair<const double *, const double *>> covariance_blocks;
+    covariance_blocks.push_back(std::make_pair(v_est, v_est));
+    covariance.Compute(covariance_blocks, &problem);
+    double cov[3 * 3];
+    covariance.GetCovarianceBlock(v_est, v_est, cov);
+    this->covariance_matrix = Eigen::Matrix3d(cov);
+  }
 
   // ceres::Problem::EvaluateOptions eval_opt;
   // eval_opt.residual_blocks = residual_ids;

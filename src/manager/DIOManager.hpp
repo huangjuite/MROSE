@@ -1,6 +1,7 @@
 #pragma once
 
 #include <deque>
+#include <fstream>
 #include <memory>
 #include <vector>
 
@@ -31,6 +32,7 @@ private:
 
   rplrio::Params params;
   std::shared_ptr<spdlog::logger> logger_;
+  std::ofstream timing_csv_;
 
   double pre_imu_t = 0;
   bool initialized = false;
@@ -60,6 +62,16 @@ public:
 
   const std::vector<std::shared_ptr<rplrio::Keyframe<PointType>>> &
   get_latest_states() const;
+
+  std::ofstream *get_timing_csv() { return timing_csv_.is_open() ? &timing_csv_ : nullptr; }
+
+  void set_timing_csv_path(const std::string &path) {
+    if (timing_csv_.is_open()) timing_csv_.close();
+    timing_csv_.open(path, std::ios::out | std::ios::trunc);
+    timing_csv_ << "wall_ms,label,duration_ms\n";
+    velocity_estimator->set_timing_csv(&timing_csv_);
+    optimizer->set_timing_csv(&timing_csv_);
+  }
 
   std::shared_ptr<RadarVelocityEstimatorBase<PointType>> velocity_estimator;
 };

@@ -1,5 +1,6 @@
 #include "manager/DIOManager.hpp"
 #include "core/RadarPointType.hpp"
+#include "core/ScopedTimer.hpp"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -45,14 +46,17 @@ void DIOManager<PointType>::update() {
 
   // integrate imu measurements
   size_t imu_size = 0;
-  while (!imu_que.empty() && (imu_que.front()->stamp - radar_stamp) < 1e-6) {
-    auto imu_data = imu_que.front();
-    double dt = imu_data->stamp - pre_imu_t;
-    optimizer->preintegrated->integrateMeasurement(imu_data->acc, imu_data->gyro, dt);
-    pre_imu_t = imu_data->stamp;
-    last_imu = imu_data;
-    imu_que.pop_front();
-    imu_size++;
+  {
+    ScopedTimer t(logger_, "imu_integration", &timing_csv_);
+    while (!imu_que.empty() && (imu_que.front()->stamp - radar_stamp) < 1e-6) {
+      auto imu_data = imu_que.front();
+      double dt = imu_data->stamp - pre_imu_t;
+      optimizer->preintegrated->integrateMeasurement(imu_data->acc, imu_data->gyro, dt);
+      pre_imu_t = imu_data->stamp;
+      last_imu = imu_data;
+      imu_que.pop_front();
+      imu_size++;
+    }
   }
 
   logger_->info("------------------------------");
@@ -143,6 +147,8 @@ void DIOManager<PointType>::feed_radar(std::shared_ptr<DIORadar> radar) {
     latest_states.emplace_back(kf);
     return;
   }
+
+  rplrio::ScopedTimer t(logger_, "feed_radar_total", &timing_csv_);
 
   update();
 }

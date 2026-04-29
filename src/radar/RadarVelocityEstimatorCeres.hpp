@@ -14,6 +14,8 @@ private:
   double s_ = 1;
 
 public:
+  DopplerCostFunction() {}
+
   DopplerCostFunction(Eigen::Vector3d pos, float doppler, double sigma) {
     p_ = -pos / pos.norm();
     d_ = double(doppler);
@@ -21,6 +23,13 @@ public:
   };
 
   ~DopplerCostFunction() {};
+
+  void setValues(Eigen::Vector3d pos, float doppler, double sigma) {
+    p_ = -pos / pos.norm();
+    d_ = double(doppler);
+    s_ = sigma;
+  }
+
   bool Evaluate(double const *const *parameters, double *residuals,
                 double **jacobians) const {
     const double *v = parameters[0];
@@ -44,13 +53,15 @@ class RadarVelocityEstimatorCeres
   typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
   typedef typename pcl::PointCloud<PointType> Pcl;
   ceres::Solver::Options options;
-  float cauchy_scale;
+  float cauchy_scale_;
 
 public:
   RadarVelocityEstimatorCeres(
       std::optional<ceres::Solver::Options> options = std::nullopt,
-      std::optional<float> doppler_sigma = 0.124,
-      std::optional<float> cauchy_scale = 1.0);
+      float doppler_sigma = 0.124f,
+      float cauchy_scale = 1.0f,
+      float min_pt_dist = 0.1f
+    );
   Eigen::Vector3d optimize(PclConstPtr radar_pc);
   Eigen::Matrix3d get_covariance(PclConstPtr radar_pc,
                                  Eigen::Vector3d velocity);

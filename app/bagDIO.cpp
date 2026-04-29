@@ -53,9 +53,13 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
   std::string logging_method = (argc >= 3) ? argv[2] : "none";
   std::string save_path = (argc >= 4) ? argv[3] : "/tmp/rio_trajectory.txt";
   std::string velocity_save_path = (argc >= 5) ? argv[4] : "/tmp/rio_velocity.txt";
+  std::string timing_save_path = (argc >= 6) ? argv[5] : "";
 
   // Create the node
   auto node = std::make_shared<DIORosNode<PointType>>();
+  if (!timing_save_path.empty()) {
+    node->dio_manager->set_timing_csv_path(timing_save_path);
+  }
   auto T_i_b = gtsam::Pose3(
       gtsam::Rot3(node->params.R_i_b),
       gtsam::Point3(node->params.T_i_b.template block<3, 1>(0, 3)));
@@ -318,6 +322,8 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
     }
   }
 
+  RCLCPP_INFO(node->get_logger(), "runBagDIO Finished.");
+
   rclcpp::shutdown();
   return 0;
 }
@@ -325,7 +331,7 @@ template <typename PointType> int runBagDIO(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0]
-              << " <bag_file_path> [logging_method] [save_path] [velocity_save_path]" << std::endl;
+              << " <bag_file_path> [logging_method] [save_path] [velocity_save_path] [timing_save_path]" << std::endl;
     std::cerr
         << "  logging_method: spawn (default), serve, save, connect, or none"
         << std::endl;
@@ -334,6 +340,8 @@ int main(int argc, char *argv[]) {
               << std::endl;
     std::cerr << "  velocity_save_path: Path to save velocity file (default: "
                  "/tmp/rio_velocity.txt)"
+              << std::endl;
+    std::cerr << "  timing_save_path: Path to save timing CSV (empty to disable)"
               << std::endl;
     return 1;
   }
