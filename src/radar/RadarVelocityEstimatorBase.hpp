@@ -18,8 +18,9 @@ protected:
 
   Eigen::Vector3d initial_v;
   Eigen::Matrix3d covariance_matrix;
-  float inlier_thresh = 0.1;
-  float doppler_sigma = 0.1;
+  float inlier_thresh_ = 0.1f;
+  float doppler_sigma_ = 0.1f;
+  float min_pt_dist_ = 0.1f;
   std::ofstream *timing_csv_ = nullptr;
 
   float doppler_projection(PointType p, Eigen::Vector3d v) {
@@ -36,9 +37,9 @@ public:
     this->initial_v = init_v;
   };
 
-  void set_inlier_thresh(float thresh) { this->inlier_thresh = thresh; };
+  void set_inlier_thresh(float thresh) { this->inlier_thresh_ = thresh; };
 
-  void set_doppler_sigma(float sigma) { this->doppler_sigma = sigma; };
+  void set_doppler_sigma(float sigma) { this->doppler_sigma_ = sigma; };
 
   void set_timing_csv(std::ofstream *csv) { this->timing_csv_ = csv; };
 
@@ -46,7 +47,7 @@ public:
     PclPtr inlier_pc(new Pcl);
     for (auto p : radar_pc->points) {
       float err = abs(doppler_projection(p, velocity) - p.doppler);
-      if (err < inlier_thresh) {
+      if (err < inlier_thresh_) {
         inlier_pc->push_back(p);
       }
     }

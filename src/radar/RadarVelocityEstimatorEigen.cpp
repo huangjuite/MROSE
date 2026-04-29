@@ -5,18 +5,23 @@
 
 template <typename PointType>
 RadarVelocityEstimatorEigen<PointType>::RadarVelocityEstimatorEigen(
-    float cauchy_scale, int max_iterations)
-    : cauchy_scale_(cauchy_scale), max_iterations_(max_iterations) {}
+    float cauchy_scale, int max_iterations, float min_pt_dist, double convergence_tol)
+    : cauchy_scale_(cauchy_scale), max_iterations_(max_iterations), convergence_tol_(convergence_tol) {
+        this->min_pt_dist_ = min_pt_dist;
+      }
 
 template <typename PointType>
 Eigen::Vector3d
 RadarVelocityEstimatorEigen<PointType>::optimize(PclConstPtr radar_pc) {
   const int n = radar_pc->points.size();
-  const double sigma = this->doppler_sigma;
+  const double sigma = this->doppler_sigma_;
   const double c2 = static_cast<double>(cauchy_scale_) * cauchy_scale_;
 
-  Eigen::MatrixXd A(n, 3);
-  Eigen::VectorXd b(n);
+  // No Auto here since Eigen returns lazy expression
+  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(n, 3);
+  Eigen::VectorXd b = Eigen::VectorXd::Zero(n);
+
+  double min_pt_dist_double = static_cast<double>(this->min_pt_dist_);
 
   auto timer_logger = spdlog::get("rplrio");
   {
@@ -25,6 +30,9 @@ RadarVelocityEstimatorEigen<PointType>::optimize(PclConstPtr radar_pc) {
       const auto &p = radar_pc->points[i];
       Eigen::Vector3d pos(p.x, p.y, p.z);
       double norm = pos.norm();
+
+      // We can skip a row because it's set to zeros above
+      if (norm < min_pt_dist_double) continue;
       A(i, 0) = -p.x / (norm * sigma);
       A(i, 1) = -p.y / (norm * sigma);
       A(i, 2) = -p.z / (norm * sigma);
@@ -50,7 +58,7 @@ RadarVelocityEstimatorEigen<PointType>::optimize(PclConstPtr radar_pc) {
 
       Eigen::Vector3d v_new = AtWA.ldlt().solve(AtWb);
 
-      if ((v_new - v).squaredNorm() < 1e-12) {
+      if ((v_new - v).squaredNorm() < convergence_tol_) {
         v = v_new;
         break;
       }

@@ -7,18 +7,16 @@
 template <typename PointType>
 RadarVelocityEstimatorCeres<PointType>::RadarVelocityEstimatorCeres(
     std::optional<ceres::Solver::Options> options,
-    std::optional<float> doppler_sigma, std::optional<float> cauchy_scale) {
+    float doppler_sigma, float cauchy_scale, float min_pt_dist) {
 
   if (options.has_value())
     this->options = options.value();
   else
     this->options.linear_solver_type = ceres::DENSE_NORMAL_CHOLESKY;
 
-  if (doppler_sigma.has_value())
-    this->doppler_sigma = doppler_sigma.value();
-
-  if (cauchy_scale.has_value())
-    this->cauchy_scale = cauchy_scale.value();
+  this->cauchy_scale_ = cauchy_scale;
+  this->doppler_sigma_ = doppler_sigma;
+  this->min_pt_dist_ = min_pt_dist;
 }
 
 template <typename PointType>
@@ -32,18 +30,21 @@ RadarVelocityEstimatorCeres<PointType>::optimize(PclConstPtr radar_pc) {
   problem_opts_.cost_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
   problem_opts_.loss_function_ownership = ceres::DO_NOT_TAKE_OWNERSHIP;
   ceres::Problem problem(problem_opts_);
-
   problem.AddParameterBlock(v_est, 3);
+
+  double min_pt_dist_double = static_cast<double>(this->min_pt_dist_);
 
   auto timer_logger = spdlog::get("rplrio");
   std::vector<DopplerCostFunction> cost_fn_pool_(radar_pc->points.size());
-  ceres::CauchyLoss cauchy_loss(cauchy_scale);
+  ceres::CauchyLoss cauchy_loss(cauchy_scale_);
   {
     rplrio::ScopedTimer t(timer_logger, "ceres_populate", this->timing_csv_);
     for (size_t idx = 0; idx < radar_pc->points.size(); ++idx) {
       const auto & p = radar_pc->points[idx];
       Eigen::Vector3d pos(p.x, p.y, p.z);
-      cost_fn_pool_[idx].setValues(pos, p.doppler, this->doppler_sigma);
+      if (pos.norm() < min_pt_dist_double) continue;
+
+      cost_fn_pool_[idx].setValues(pos, p.doppler, this->doppler_sigma_);
       ceres::ResidualBlockId id = problem.AddResidualBlock(
           &cost_fn_pool_[idx], &cauchy_loss, v_est);
     }
