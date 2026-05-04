@@ -1,17 +1,17 @@
+#include <nanobind/eigen/dense.h>
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
-#include <nanobind/eigen/dense.h>
-#include <nanobind/stl/string.h>
-#include <nanobind/stl/shared_ptr.h>
-#include <nanobind/stl/vector.h>
-#include <nanobind/stl/unordered_map.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/shared_ptr.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/unordered_map.h>
+#include <nanobind/stl/vector.h>
 
-#include "manager/DIOManager.hpp"
-#include "velocity/RadarVelocityEstimatorCeres.hpp"
 #include "core/RadarPointType.hpp"
 #include "core/params.hpp"
 #include "core/rplrio_types.hpp"
+#include "manager/DIOManager.hpp"
+#include "velocity/RadarVelocityEstimatorCeres.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -83,7 +83,8 @@ NB_MODULE(_core, m) {
       .def_rw("stamp", &rplrio::IMU::stamp);
 
   nb::class_<RadarVelocityEstimatorBase>(m, "RadarVelocityEstimatorBase")
-      .def("set_initial_velocity", &RadarVelocityEstimatorBase::set_initial_velocity)
+      .def("set_initial_velocity",
+           &RadarVelocityEstimatorBase::set_initial_velocity)
       .def("set_inlier_thresh", &RadarVelocityEstimatorBase::set_inlier_thresh)
       .def("set_doppler_sigma", &RadarVelocityEstimatorBase::set_doppler_sigma);
 
@@ -98,81 +99,93 @@ NB_MODULE(_core, m) {
       .def_ro("stamp", &rplrio::Keyframe::stamp)
       .def_ro("seq", &rplrio::Keyframe::seq)
       .def_ro("name", &rplrio::Keyframe::name)
-      .def_prop_ro("position", [](const rplrio::Keyframe &kf) {
-        gtsam::Point3 t = kf.state.pose().translation();
-        return Eigen::Vector3d(t.x(), t.y(), t.z());
-      })
-      .def_prop_ro("rotation", [](const rplrio::Keyframe &kf) {
-        auto q = kf.state.pose().rotation().toQuaternion();
-        return Eigen::Vector4d(q.w(), q.x(), q.y(), q.z());
-      })
-      .def_prop_ro("velocity", [](const rplrio::Keyframe &kf) {
-        return Eigen::Vector3d(kf.state.velocity());
-      })
-      .def_prop_ro("pose_cov", [](const rplrio::Keyframe &kf) {
-        return Eigen::MatrixXd(kf.pose_cov);
-      })
-      .def_prop_ro("velocity_cov", [](const rplrio::Keyframe &kf) {
-        return Eigen::Matrix3d(kf.velocity_cov);
-      })
-      .def_prop_ro("v_err", [](const rplrio::Keyframe &kf) {
-        return Eigen::Vector3d(kf.v_err);
-      })
+      .def_prop_ro("position",
+                   [](const rplrio::Keyframe &kf) {
+                     gtsam::Point3 t = kf.state.pose().translation();
+                     return Eigen::Vector3d(t.x(), t.y(), t.z());
+                   })
+      .def_prop_ro("rotation",
+                   [](const rplrio::Keyframe &kf) {
+                     auto q = kf.state.pose().rotation().toQuaternion();
+                     return Eigen::Vector4d(q.w(), q.x(), q.y(), q.z());
+                   })
+      .def_prop_ro("velocity",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::Vector3d(kf.state.velocity());
+                   })
+      .def_prop_ro("pose_cov",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::MatrixXd(kf.pose_cov);
+                   })
+      .def_prop_ro("velocity_cov",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::Matrix3d(kf.velocity_cov);
+                   })
+      .def_prop_ro(
+          "v_err",
+          [](const rplrio::Keyframe &kf) { return Eigen::Vector3d(kf.v_err); })
       .def_prop_ro("imu_acc",
                    [](const rplrio::Keyframe &kf) { return kf.imu.acc; })
       .def_prop_ro("imu_gyro",
                    [](const rplrio::Keyframe &kf) { return kf.imu.gyro; })
-      .def_prop_ro("imu_bias_acc", [](const rplrio::Keyframe &kf) {
-        return Eigen::Vector3d(kf.imu_bias.accelerometer());
-      })
-      .def_prop_ro("imu_bias_gyro", [](const rplrio::Keyframe &kf) {
-        return Eigen::Vector3d(kf.imu_bias.gyroscope());
-      })
-      .def_prop_ro("imu_bias_cov", [](const rplrio::Keyframe &kf) {
-        return Eigen::MatrixXd(kf.imu_bias_cov);
-      })
-      .def_prop_ro("radar_velocity", [](const rplrio::Keyframe &kf) {
-        return Eigen::Vector3d(kf.radar_velocity);
-      })
-      .def_prop_ro("radar_velocity_cov", [](const rplrio::Keyframe &kf) {
-        return Eigen::Matrix3d(kf.radar_velocity_cov);
-      })
-      .def_prop_ro("point_cloud",
+      .def_prop_ro("imu_bias_acc",
                    [](const rplrio::Keyframe &kf) {
-                     return cloud_to_ndarray(kf.radar_points);
-                   },
-                   nb::rv_policy::move);
+                     return Eigen::Vector3d(kf.imu_bias.accelerometer());
+                   })
+      .def_prop_ro("imu_bias_gyro",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::Vector3d(kf.imu_bias.gyroscope());
+                   })
+      .def_prop_ro("imu_bias_cov",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::MatrixXd(kf.imu_bias_cov);
+                   })
+      .def_prop_ro("radar_velocity",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::Vector3d(kf.radar_velocity);
+                   })
+      .def_prop_ro("radar_velocity_cov",
+                   [](const rplrio::Keyframe &kf) {
+                     return Eigen::Matrix3d(kf.radar_velocity_cov);
+                   })
+      .def_prop_ro(
+          "point_cloud",
+          [](const rplrio::Keyframe &kf) {
+            return cloud_to_ndarray(kf.radar_points);
+          },
+          nb::rv_policy::move);
 
   nb::class_<rplrio::Radar>(m, "Radar")
       .def(nb::init<gtsam::Vector3, gtsam::Matrix33, double,
                     rplrio::RadarParams, std::string>(),
            "vel"_a, "vel_cov"_a, "stamp"_a, "params"_a, "name"_a)
-      .def("__init__",
-           [](rplrio::Radar *self,
-              nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu>
-                  points,
-              double stamp, rplrio::RadarParams params, std::string name) {
-             if (points.shape(1) != 4)
-               throw std::invalid_argument(
-                   "Expected 4 columns (x, y, z, doppler)");
-             auto cloud = std::make_shared<rplrio::PointCloud>();
-             size_t n = points.shape(0);
-             cloud->resize(n);
-             const float *data = points.data();
-             for (size_t i = 0; i < n; ++i) {
-               (*cloud)[i] = {data[i * 4 + 0], data[i * 4 + 1],
-                               data[i * 4 + 2], data[i * 4 + 3]};
-             }
-             new (self) rplrio::Radar(cloud, stamp, params, name);
-           },
-           "points"_a, "stamp"_a, "params"_a, "name"_a)
+      .def(
+          "__init__",
+          [](rplrio::Radar *self,
+             nb::ndarray<float, nb::ndim<2>, nb::c_contig, nb::device::cpu>
+                 points,
+             double stamp, rplrio::RadarParams params, std::string name) {
+            if (points.shape(1) != 4)
+              throw std::invalid_argument(
+                  "Expected 4 columns (x, y, z, doppler)");
+            auto cloud = std::make_shared<rplrio::PointCloud>();
+            size_t n = points.shape(0);
+            cloud->resize(n);
+            const float *data = points.data();
+            for (size_t i = 0; i < n; ++i) {
+              (*cloud)[i] = {data[i * 4 + 0], data[i * 4 + 1], data[i * 4 + 2],
+                             data[i * 4 + 3]};
+            }
+            new (self) rplrio::Radar(cloud, stamp, params, name);
+          },
+          "points"_a, "stamp"_a, "params"_a, "name"_a)
       .def_ro("frame_id", &rplrio::Radar::frame_id)
       .def_ro("stamp", &rplrio::Radar::stamp)
-      .def_prop_ro("vel",
-                   [](const rplrio::Radar &r) { return Eigen::Vector3d(r.vel); })
-      .def_prop_ro("vel_cov", [](const rplrio::Radar &r) {
-        return Eigen::Matrix3d(r.vel_cov);
-      })
+      .def_prop_ro(
+          "vel", [](const rplrio::Radar &r) { return Eigen::Vector3d(r.vel); })
+      .def_prop_ro(
+          "vel_cov",
+          [](const rplrio::Radar &r) { return Eigen::Matrix3d(r.vel_cov); })
       .def_prop_ro(
           "point_cloud",
           [](const rplrio::Radar &r) { return cloud_to_ndarray(r.pc); },

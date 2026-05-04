@@ -1,24 +1,23 @@
 #pragma once
 
-#include <deque>
-#include <memory>
-#include <vector>
-
-#include <spdlog/spdlog.h>
-
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <spdlog/spdlog.h>
 
-#include "manager/ControledSmoother.hpp"
-#include "velocity/RadarVelocityEstimatorBase.hpp"
-#include "manager/StaticInitializer.hpp"
-#include "factor/VelocityPoseMeasurementFactor.hpp"
-#include "factor/VelocityPoseBiasFactor.hpp"
+#include <deque>
+#include <memory>
+#include <vector>
+
 #include "core/params.hpp"
 #include "core/rplrio_types.hpp"
+#include "factor/VelocityPoseBiasFactor.hpp"
+#include "factor/VelocityPoseMeasurementFactor.hpp"
+#include "manager/ControledSmoother.hpp"
+#include "manager/StaticInitializer.hpp"
+#include "velocity/RadarVelocityEstimatorBase.hpp"
 
 typedef VelocityPoseBiasFactor RadarFactor;
 

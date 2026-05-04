@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Eigen/Dense>
 #include <gtsam/navigation/CombinedImuFactor.h>
+
+#include <Eigen/Dense>
 #include <string>
 #include <vector>
 

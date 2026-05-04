@@ -1,14 +1,12 @@
 #pragma once
 
-#include <Eigen/Eigen>
-#include <Eigen/src/Core/Matrix.h>
-#include <gtsam/base/Matrix.h>
-#include <gtsam/base/Vector.h>
+#include <Eigen/Dense>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
 #include <gtsam/navigation/NavState.h>
-#include "core/params.hpp"
+
 #include "core/RadarPointType.hpp"
+#include "core/params.hpp"
 
 namespace rplrio {
 
@@ -64,20 +62,19 @@ struct Radar {
   double stamp;
   RadarParams param;
 
-  gtsam::Vector3 vel;
-  gtsam::Matrix33 vel_cov;
+  Eigen::Vector3d vel;
+  Eigen::Matrix3d vel_cov;
 
   PointCloudPtr pc;
 
-  Radar(PointCloudPtr p, double t, RadarParams params,
-        std::string name) {
+  Radar(PointCloudPtr p, double t, RadarParams params, std::string name) {
     stamp = t;
     pc = p;
     param = params;
     this->frame_id = name;
   }
 
-  Radar(gtsam::Vector3 v, gtsam::Matrix33 cov, double t, RadarParams params,
+  Radar(Eigen::Vector3d v, Eigen::Matrix3d cov, double t, RadarParams params,
         std::string name) {
     stamp = t;
     param = params;
@@ -93,17 +90,17 @@ struct Keyframe {
   std::string name;
 
   gtsam::NavState state;
-  gtsam::Matrix pose_cov;
-  gtsam::Matrix33 velocity_cov;
-  gtsam::Vector3 v_err;
+  Eigen::MatrixXd pose_cov;
+  Eigen::Matrix3d velocity_cov;
+  Eigen::Vector3d v_err;
 
   IMU imu;
   gtsam::imuBias::ConstantBias imu_bias;
-  gtsam::Matrix66 imu_bias_cov;
+  Eigen::Matrix<double, 6, 6> imu_bias_cov;
 
   PointCloudPtr radar_points;
-  gtsam::Vector3 radar_velocity;
-  gtsam::Matrix33 radar_velocity_cov;
+  Eigen::Vector3d radar_velocity;
+  Eigen::Matrix3d radar_velocity_cov;
 };
 
 } // namespace rplrio

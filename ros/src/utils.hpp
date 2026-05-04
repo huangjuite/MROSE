@@ -16,13 +16,14 @@
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/ImuBias.h>
 
-#include "core/RadarPointType.hpp"
-#include "core/params.hpp"
 #include <Eigen/Dense>
 #include <array>
 #include <builtin_interfaces/msg/time.hpp>
 #include <cmath>
 #include <string>
+
+#include "core/RadarPointType.hpp"
+#include "core/params.hpp"
 
 namespace rplrio {
 

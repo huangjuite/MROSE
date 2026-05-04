@@ -1,15 +1,15 @@
 #pragma once
 
-#include <gtsam/linear/NoiseModel.h>
-#include <memory>
-#include <unordered_set>
-
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Key.h>
 #include <gtsam/inference/Symbol.h>
+#include <gtsam/linear/NoiseModel.h>
 #include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/Values.h>
+
+#include <memory>
+#include <unordered_set>
 
 using namespace gtsam;
 

@@ -16,8 +16,6 @@ struct EIGEN_ALIGN16 PointXYZDoppler {
 } // namespace pcl
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::PointXYZDoppler,
-  (float, x, x)
-  (float, y, y)
-  (float, z, z)
-  (float, doppler, doppler)
-)
+                                  (float, x, x)(float, y, y)(float, z,
+                                                             z)(float, doppler,
+                                                                doppler))

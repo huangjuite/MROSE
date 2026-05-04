@@ -1,4 +1,5 @@
 #include "manager/ControledSmoother.hpp"
+
 #include <gtsam/geometry/Point3.h>
 #include <gtsam/nonlinear/BayesTreeMarginalizationHelper.h>
 
@@ -13,7 +14,6 @@ FixedLagSmoother::Result ControledSmoother::update(
     const KeyTimestampMap &timestamps,
     const noiseModel::Diagonal::shared_ptr &marginalizationPoseModel,
     const FactorIndices &factorsToRemove) {
-
   FastVector<size_t> removedFactors;
   std::optional<FastMap<Key, int>> constrainedKeys = {};
 
@@ -82,7 +82,6 @@ void ControledSmoother::printSymbolicTree() const {
 
 void ControledSmoother::printSymbolicTreeHelper(
     const ISAM2Clique::shared_ptr &clique, const std::string indent) const {
-
   // Print the current clique
   std::cout << indent << "P( ";
   for (Key key : clique->conditional()->frontals()) {

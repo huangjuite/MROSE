@@ -1,4 +1,5 @@
 #include "manager/DIOManager.hpp"
+
 #include <gtsam/inference/Symbol.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -11,7 +12,6 @@ namespace rplrio {
 DIOManager::DIOManager(
     rplrio::Params params,
     std::shared_ptr<RadarVelocityEstimatorBase> velocity_estimator) {
-
   logger_ = spdlog::stdout_color_mt("rplrio");
   logger_->set_pattern("[%^%l%$] %v");
   logger_->set_level(static_cast<spdlog::level::level_enum>(params.log_level));
@@ -39,7 +39,6 @@ void DIOManager::graph_init(const Eigen::Quaterniond &rotation,
                             const Eigen::Vector3d &bias_acc,
                             const Eigen::Vector3d &bias_gyro,
                             const double &stamp) {
-
   // priors
   gtsam::Pose3 prior_pose(gtsam::Rot3::Quaternion(rotation.w(), rotation.x(),
                                                   rotation.y(), rotation.z()),
@@ -152,8 +151,8 @@ void DIOManager::update() {
   update();
 }
 
-std::shared_ptr<rplrio::Keyframe>
-DIOManager::optimize(const Radar &radar, const IMU &imu) {
+std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const Radar &radar,
+                                                       const IMU &imu) {
   double current_t = radar.stamp;
 
   // combined IMU factor
@@ -270,11 +269,9 @@ DIOManager::optimize(const Radar &radar, const IMU &imu) {
 }
 
 void DIOManager::feed_imu(std::shared_ptr<IMU> imu_data) {
-
   if (params.use_static_init && !initialized) {
     bool init_success = initializer->init_update(imu_data);
     if (init_success) {
-
       Eigen::Vector3d bias_a = initializer->get_bias_acc();
       Eigen::Vector3d bias_g = initializer->get_bias_gyro();
       Eigen::Quaterniond init_r = initializer->get_rotation();
@@ -299,7 +296,6 @@ void DIOManager::feed_imu(std::shared_ptr<IMU> imu_data) {
       update();
     }
   } else if (!params.use_static_init && !initialized) {
-
     Eigen::Vector3d bias_a = params.init_bias_acc;
     Eigen::Vector3d bias_g = params.init_bias_gyro;
     Eigen::Quaterniond init_r = Eigen::Quaterniond::Identity();
@@ -313,7 +309,6 @@ void DIOManager::feed_imu(std::shared_ptr<IMU> imu_data) {
 }
 
 void DIOManager::feed_radar(std::shared_ptr<Radar> radar) {
-
   radar_que.emplace_back(radar);
 
   if (!initialized) {

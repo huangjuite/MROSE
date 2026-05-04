@@ -1,9 +1,10 @@
 #pragma once
 
+#include <spdlog/spdlog.h>
+
 #include <Eigen/Eigen>
 #include <deque>
 #include <memory>
-#include <spdlog/spdlog.h>
 
 #include "core/rplrio_types.hpp"
 

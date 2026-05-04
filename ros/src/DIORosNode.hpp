@@ -1,21 +1,21 @@
 #pragma once
 
-#include <memory>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+#include <memory>
 #include <nav_msgs/msg/detail/path__struct.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker.hpp>
 
-#include "manager/DIOManager.hpp"
-#include "core/params.hpp"
 #include "core/rplrio_types.hpp"
+#include "manager/DIOManager.hpp"
+#include "ros_params.hpp"
 
 class DIORosNode : public rclcpp::Node {
 private:
@@ -24,7 +24,8 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr>
       sub_radars;
-  std::vector<rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr>
+  std::vector<rclcpp::Subscription<
+      geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr>
       sub_vel;
 
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pub_pose;
@@ -42,9 +43,11 @@ private:
 public:
   DIORosNode();
   ~DIORosNode();
-  rplrio::Params params;
+  RosParams ros_params;
   std::unique_ptr<rplrio::DIOManager> dio_manager;
   void cb_radar(const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg);
-  void cb_vel(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr vel_msg);
+  void
+  cb_vel(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr
+             vel_msg);
   void cb_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu);
 };

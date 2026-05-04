@@ -1,4 +1,5 @@
 #include "factor/VelocityPoseBiasFactor.hpp"
+
 #include <gtsam/base/Matrix.h>
 
 VelocityPoseBiasFactor::VelocityPoseBiasFactor(Key v_key, Key x_key, Key b_key,

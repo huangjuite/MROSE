@@ -15,5 +15,6 @@ dependencies = ["numpy", "pyyaml"]
 wheel.packages = ["python/rpl_rio"]
 
 [tool.scikit-build.cmake]
-version = ">=3.16"
+source-dir = "src"
+version = ">=3.22"
 args = ["-DBUILD_PYTHON_BINDINGS=ON"]

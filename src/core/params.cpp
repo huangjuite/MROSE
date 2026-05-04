@@ -1,18 +1,19 @@
 #include "core/params.hpp"
+
 #include <yaml-cpp/yaml.h>
 
 namespace rplrio {
 
 ImuParam_ptr imuParams(Params param) // EPSON G364
 {
-  gtsam::Matrix33 measured_acc_cov = gtsam::I_3x3 * pow(param.acc_noise, 2);
-  gtsam::Matrix33 measured_omega_cov = gtsam::I_3x3 * pow(param.gyro_noise, 2);
-  gtsam::Matrix33 integration_error_cov =
+  Eigen::Matrix3d measured_acc_cov = gtsam::I_3x3 * pow(param.acc_noise, 2);
+  Eigen::Matrix3d measured_omega_cov = gtsam::I_3x3 * pow(param.gyro_noise, 2);
+  Eigen::Matrix3d integration_error_cov =
       gtsam::I_3x3 *
       1e-8; // error committed in integrating position from velocities
-  gtsam::Matrix33 bias_acc_cov = gtsam::I_3x3 * pow(param.acc_rw, 2);
-  gtsam::Matrix33 bias_omega_cov = gtsam::I_3x3 * pow(param.gyro_rw, 2);
-  gtsam::Matrix66 bias_acc_omega_init =
+  Eigen::Matrix3d bias_acc_cov = gtsam::I_3x3 * pow(param.acc_rw, 2);
+  Eigen::Matrix3d bias_omega_cov = gtsam::I_3x3 * pow(param.gyro_rw, 2);
+  Eigen::Matrix<double, 6, 6> bias_acc_omega_init =
       gtsam::I_6x6 * 1e-5; // error in the bias used for preintegration
 
   auto p = gtsam::PreintegratedCombinedMeasurements::Params::MakeSharedU(
@@ -78,16 +79,18 @@ Params get_params(const std::string &cfg_path) {
   }
 
   param.use_static_init = config["odom"]["use_static_init"].as<bool>();
-  param.init_bias_acc = config["odom"]["init_bias_acc"]
-      ? Eigen::Vector3d(config["odom"]["init_bias_acc"][0].as<double>(),
-                        config["odom"]["init_bias_acc"][1].as<double>(),
-                        config["odom"]["init_bias_acc"][2].as<double>())
-      : Eigen::Vector3d::Zero();
-  param.init_bias_gyro = config["odom"]["init_bias_gyro"]
-      ? Eigen::Vector3d(config["odom"]["init_bias_gyro"][0].as<double>(),
-                        config["odom"]["init_bias_gyro"][1].as<double>(),
-                        config["odom"]["init_bias_gyro"][2].as<double>())
-      : Eigen::Vector3d::Zero();
+  param.init_bias_acc =
+      config["odom"]["init_bias_acc"]
+          ? Eigen::Vector3d(config["odom"]["init_bias_acc"][0].as<double>(),
+                            config["odom"]["init_bias_acc"][1].as<double>(),
+                            config["odom"]["init_bias_acc"][2].as<double>())
+          : Eigen::Vector3d::Zero();
+  param.init_bias_gyro =
+      config["odom"]["init_bias_gyro"]
+          ? Eigen::Vector3d(config["odom"]["init_bias_gyro"][0].as<double>(),
+                            config["odom"]["init_bias_gyro"][1].as<double>(),
+                            config["odom"]["init_bias_gyro"][2].as<double>())
+          : Eigen::Vector3d::Zero();
   param.doppler_inlier_thresh =
       config["odom"]["doppler_inlier_thresh"].as<double>();
   param.init_window = config["odom"]["static_init_window"].as<double>();
@@ -95,12 +98,18 @@ Params get_params(const std::string &cfg_path) {
 
   if (config["log_level"]) {
     std::string lvl = config["log_level"].as<std::string>();
-    if (lvl == "trace")         param.log_level = LogLevel::TRACE;
-    else if (lvl == "debug")    param.log_level = LogLevel::DEBUG;
-    else if (lvl == "info")     param.log_level = LogLevel::INFO;
-    else if (lvl == "warn")     param.log_level = LogLevel::WARN;
-    else if (lvl == "error")    param.log_level = LogLevel::ERROR;
-    else if (lvl == "fatal" || lvl == "critical") param.log_level = LogLevel::CRITICAL;
+    if (lvl == "trace")
+      param.log_level = LogLevel::TRACE;
+    else if (lvl == "debug")
+      param.log_level = LogLevel::DEBUG;
+    else if (lvl == "info")
+      param.log_level = LogLevel::INFO;
+    else if (lvl == "warn")
+      param.log_level = LogLevel::WARN;
+    else if (lvl == "error")
+      param.log_level = LogLevel::ERROR;
+    else if (lvl == "fatal" || lvl == "critical")
+      param.log_level = LogLevel::CRITICAL;
   }
 
   return param;

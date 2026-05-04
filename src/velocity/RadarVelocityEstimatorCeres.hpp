@@ -1,10 +1,12 @@
 #pragma once
 
-#include "velocity/RadarVelocityEstimatorBase.hpp"
 #include <ceres/ceres.h>
 #include <ceres/solver.h>
 #include <ceres/types.h>
+
 #include <optional>
+
+#include "velocity/RadarVelocityEstimatorBase.hpp"
 
 class DopplerCostFunction : public ceres::SizedCostFunction<1, 3> {
 private:
@@ -19,7 +21,7 @@ public:
     s_ = sigma;
   };
 
-  ~DopplerCostFunction() {};
+  ~DopplerCostFunction(){};
   bool Evaluate(double const *const *parameters, double *residuals,
                 double **jacobians) const {
     const double *v = parameters[0];

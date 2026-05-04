@@ -1,4 +1,5 @@
 #include "utils.hpp"
+
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
 
 namespace rplrio {
@@ -100,8 +101,8 @@ nav_msgs::msg::Odometry toOdometry(Eigen::Matrix4d global_pose,
   return odom;
 }
 
-geometry_msgs::msg::TwistWithCovarianceStamped
-toROSTwist(gtsam::Vector3 v, gtsam::Matrix cov) {
+geometry_msgs::msg::TwistWithCovarianceStamped toROSTwist(gtsam::Vector3 v,
+                                                          gtsam::Matrix cov) {
   geometry_msgs::msg::TwistWithCovarianceStamped twist;
   twist.twist.twist.linear.x = v.x();
   twist.twist.twist.linear.y = v.y();

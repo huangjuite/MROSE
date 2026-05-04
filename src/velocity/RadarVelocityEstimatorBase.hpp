@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdlib>
 #include <Eigen/Dense>
+#include <cstdlib>
 
 #include "core/RadarPointType.hpp"
 
@@ -44,7 +44,6 @@ public:
 
   virtual Eigen::Vector3d optimize(const rplrio::PointCloudPtr &radar_pc) = 0;
 
-  virtual Eigen::Matrix3d
-  get_covariance(const rplrio::PointCloudPtr &radar_pc,
-                 Eigen::Vector3d velocity) = 0;
+  virtual Eigen::Matrix3d get_covariance(const rplrio::PointCloudPtr &radar_pc,
+                                         Eigen::Vector3d velocity) = 0;
 };

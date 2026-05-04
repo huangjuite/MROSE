@@ -1,10 +1,10 @@
 #include "velocity/RadarVelocityEstimatorCeres.hpp"
+
 #include <optional>
 
 RadarVelocityEstimatorCeres::RadarVelocityEstimatorCeres(
     std::optional<ceres::Solver::Options> options,
     std::optional<float> doppler_sigma, std::optional<float> cauchy_scale) {
-
   if (options.has_value())
     this->options = options.value();
   else

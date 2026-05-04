@@ -1,5 +1,4 @@
 *.npy
 __pycache__
 .vscode/
-COLCON_IGNORE
 build/

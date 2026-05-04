@@ -36,25 +36,6 @@ def generate_launch_description():
         
         return [doppler_odom_node]
 
-
-        # map_node = Node(
-        #     package="rpl_rio",
-        #     executable="runMapping",
-        #     output="screen",
-        #     parameters=[
-        #         {
-        #             "config": os.path.join(
-        #                 get_package_share_directory("rpl_rio"),
-        #                 "cfg",
-        #                 f"{LaunchConfiguration('config').perform(context)}.yaml",
-        #             ),
-        #             "use_sim_time": LaunchConfiguration("use_sim_time"),
-        #         }
-        #     ],
-        # )
-
-        # return [doppler_odom_node, map_node]
-
     ld = LaunchDescription([config_arg, use_sim_time])
     ld.add_action(OpaqueFunction(function=odom_node_setup))
     return ld

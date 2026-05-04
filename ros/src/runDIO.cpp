@@ -1,5 +1,6 @@
-#include "DIORosNode.hpp"
 #include <rclcpp/rclcpp.hpp>
+
+#include "DIORosNode.hpp"
 
 int main(int argc, char *argv[]) {
   rclcpp::init(argc, argv);
