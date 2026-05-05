@@ -272,6 +272,7 @@ RIOManager<PointType>::optimize(const RIORadar &radar, const rplrio::IMU &imu) {
   // TODO: compute velocity covariance from the optimization result
   gtsam::Matrix x_cov = gtsam::Matrix::Zero(6, 6);
   gtsam::Matrix v_cov = gtsam::Matrix::Zero(3, 3);
+  gtsam::Matrix b_cov = gtsam::Matrix::Zero(6, 6);
   auto v_err = rfac.evaluateError(opt_v, opt_x, prev_bias, {}, {}, {});
 
   // key frame informations
