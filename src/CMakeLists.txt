@@ -11,10 +11,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
   option(BUILD_PYTHON_BINDINGS "Build Python bindings" OFF)
-  if(BUILD_PYTHON_BINDINGS)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../python
-                     ${CMAKE_CURRENT_BINARY_DIR}/python)
-  endif()
 endif()
 
 find_package(Eigen3 REQUIRED)
@@ -45,3 +41,8 @@ target_link_libraries(rio PUBLIC
   yaml-cpp
   fmt::fmt
 )
+
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR AND BUILD_PYTHON_BINDINGS)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../python
+                   ${CMAKE_CURRENT_BINARY_DIR}/python)
+endif()
