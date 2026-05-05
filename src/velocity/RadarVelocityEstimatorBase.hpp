@@ -11,6 +11,7 @@ protected:
   Eigen::Matrix3d covariance_matrix;
   float inlier_thresh = 0.1;
   float doppler_sigma = 0.1;
+  float cauchy_scale = 1.0;
 
   float doppler_projection(const rplrio::PointXYZD &p, Eigen::Vector3d v) {
     Eigen::Vector3d unit_r(p.x, p.y, p.z);
@@ -29,6 +30,7 @@ public:
   void set_inlier_thresh(float thresh) { this->inlier_thresh = thresh; };
 
   void set_doppler_sigma(float sigma) { this->doppler_sigma = sigma; };
+  void set_cauchy_scale(float scale) { this->cauchy_scale = scale; };
 
   rplrio::PointCloudPtr get_inlier(const rplrio::PointCloudPtr &radar_pc,
                                    Eigen::Vector3d velocity) {

@@ -3,18 +3,11 @@
 #include <optional>
 
 RadarVelocityEstimatorCeres::RadarVelocityEstimatorCeres(
-    std::optional<ceres::Solver::Options> options,
-    std::optional<float> doppler_sigma, std::optional<float> cauchy_scale) {
+    std::optional<ceres::Solver::Options> options) {
   if (options.has_value())
     this->options = options.value();
   else
     this->options.linear_solver_type = ceres::DENSE_QR;
-
-  if (doppler_sigma.has_value())
-    this->doppler_sigma = doppler_sigma.value();
-
-  if (cauchy_scale.has_value())
-    this->cauchy_scale = cauchy_scale.value();
 }
 
 Eigen::Vector3d

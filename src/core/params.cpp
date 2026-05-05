@@ -55,6 +55,7 @@ Params get_params(const std::string &cfg_path) {
   param.radar_list = config["odom"]["radar"].as<std::vector<std::string>>();
   for (const std::string &r : param.radar_list) {
     param.radars[r].doppler_std = config[r]["doppler_sigma"].as<double>();
+    param.radars[r].cauchy_scale = config[r]["cauchy_scale"].as<double>();
     auto T_r_i_node = config[r]["T_r_i"];
     for (size_t i = 0; i < 4; ++i)
       for (size_t j = 0; j < 4; ++j)
@@ -77,6 +78,9 @@ Params get_params(const std::string &cfg_path) {
     param.marginalization_sigma = Eigen::VectorXd(6);
     param.marginalization_sigma << 10, 10, 10, 10, 10, 10;
   }
+
+  param.two_d_only = config["odom"]["two_d_only"]
+      ? config["odom"]["two_d_only"].as<bool>() : false;
 
   param.use_static_init = config["odom"]["use_static_init"].as<bool>();
   param.init_bias_acc =

@@ -25,7 +25,7 @@ DIOManager::DIOManager(
   gtsam::ISAM2Params parameters;
   parameters.relinearizeThreshold = 0.01;
   parameters.relinearizeSkip = 1;
-  smootherISAM2 = std::make_unique<ControledSmoother>(params.lag, parameters);
+  smootherISAM2 = std::make_unique<ControledSmoother>(params.lag, parameters, params.two_d_only);
 
   // imu init
   if (params.use_static_init) {
@@ -186,6 +186,7 @@ std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const Radar &radar,
     velocity_estimator->set_initial_velocity(radar.param.R_r_i.transpose() *
                                              prop_state.bodyVelocity());
     velocity_estimator->set_doppler_sigma(radar.param.doppler_std);
+    velocity_estimator->set_cauchy_scale(radar.param.cauchy_scale);
     measured_v = velocity_estimator->optimize(radar.pc);
     radar_inlier = velocity_estimator->get_inlier(radar.pc, measured_v);
 

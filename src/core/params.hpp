@@ -24,6 +24,7 @@ struct RadarParams {
   Eigen::Matrix4d T_r_i;
   Eigen::Matrix3d R_r_i;
   double doppler_std;
+  double cauchy_scale;
   double azimuth_std;
   double elevation_std;
 };
@@ -34,6 +35,7 @@ struct Params {
   bool bv_use_huber;
   double bv_huber_k;
   Eigen::VectorXd marginalization_sigma;
+  bool two_d_only;
 
   // initializer
   bool use_static_init;

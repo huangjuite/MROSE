@@ -59,6 +59,7 @@ NB_MODULE(_core, m) {
       .def_rw("bv_use_huber", &rplrio::Params::bv_use_huber)
       .def_rw("bv_huber_k", &rplrio::Params::bv_huber_k)
       .def_rw("marginalization_sigma", &rplrio::Params::marginalization_sigma)
+      .def_rw("two_d_only", &rplrio::Params::two_d_only)
       .def_rw("use_static_init", &rplrio::Params::use_static_init)
       .def_rw("init_window", &rplrio::Params::init_window)
       .def_rw("init_thres", &rplrio::Params::init_thres)
@@ -86,14 +87,13 @@ NB_MODULE(_core, m) {
       .def("set_initial_velocity",
            &RadarVelocityEstimatorBase::set_initial_velocity)
       .def("set_inlier_thresh", &RadarVelocityEstimatorBase::set_inlier_thresh)
-      .def("set_doppler_sigma", &RadarVelocityEstimatorBase::set_doppler_sigma);
+      .def("set_doppler_sigma", &RadarVelocityEstimatorBase::set_doppler_sigma)
+      .def("set_cauchy_scale", &RadarVelocityEstimatorBase::set_cauchy_scale);
 
   nb::class_<RadarVelocityEstimatorCeres, RadarVelocityEstimatorBase>(
       m, "RadarVelocityEstimatorCeres")
-      .def(nb::init<std::optional<ceres::Solver::Options>, std::optional<float>,
-                    std::optional<float>>(),
-           "options"_a = std::nullopt, "doppler_sigma"_a = 0.124f,
-           "cauchy_scale"_a = 1.0f);
+      .def(nb::init<std::optional<ceres::Solver::Options>>(),
+           "options"_a = std::nullopt);
 
   nb::class_<rplrio::Keyframe>(m, "Keyframe")
       .def_ro("stamp", &rplrio::Keyframe::stamp)

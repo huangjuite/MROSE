@@ -17,6 +17,7 @@ xwr:
     - [0.000, 0.000, 1.000,  0.079]
     - [0.000, 0.000, 0.000,  1.000]
   doppler_sigma: 0.124 # doppler uncertainty (m/s)
+  cauchy_scale: 1.0
 
 log_level: debug # options: debug, info, warn, error, fatal
 

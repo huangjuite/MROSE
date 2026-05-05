@@ -17,6 +17,7 @@ radar_1:
     - [-0.000,  0.000, -1.000,  0.823]
     - [ 0.000,  0.000,  0.000,  1.000]
   doppler_sigma: 0.1 # doppler uncertainty (m/s)
+  cauchy_scale: 1.0
 
 
 radar_2:
@@ -26,6 +27,7 @@ radar_2:
     - [ 0.000,  0.000, -1.000,  0.823]
     - [ 0.000,  0.000,  0.000,  1.000]
   doppler_sigma: 0.1 # doppler uncertainty (m/s)
+  cauchy_scale: 1.0
 
 log_level: debug # options: debug, info, warn, error, fatal
 

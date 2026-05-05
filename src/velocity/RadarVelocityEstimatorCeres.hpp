@@ -40,13 +40,11 @@ public:
 
 class RadarVelocityEstimatorCeres : public RadarVelocityEstimatorBase {
   ceres::Solver::Options options;
-  float cauchy_scale;
+  float cauchy_scale = 1.0;
 
 public:
   RadarVelocityEstimatorCeres(
-      std::optional<ceres::Solver::Options> options = std::nullopt,
-      std::optional<float> doppler_sigma = 0.124,
-      std::optional<float> cauchy_scale = 1.0);
+      std::optional<ceres::Solver::Options> options = std::nullopt);
   Eigen::Vector3d optimize(const rplrio::PointCloudPtr &radar_pc);
   Eigen::Matrix3d get_covariance(const rplrio::PointCloudPtr &radar_pc,
                                  Eigen::Vector3d velocity);

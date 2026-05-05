@@ -18,7 +18,8 @@ namespace rplrio {
 class ControledSmoother : public gtsam::IncrementalFixedLagSmoother {
 public:
   ControledSmoother(double lag = 0.0,
-                    const gtsam::ISAM2Params &params = gtsam::ISAM2Params());
+                    const gtsam::ISAM2Params &params = gtsam::ISAM2Params(),
+                    bool two_d_only = false);
 
   virtual ~ControledSmoother() = default;
 
@@ -31,6 +32,9 @@ public:
   void printSymbolicTree() const;
   void printSymbolicTreeHelper(const ISAM2Clique::shared_ptr &clique,
                                const std::string indent = "") const;
+
+private:
+  bool two_d_only_ = false;
 };
 
 } // namespace rplrio
