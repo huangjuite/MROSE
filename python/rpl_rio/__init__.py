@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
 
 # Import the C++ bindings
-from rpl_rio import _core as _rio
+from rpl_rio import _core as _rio  # type: ignore
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -24,19 +24,9 @@ Params = _rio.Params
 RadarParams = _rio.RadarParams
 LogLevel = _rio.LogLevel
 get_params = _rio.get_params
-
-# Type aliases for different point types
-DIOManager_XYZD = _rio.DIOManager_XYZD
-DIOManager_XYZSD = _rio.DIOManager_XYZSD
-
-Radar_XYZD = _rio.Radar_XYZD
-Radar_XYZSD = _rio.Radar_XYZSD
-
-Keyframe_XYZD = _rio.Keyframe_XYZD
-Keyframe_XYZSD = _rio.Keyframe_XYZSD
-
-RadarVelocityEstimatorCeres_XYZD = _rio.RadarVelocityEstimatorCeres_XYZD
-RadarVelocityEstimatorCeres_XYZSD = _rio.RadarVelocityEstimatorCeres_XYZSD
+Radar = _rio.Radar
+Keyframe = _rio.Keyframe
+RadarVelocityEstimatorCeres = _rio.RadarVelocityEstimatorCeres
 
 __all__ = [
     # Types
@@ -44,22 +34,14 @@ __all__ = [
     "Params",
     "RadarParams",
     "LogLevel",
+    "Radar",
+    "Keyframe",
     "KeyframeData",
     # Functions
     "get_params",
-    # DIOManager variants
+    # Main classes
     "DIOManager",
-    "DIOManager_XYZD",
-    "DIOManager_XYZSD",
-    # Radar variants
-    "Radar_XYZD",
-    "Radar_XYZSD",
-    # Keyframe variants
-    "Keyframe_XYZD",
-    "Keyframe_XYZSD",
-    # Velocity estimator variants
-    "RadarVelocityEstimatorCeres_XYZD",
-    "RadarVelocityEstimatorCeres_XYZSD",
+    "RadarVelocityEstimatorCeres",
 ]
 
 
@@ -83,10 +65,10 @@ class KeyframeData:
     imu_bias_cov: NDArray[np.float64]  # (6, 6)
     radar_velocity: NDArray[np.float64]  # (3,)
     radar_velocity_cov: NDArray[np.float64]  # (3, 3)
-    point_cloud: NDArray[np.float32]  # (N, num_fields)
+    point_cloud: NDArray[np.float32]  # (N, 4) [x, y, z, doppler]
 
     @classmethod
-    def from_keyframe(cls, kf) -> KeyframeData:
+    def from_keyframe(cls, kf: _rio.Keyframe) -> KeyframeData:
         """Create KeyframeData from a C++ Keyframe object."""
         return cls(
             stamp=kf.stamp,
@@ -110,86 +92,43 @@ class KeyframeData:
 
 
 class DIOManager:
-    """Pythonic wrapper for DIOManager with automatic point type selection."""
-
-    POINT_TYPES = {
-        "PointXYZD": (
-            DIOManager_XYZD,
-            Radar_XYZD,
-            RadarVelocityEstimatorCeres_XYZD,
-        ),
-        "PointXYZSD": (
-            DIOManager_XYZSD,
-            Radar_XYZSD,
-            RadarVelocityEstimatorCeres_XYZSD,
-        ),
-    }
+    """Pythonic wrapper for DIOManager."""
 
     def __init__(
         self,
-        params: Params,
-        point_type: str = "XYZD",
-        doppler_sigma: float = 0.124,
-        cauchy_scale: float = 1.0,
+        params: _rio.Params,
+        verbose: bool = False,
     ):
         """Initialize DIOManager.
 
         Args:
             params: DIO parameters (from get_params or manually constructed)
-            point_type: Point cloud type ('PointXYZD', 'PointXYZSD')
-            doppler_sigma: Doppler measurement noise standard deviation
-            cauchy_scale: Cauchy loss scale for robust estimation
+            verbose: Set C++ log level to debug (default: warn).
         """
-        if point_type not in self.POINT_TYPES:
-            raise ValueError(
-                f"Unknown point type: {point_type}. "
-                f"Available: {list(self.POINT_TYPES.keys())}"
-            )
-
-        manager_cls, self._radar_cls, vel_est_cls = self.POINT_TYPES[point_type]
-
-        self._vel_estimator = vel_est_cls(
-            doppler_sigma=doppler_sigma, cauchy_scale=cauchy_scale
-        )
-        self._manager = manager_cls(params, self._vel_estimator)
+        velocity_estimator = RadarVelocityEstimatorCeres()
+        params.log_level = _rio.LogLevel.DEBUG if verbose else _rio.LogLevel.WARN
+        self._manager = _rio.DIOManager(params, velocity_estimator)
         self._params = params
-        self._doppler_sigma = doppler_sigma
-        self._cauchy_scale = cauchy_scale
+        self._vel_estimator = velocity_estimator
+        print(f"2d only: {self._params.two_d_only}")
 
     @classmethod
     def from_config(
         cls,
-        config_path: str | Path,
-        point_type: str | None = None,
-        doppler_sigma: float = 0.124,
-        cauchy_scale: float = 1.0,
+        config_path: Union[str, Path],
+        verbose: bool = False,
     ) -> DIOManager:
         """Create DIOManager from a YAML config file.
 
         Args:
             config_path: Path to YAML config file
-            point_type: Point cloud type (if None, inferred from config)
-            doppler_sigma: Doppler measurement noise standard deviation
-            cauchy_scale: Cauchy loss scale for robust estimation
+            verbose: Set C++ log level to debug (default: warn).
 
         Returns:
             Configured DIOManager instance
         """
-        import yaml
-
         params = get_params(str(config_path))
-
-        if point_type is None:
-            with open(config_path) as f:
-                cfg = yaml.safe_load(f)
-            point_type = cfg.get("point_type", "PointXYZD")
-
-        return cls(
-            params=params,
-            point_type=point_type,
-            doppler_sigma=doppler_sigma,
-            cauchy_scale=cauchy_scale,
-        )
+        return cls(params=params, verbose=verbose)
 
     def feed_imu(
         self,
@@ -212,16 +151,17 @@ class DIOManager:
         points: NDArray[np.float32],
         stamp: float,
         frame_id: str,
-    ) -> list[KeyframeData]:
+    ) -> List[KeyframeData]:
         """Feed a radar point cloud measurement.
 
         Args:
-            points: Point cloud as (N, num_fields) float32 array
+            points: Point cloud as (N, 4) float32 array [x, y, z, doppler]
             stamp: Timestamp in seconds
             frame_id: Radar frame identifier (must match config)
 
         Returns:
             List of new keyframes produced by this measurement
+
         """
         if frame_id not in self._params.radars:
             raise ValueError(
@@ -230,16 +170,14 @@ class DIOManager:
             )
 
         radar_params = self._params.radars[frame_id]
-        radar = self._radar_cls(
+        radar = Radar(
             np.ascontiguousarray(points, dtype=np.float32),
             stamp,
             radar_params,
             frame_id,
         )
         self._manager.feed_radar(radar)
-        return [
-            KeyframeData.from_keyframe(kf) for kf in self._manager.get_latest_states()
-        ]
+        return self.get_latest_states()
 
     def feed_radar_velocity(
         self,
@@ -247,7 +185,7 @@ class DIOManager:
         velocity_cov: NDArray[np.float64],
         stamp: float,
         frame_id: str,
-    ) -> list[KeyframeData]:
+    ) -> List[KeyframeData]:
         """Feed a pre-computed radar velocity measurement.
 
         Args:
@@ -266,7 +204,7 @@ class DIOManager:
             )
 
         radar_params = self._params.radars[frame_id]
-        radar = self._radar_cls(
+        radar = Radar(
             np.asarray(velocity),
             np.asarray(velocity_cov),
             stamp,
@@ -274,21 +212,20 @@ class DIOManager:
             frame_id,
         )
         self._manager.feed_radar(radar)
-        return [
-            KeyframeData.from_keyframe(kf) for kf in self._manager.get_latest_states()
-        ]
+        return self.get_latest_states()
 
-    def get_latest_states(self) -> list[KeyframeData]:
+    def get_latest_states(self) -> List[KeyframeData]:
         """Get the latest keyframe states.
 
         Returns:
             List of KeyframeData from the most recent optimization
         """
         return [
-            KeyframeData.from_keyframe(kf) for kf in self._manager.get_latest_states()
+            KeyframeData.from_keyframe(kf)
+            for kf in self._manager.get_latest_states()
         ]
 
     @property
-    def params(self) -> Params:
+    def params(self) -> _rio.Params:
         """Get the DIO parameters."""
         return self._params

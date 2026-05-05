@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Eigen/Dense>
 #include <gtsam/navigation/CombinedImuFactor.h>
+
+#include <Eigen/Dense>
 #include <string>
 #include <vector>
 
@@ -20,27 +21,28 @@ enum class LogLevel {
 };
 
 struct RadarParams {
-  std::string topic;
-  std::string type = "PointCloud2";
   Eigen::Matrix4d T_r_i;
   Eigen::Matrix3d R_r_i;
   double doppler_std;
+  double cauchy_scale;
   double azimuth_std;
   double elevation_std;
 };
 
 struct Params {
   // odom
-  std::string imu_topic;
   double lag;
   bool bv_use_huber;
   double bv_huber_k;
   Eigen::VectorXd marginalization_sigma;
+  bool two_d_only;
 
   // initializer
   bool use_static_init;
   double init_window;
   double init_thres;
+  Eigen::Vector3d init_bias_acc;
+  Eigen::Vector3d init_bias_gyro;
 
   // imu
   Eigen::Matrix4d T_i_b;
@@ -61,4 +63,7 @@ struct Params {
 };
 
 ImuParam_ptr imuParams(Params param);
+
+Params get_params(const std::string &cfg_path);
+
 }; // namespace rplrio

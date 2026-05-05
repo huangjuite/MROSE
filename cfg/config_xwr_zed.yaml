@@ -8,7 +8,6 @@ imu0:
   accelerometer_random_walk: 7.316842828686425e-05
   gyroscope_noise_density: 3.581400308085914e-05
   gyroscope_random_walk: 1.1036348379504944e-06
-  rostopic: /zed/zed_node/imu/data_raw
   gravity: 9.81
 
 xwr:
@@ -17,10 +16,8 @@ xwr:
     - [0.000, 1.000, 0.000,  0.052]
     - [0.000, 0.000, 1.000,  0.079]
     - [0.000, 0.000, 0.000,  1.000]
-  rostopic: /xwr/point_cloud
   doppler_sigma: 0.124 # doppler uncertainty (m/s)
-
-point_type: PointXYZD
+  cauchy_scale: 1.0
 
 log_level: debug # options: debug, info, warn, error, fatal
 

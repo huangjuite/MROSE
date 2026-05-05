@@ -14,10 +14,14 @@ find_package(nanobind CONFIG REQUIRED)
 nanobind_add_module(_core bindings.cpp)
 target_link_libraries(_core PRIVATE rio)
 target_include_directories(_core PRIVATE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../src>
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src
 )
 
 # Install nanobind extension into the Python package
+if(NOT DEFINED PYTHON_INSTALL_DIR)
+  set(PYTHON_INSTALL_DIR ".")
+endif()
+
 install(TARGETS _core
   LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/rpl_rio"
 )
