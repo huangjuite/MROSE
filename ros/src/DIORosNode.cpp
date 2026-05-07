@@ -1,10 +1,4 @@
-<<<<<<<< HEAD:src/node/DIORosNode.cpp
-#include "node/DIORosNode.hpp"
-#include "core/RadarPointType.hpp"
-#include "core/utils.hpp"
-========
 #include "DIORosNode.hpp"
->>>>>>>> main:ros/src/DIORosNode.cpp
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>

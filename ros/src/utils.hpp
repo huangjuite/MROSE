@@ -10,20 +10,15 @@
 #include <rclcpp/node.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <visualization_msgs/msg/marker.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 
 // GTSAM includes.
 #include <gtsam/geometry/Pose2.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/ImuBias.h>
 
-<<<<<<<< HEAD:src/core/utils.hpp
-#include "core/RadarPointType.hpp"
-#include "core/params.hpp"
-========
->>>>>>>> main:ros/src/utils.hpp
 #include <Eigen/Dense>
 #include <array>
-#include <builtin_interfaces/msg/time.hpp>
 #include <cmath>
 #include <string>
 

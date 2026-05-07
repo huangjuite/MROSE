@@ -17,26 +17,8 @@
 #include "manager/DIOManager.hpp"
 #include "ros_params.hpp"
 
-<<<<<<<< HEAD:src/node/DIORosNode.hpp
-// RIO includes
-#include "manager/DIOManager.hpp"
-#include "core/RadarPointType.hpp"
-#include "radar/RadarVelocityEstimatorEigen.hpp"
-#include "radar/RadarVelocityEstimatorCeres.hpp"
-#include "core/params.hpp"
-#include "core/rplrio_types.hpp"
-
-template <class PointType> class DIORosNode : public rclcpp::Node {
-private:
-  typedef RadarVelocityEstimatorEigen<PointType> VestType;
-  typedef typename pcl::PointCloud<PointType>::ConstPtr PclConstPtr;
-  typedef typename pcl::PointCloud<PointType>::Ptr PclPtr;
-  typedef typename pcl::PointCloud<PointType> Pcl;
-
-========
 class DIORosNode : public rclcpp::Node {
 private:
->>>>>>>> main:ros/src/DIORosNode.hpp
   std::string imu_frame_id_;
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu;

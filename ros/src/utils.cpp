@@ -1,9 +1,5 @@
-<<<<<<<< HEAD:src/core/utils.cpp
-#include "core/utils.hpp"
-========
 #include "utils.hpp"
 
->>>>>>>> main:ros/src/utils.cpp
 #include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
 
 namespace rplrio {
