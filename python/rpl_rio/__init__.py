@@ -27,6 +27,7 @@ get_params = _rio.get_params
 Radar = _rio.Radar
 Keyframe = _rio.Keyframe
 RadarVelocityEstimatorCeres = _rio.RadarVelocityEstimatorCeres
+RadarVelocityEstimatorEigen = _rio.RadarVelocityEstimatorEigen
 
 __all__ = [
     # Types
@@ -42,6 +43,7 @@ __all__ = [
     # Main classes
     "DIOManager",
     "RadarVelocityEstimatorCeres",
+    "RadarVelocityEstimatorEigen",
 ]
 
 
@@ -105,7 +107,7 @@ class DIOManager:
             params: DIO parameters (from get_params or manually constructed)
             verbose: Set C++ log level to debug (default: warn).
         """
-        velocity_estimator = RadarVelocityEstimatorCeres()
+        velocity_estimator = RadarVelocityEstimatorEigen()
         params.log_level = _rio.LogLevel.DEBUG if verbose else _rio.LogLevel.WARN
         self._manager = _rio.DIOManager(params, velocity_estimator)
         self._params = params
