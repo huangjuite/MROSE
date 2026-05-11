@@ -36,7 +36,7 @@ cloud_to_ndarray(const rplrio::PointCloudPtr &cloud) {
 }
 
 NB_MODULE(_core, m) {
-  m.doc() = "Python bindings for rpl_rio DIOManager";
+  m.doc() = "Python bindings for mrose DIOManager";
 
   nb::enum_<rplrio::LogLevel>(m, "LogLevel")
       .value("TRACE", rplrio::LogLevel::TRACE)

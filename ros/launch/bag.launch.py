@@ -45,7 +45,7 @@ def generate_launch_description():
 
     def bagDIO_node_setup(context):
         bagDIO_node = Node(
-            package="rpl_rio",
+            package="mrose",
             executable="bagDIO",
             output="screen",
             emulate_tty=True,
@@ -59,7 +59,7 @@ def generate_launch_description():
             parameters=[
                 {
                     "config": os.path.join(
-                        get_package_share_directory("rpl_rio"),
+                        get_package_share_directory("mrose"),
                         "cfg",
                         f"{LaunchConfiguration('config').perform(context)}.yaml",
                     ),

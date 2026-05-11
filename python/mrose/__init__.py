@@ -1,6 +1,6 @@
-"""rpl_rio - Radar-Inertial Odometry Python interface.
+"""mrose - Radar-Inertial Odometry Python interface.
 
-This module provides a Pythonic interface to the rpl_rio DIOManager
+This module provides a Pythonic interface to the mrose DIOManager
 using nanobind bindings to the C++ implementation.
 """
 
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, List, Union
 import numpy as np
 
 # Import the C++ bindings
-from rpl_rio import _core as _rio  # type: ignore
+from mrose import _core as _rio  # type: ignore
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -43,7 +43,6 @@ __all__ = [
     # Main classes
     "DIOManager",
     "RadarVelocityEstimatorCeres",
-    "RadarVelocityEstimatorEigen",
 ]
 
 

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 # When included via add_subdirectory from ros/CMakeLists.txt, skip — the parent
 # project already provides cmake_minimum_required, project(), and global flags.
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-  project(rpl_rio VERSION 0.1.0)
+  project(mrose VERSION 0.1.0)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -19,13 +19,13 @@ def generate_launch_description():
 
     def odom_node_setup(context):
         doppler_odom_node = Node(
-            package="rpl_rio",
+            package="mrose",
             executable="runDIO",
             output="screen",
             parameters=[
                 {
                     "config": os.path.join(
-                        get_package_share_directory("rpl_rio"),
+                        get_package_share_directory("mrose"),
                         "cfg",
                         f"{LaunchConfiguration('config').perform(context)}.yaml",
                     ),

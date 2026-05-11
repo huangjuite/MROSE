@@ -64,3 +64,18 @@ ros/          ROS2 package (launch files, CMakeLists, package.xml)
 cfg/          Sensor configuration YAML files
 env/          Build helper scripts (build_gtsam.sh)
 ```
+
+## Citation
+
+If you use this work, please cite:
+
+```bibtex
+@inproceedings{huang2024multi,
+  title={Multi-radar inertial odometry for 3d state estimation using mmwave imaging radar},
+  author={Huang, Jui-Te and Xu, Ruoyang and Hinduja, Akshay and Kaess, Michael},
+  booktitle={2024 IEEE International Conference on Robotics and Automation (ICRA)},
+  pages={12006--12012},
+  year={2024},
+  organization={IEEE}
+}
+```

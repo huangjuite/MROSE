@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(rpl_rio VERSION 0.1.0)
+project(mrose VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,7 +12,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../src" AND NOT IS_SYMLINK "${CMAKE_CURRENT_SOURCE_DIR}")
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_BINARY_DIR}/rio)
 else()
-  message(FATAL_ERROR "rpl_rio core not found — ros/ must not be a standalone symlink.")
+  message(FATAL_ERROR "mrose core not found — ros/ must not be a standalone symlink.")
 endif()
 
 find_package(ament_cmake REQUIRED)

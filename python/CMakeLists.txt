@@ -1,4 +1,4 @@
-# Python bindings for rpl_rio
+# Python bindings for mrose
 
 # Find Python and nanobind
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
@@ -23,5 +23,5 @@ if(NOT DEFINED PYTHON_INSTALL_DIR)
 endif()
 
 install(TARGETS _core
-  LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/rpl_rio"
+  LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/mrose"
 )

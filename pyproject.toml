@@ -3,16 +3,16 @@ requires = ["scikit-build-core>=0.10.0", "nanobind>=2.4.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "rpl-rio"
+name = "mrose"
 version = "0.1.0"
-description = "Radar-Inertial Odometry Python interface"
+description = "MROSE Python interface"
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [{ name = "Ray", email = "juiteh@andrew.cmu.edu" }]
 dependencies = ["numpy", "pyyaml"]
 
 [tool.scikit-build]
-wheel.packages = ["python/rpl_rio"]
+wheel.packages = ["python/mrose"]
 
 [tool.scikit-build.cmake]
 source-dir = "src"
