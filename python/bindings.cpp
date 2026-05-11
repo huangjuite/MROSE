@@ -12,6 +12,7 @@
 #include "core/rplrio_types.hpp"
 #include "manager/DIOManager.hpp"
 #include "velocity/RadarVelocityEstimatorCeres.hpp"
+#include "velocity/RadarVelocityEstimatorEigen.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -35,7 +36,7 @@ cloud_to_ndarray(const rplrio::PointCloudPtr &cloud) {
 }
 
 NB_MODULE(_core, m) {
-  m.doc() = "Python bindings for rpl_rio DIOManager";
+  m.doc() = "Python bindings for mrose DIOManager";
 
   nb::enum_<rplrio::LogLevel>(m, "LogLevel")
       .value("TRACE", rplrio::LogLevel::TRACE)
@@ -82,7 +83,8 @@ NB_MODULE(_core, m) {
       .def_rw("acc", &rplrio::IMU::acc)
       .def_rw("gyro", &rplrio::IMU::gyro)
       .def_rw("stamp", &rplrio::IMU::stamp);
-
+    
+  
   nb::class_<RadarVelocityEstimatorBase>(m, "RadarVelocityEstimatorBase")
       .def("set_initial_velocity",
            &RadarVelocityEstimatorBase::set_initial_velocity)
@@ -90,10 +92,15 @@ NB_MODULE(_core, m) {
       .def("set_doppler_sigma", &RadarVelocityEstimatorBase::set_doppler_sigma)
       .def("set_cauchy_scale", &RadarVelocityEstimatorBase::set_cauchy_scale);
 
-  nb::class_<RadarVelocityEstimatorCeres, RadarVelocityEstimatorBase>(
-      m, "RadarVelocityEstimatorCeres")
-      .def(nb::init<std::optional<ceres::Solver::Options>>(),
-           "options"_a = std::nullopt);
+
+    nb::class_<RadarVelocityEstimatorCeres, RadarVelocityEstimatorBase>(m, "RadarVelocityEstimatorCeres")
+        .def(nb::init<std::optional<ceres::Solver::Options>>(),
+                "options"_a = std::nullopt);
+
+    nb::class_<RadarVelocityEstimatorEigen, RadarVelocityEstimatorBase>(m, "RadarVelocityEstimatorEigen")
+        .def(nb::init<int, float, double>(),
+                "max_iterations"_a = 10, "min_pt_dist"_a = 0.1f, "convergence_tol"_a = 1e-7);
+
 
   nb::class_<rplrio::Keyframe>(m, "Keyframe")
       .def_ro("stamp", &rplrio::Keyframe::stamp)

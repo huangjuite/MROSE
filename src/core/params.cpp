@@ -33,6 +33,7 @@ ImuParam_ptr imuParams(Params param) // EPSON G364
 
   return p;
 }
+
 Params get_params(const std::string &cfg_path) {
   Params param;
   YAML::Node config = YAML::LoadFile(cfg_path);
@@ -80,7 +81,8 @@ Params get_params(const std::string &cfg_path) {
   }
 
   param.two_d_only = config["odom"]["two_d_only"]
-      ? config["odom"]["two_d_only"].as<bool>() : false;
+                         ? config["odom"]["two_d_only"].as<bool>()
+                         : false;
 
   param.use_static_init = config["odom"]["use_static_init"].as<bool>();
   param.init_bias_acc =

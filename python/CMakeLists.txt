@@ -1,4 +1,4 @@
-# Python bindings for rpl_rio
+# Python bindings for mrose
 
 # Find Python and nanobind
 find_package(Python REQUIRED COMPONENTS Interpreter Development)
@@ -9,9 +9,6 @@ execute_process(
 message(STATUS "nanobind cmake dir: ${NB_DIR}")
 list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 find_package(nanobind CONFIG REQUIRED)
-
-# Ensure rio library has position-independent code
-set_property(TARGET rio PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Create nanobind module
 nanobind_add_module(_core bindings.cpp)
@@ -26,5 +23,5 @@ if(NOT DEFINED PYTHON_INSTALL_DIR)
 endif()
 
 install(TARGETS _core
-  LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/rpl_rio"
+  LIBRARY DESTINATION "${PYTHON_INSTALL_DIR}/mrose"
 )

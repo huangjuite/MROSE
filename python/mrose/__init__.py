@@ -1,6 +1,6 @@
-"""rpl_rio - Radar-Inertial Odometry Python interface.
+"""mrose - Radar-Inertial Odometry Python interface.
 
-This module provides a Pythonic interface to the rpl_rio DIOManager
+This module provides a Pythonic interface to the mrose DIOManager
 using nanobind bindings to the C++ implementation.
 """
 
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, List, Union
 import numpy as np
 
 # Import the C++ bindings
-from rpl_rio import _core as _rio  # type: ignore
+from mrose import _core as _rio  # type: ignore
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
@@ -27,6 +27,7 @@ get_params = _rio.get_params
 Radar = _rio.Radar
 Keyframe = _rio.Keyframe
 RadarVelocityEstimatorCeres = _rio.RadarVelocityEstimatorCeres
+RadarVelocityEstimatorEigen = _rio.RadarVelocityEstimatorEigen
 
 __all__ = [
     # Types
@@ -105,7 +106,7 @@ class DIOManager:
             params: DIO parameters (from get_params or manually constructed)
             verbose: Set C++ log level to debug (default: warn).
         """
-        velocity_estimator = RadarVelocityEstimatorCeres()
+        velocity_estimator = RadarVelocityEstimatorEigen()
         params.log_level = _rio.LogLevel.DEBUG if verbose else _rio.LogLevel.WARN
         self._manager = _rio.DIOManager(params, velocity_estimator)
         self._params = params
