@@ -312,15 +312,26 @@ void DIOManager::feed_imu(std::shared_ptr<IMU> imu_data) {
 void DIOManager::feed_radar(std::shared_ptr<Radar> radar) {
   radar_que.emplace_back(radar);
 
+  latest_states.clear();
+
   if (!initialized) {
+    auto dummy = std::make_shared<Keyframe>(
+        Keyframe{.stamp = radar->stamp,
+                 .seq = 0,
+                 .name = radar->frame_id,
+                 .state = gtsam::NavState(gtsam::Pose3(), gtsam::Vector3::Zero()),
+                 .pose_cov = Eigen::MatrixXd::Zero(6, 6),
+                 .velocity_cov = Eigen::Matrix3d::Zero(),
+                 .v_err = Eigen::Vector3d::Zero(),
+                 .imu_bias_cov = Eigen::Matrix<double, 6, 6>::Zero(),
+                 .radar_points = radar->pc,
+                 .radar_velocity = Eigen::Vector3d::Zero(),
+                 .radar_velocity_cov = Eigen::Matrix3d::Zero()});
+    latest_states.emplace_back(dummy);
     return;
   }
 
-  latest_states.clear();
-
   update();
-
-  return;
 }
 
 const std::vector<std::shared_ptr<Keyframe>> &

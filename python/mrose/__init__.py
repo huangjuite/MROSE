@@ -111,7 +111,6 @@ class DIOManager:
         self._manager = _rio.DIOManager(params, velocity_estimator)
         self._params = params
         self._vel_estimator = velocity_estimator
-        print(f"2d only: {self._params.two_d_only}")
 
     @classmethod
     def from_config(
