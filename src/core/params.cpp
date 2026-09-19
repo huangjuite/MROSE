@@ -84,6 +84,10 @@ Params get_params(const std::string &cfg_path) {
                          ? config["odom"]["two_d_only"].as<bool>()
                          : false;
 
+  param.min_keyframe_dt = config["odom"]["min_keyframe_dt"]
+                              ? config["odom"]["min_keyframe_dt"].as<double>()
+                              : 0.002;
+
   param.use_static_init = config["odom"]["use_static_init"].as<bool>();
   param.init_bias_acc =
       config["odom"]["init_bias_acc"]

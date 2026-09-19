@@ -6,12 +6,13 @@
 #include <gtsam/geometry/Point3.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/navigation/ImuBias.h>
+#include <gtsam/nonlinear/NoiseModelFactorN.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
 
 using namespace gtsam;
 
 class VelocityPoseBiasFactor
-    : public NoiseModelFactor3<Vector3, Pose3, imuBias::ConstantBias> {
+    : public NoiseModelFactorN<Vector3, Pose3, imuBias::ConstantBias> {
 private:
   Vector3 v_measure;
   Vector3 omega;

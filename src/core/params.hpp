@@ -32,6 +32,7 @@ struct RadarParams {
 struct Params {
   // odom
   double lag;
+  double min_keyframe_dt;
   bool bv_use_huber;
   double bv_huber_k;
   Eigen::VectorXd marginalization_sigma;

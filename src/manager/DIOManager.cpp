@@ -23,9 +23,10 @@ DIOManager::DIOManager(
 
   // optimizer init
   gtsam::ISAM2Params parameters;
-  parameters.relinearizeThreshold = 0.01;
-  parameters.relinearizeSkip = 1;
-  smootherISAM2 = std::make_unique<ControledSmoother>(params.lag, parameters, params.two_d_only);
+  smoother = std::make_unique<ControledSmoother>(params.lag, parameters,
+                                                 params.two_d_only);
+  marginalizationPoseModel =
+      gtsam::noiseModel::Diagonal::Sigmas(params.marginalization_sigma);
 
   // imu init
   if (params.use_static_init) {
@@ -61,23 +62,15 @@ void DIOManager::graph_init(const Eigen::Quaterniond &rotation,
   prop_state = prev_state;
   prev_bias = prior_imu_bias;
 
-  // prior noise model
-  auto pose_noise_model = gtsam::noiseModel::Diagonal::Sigmas(
-      (gtsam::Vector(6) << 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3)
-          .finished()); // rad,rad,rad,m, m, m
-  auto velocity_noise_model =
-      gtsam::noiseModel::Isotropic::Sigma(3, 1e-3); // m/s
-  auto bias_noise_model = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
+  auto pose_noise_model = gtsam::noiseModel::Constrained::All(6);
+  auto velocity_noise_model = gtsam::noiseModel::Constrained::All(3);
+  auto bias_noise_model = gtsam::noiseModel::Constrained::All(6);
 
   // Add all prior
   graph = std::make_unique<gtsam::NonlinearFactorGraph>();
   graph->addPrior(X(0), prior_pose, pose_noise_model);
   graph->addPrior(V(0), prior_velocity, velocity_noise_model);
   graph->addPrior(B(0), prior_imu_bias, bias_noise_model);
-
-  // set marginalization model
-  marginalizationPoseModel =
-      gtsam::noiseModel::Diagonal::Sigmas(params.marginalization_sigma);
 
   initialized = true;
 }
@@ -113,37 +106,37 @@ void DIOManager::update() {
     imu_size++;
   }
 
+  // interpolate a boundary IMU sample at the radar timestamp, regardless of
+  // whether any raw samples were consumed above -- deltaTij() must reflect
+  // the true elapsed time up to radar_stamp so the keyframe-reuse threshold
+  // below is accurate.
+  if (!imu_que.empty()) {
+    auto next_imu = imu_que.front();
+    rplrio::IMU interp;
+
+    bool interp_success =
+        rplrio::IMU::interpolate(interp, radar_stamp, *last_imu, *next_imu);
+    if (interp_success) {
+      preintegrated->integrateMeasurement(interp.acc, interp.gyro,
+                                          interp.stamp - pre_imu_t);
+      pre_imu_t = interp.stamp;
+      *last_imu = interp;
+    }
+  }
+
   logger_->info("------------------------------");
   logger_->info("key frame {}", radar_msg->frame_id);
   logger_->info("imu queue size: {}", imu_que.size());
   logger_->info("radar queue size: {}", radar_que.size());
   logger_->info("imu integrated: {}", imu_size);
 
-  // close to previous key frame
-  if (imu_size == 0) {
-    logger_->debug("only add radar.");
-    auto keyframe = optimize(*radar_msg, *last_imu);
-    latest_states.emplace_back(keyframe);
-  } else { // new key frame
-
-    if (!imu_que.empty()) {
-      auto next_imu = imu_que.front();
-      rplrio::IMU interp;
-
-      bool interp_success =
-          rplrio::IMU::interpolate(interp, radar_stamp, *last_imu, *next_imu);
-      if (interp_success) {
-        preintegrated->integrateMeasurement(interp.acc, interp.gyro,
-                                            interp.stamp - pre_imu_t);
-        pre_imu_t = interp.stamp;
-        *last_imu = interp;
-      }
-    }
-
+  // close to previous key frame: reuse the current pose/velocity keys
+  // instead of spawning new ones, until enough IMU time has accumulated.
+  if (preintegrated->deltaTij() >= params.min_keyframe_dt) {
     step++;
-    auto keyframe = optimize(*radar_msg, *last_imu);
-    latest_states.emplace_back(keyframe);
   }
+  auto keyframe = optimize(*radar_msg, *last_imu);
+  latest_states.emplace_back(keyframe);
 
   logger_->info("step: {}, time: {:.6f}", step + 1, radar_stamp);
 
@@ -154,10 +147,11 @@ void DIOManager::update() {
 std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const Radar &radar,
                                                        const IMU &imu) {
   double current_t = radar.stamp;
+  bool new_keyframe = preintegrated->deltaTij() >= params.min_keyframe_dt;
 
   // combined IMU factor
   // ---------------------------------------------------------------------------
-  if (preintegrated->deltaTij() > 1e-6) {
+  if (new_keyframe) {
     auto preint_imu_combined =
         dynamic_cast<const gtsam::PreintegratedCombinedMeasurements &>(
             *preintegrated);
@@ -170,11 +164,19 @@ std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const Radar &radar,
     initial_values.insert(X(step), prop_state.pose());
     initial_values.insert(V(step), prop_state.v());
     initial_values.insert(B(step), prev_bias);
-
-    key_timestamps[X(step)] = current_t;
-    key_timestamps[V(step)] = current_t;
-    key_timestamps[B(step)] = current_t;
+  } else {
+    // No new key this round -- still refresh the predicted state (used as
+    // the radar velocity estimator's initial guess below) from the
+    // still-accumulating preintegration.
+    prop_state = preintegrated->predict(prev_state, prev_bias);
   }
+
+  // Bump the timestamp of whichever keys this frame references so the
+  // lag-window smoother doesn't marginalize them out while still being
+  // actively observed.
+  key_timestamps[X(step)] = current_t;
+  key_timestamps[V(step)] = current_t;
+  key_timestamps[B(step)] = current_t;
 
   // ------------------------------------------------------------------------------------
   gtsam::Vector3 measured_v;
@@ -227,27 +229,33 @@ std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const Radar &radar,
 
   // optimize
   // ----------------------------------------------------------------------------
-  smootherISAM2->update(*graph, initial_values, key_timestamps,
-                        marginalizationPoseModel);
+  smoother->update(*graph, initial_values, key_timestamps,
+                   marginalizationPoseModel);
 
   graph->resize(0);
   initial_values.clear();
   key_timestamps.clear();
 
   //-----------------------------------------------------------------------------
-  // Overwrite the beginning of the preintegration for the next step.
-  auto opt_x = smootherISAM2->calculateEstimate<gtsam::Pose3>(X(step));
-  auto opt_v = smootherISAM2->calculateEstimate<gtsam::Vector3>(V(step));
+  // Read back this key's freshly-updated estimate -- this happens every
+  // call, since a radar factor was just added to it regardless of branch.
+  auto opt_x = smoother->calculateEstimate<gtsam::Pose3>(X(step));
+  auto opt_v = smoother->calculateEstimate<gtsam::Vector3>(V(step));
+  auto opt_b = smoother->calculateEstimate<gtsam::imuBias::ConstantBias>(B(step));
 
-  prev_state = gtsam::NavState(opt_x, opt_v);
-  prev_bias =
-      smootherISAM2->calculateEstimate<gtsam::imuBias::ConstantBias>(B(step));
-  preintegrated->resetIntegrationAndSetBias(prev_bias);
+  // Only fold the estimate back into the preintegration base and reset it
+  // when the preintegration was actually consumed into a CombinedImuFactor
+  // this round -- otherwise keep accumulating across this reused key.
+  if (new_keyframe) {
+    prev_state = gtsam::NavState(opt_x, opt_v);
+    prev_bias = opt_b;
+    preintegrated->resetIntegrationAndSetBias(prev_bias);
+  }
 
-  gtsam::Matrix x_cov = smootherISAM2->marginalCovariance(X(step));
-  gtsam::Matrix v_cov = smootherISAM2->marginalCovariance(V(step));
-  gtsam::Matrix b_cov = smootherISAM2->marginalCovariance(B(step));
-  auto v_err = rfac.evaluateError(opt_v, opt_x, prev_bias, {}, {}, {});
+  gtsam::Matrix x_cov = smoother->marginalCovariance(X(step));
+  gtsam::Matrix v_cov = smoother->marginalCovariance(V(step));
+  gtsam::Matrix b_cov = smoother->marginalCovariance(B(step));
+  auto v_err = rfac.evaluateError(opt_v, opt_x, opt_b, {}, {}, {});
 
   // key frame information
   // -----------------------------------------------------------------------------
@@ -255,12 +263,12 @@ std::shared_ptr<rplrio::Keyframe> DIOManager::optimize(const Radar &radar,
       Keyframe{.stamp = current_t,
                .seq = static_cast<uint>(step),
                .name = radar.frame_id,
-               .state = prev_state,
+               .state = gtsam::NavState(opt_x, opt_v),
                .pose_cov = x_cov,
                .velocity_cov = v_cov,
                .v_err = v_err,
                .imu = imu,
-               .imu_bias = prev_bias,
+               .imu_bias = opt_b,
                .imu_bias_cov = b_cov,
                .radar_points = radar_inlier,
                .radar_velocity = measured_v,

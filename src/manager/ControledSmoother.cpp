@@ -42,7 +42,8 @@ FixedLagSmoother::Result ControledSmoother::update(
   }
 
   // Force iSAM2 to put the marginalizable variables at the beginning
-  createOrderingConstraints(marginalizableKeys, constrainedKeys);
+  createOrderingConstraints(
+      marginalizableKeys, [](Key) { return true; }, constrainedKeys);
 
   std::unordered_set<Key> additionalKeys =
       BayesTreeMarginalizationHelper<ISAM2>::gatherAdditionalKeysToReEliminate(

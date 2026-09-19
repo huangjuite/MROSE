@@ -6,8 +6,8 @@ VelocityPoseBiasFactor::VelocityPoseBiasFactor(Key v_key, Key x_key, Key b_key,
                                                Vector3 v_measure, Vector3 omega,
                                                Matrix44 T_s_i,
                                                const SharedNoiseModel &model)
-    : NoiseModelFactor3<Vector3, Pose3, imuBias::ConstantBias>(model, v_key,
-                                                               x_key, b_key),
+    : NoiseModelFactorN<Vector3, Pose3, imuBias::ConstantBias>(model, v_key,
+                                                                x_key, b_key),
       v_measure(v_measure), omega(omega), T_s_i(T_s_i) {}
 
 Vector VelocityPoseBiasFactor::evaluateError(

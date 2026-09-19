@@ -2,8 +2,6 @@
 
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/navigation/CombinedImuFactor.h>
-#include <gtsam/nonlinear/ISAM2.h>
-#include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <spdlog/spdlog.h>
 
@@ -38,7 +36,7 @@ private:
   std::deque<std::shared_ptr<Radar>> radar_que;
 
   // imu settings
-  std::shared_ptr<gtsam::PreintegrationType> preintegrated;
+  std::shared_ptr<gtsam::PreintegrationBase> preintegrated;
   std::deque<std::shared_ptr<IMU>> imu_que;
   std::shared_ptr<IMU> last_imu;
   std::shared_ptr<StaticInitializer> initializer;
@@ -48,13 +46,13 @@ private:
   gtsam::NavState prev_state;
   gtsam::NavState prop_state;
   gtsam::imuBias::ConstantBias prev_bias;
-  gtsam::noiseModel::Diagonal::shared_ptr marginalizationPoseModel;
 
   std::vector<std::shared_ptr<Keyframe>> latest_states;
 
   // optimizer & graph
   gtsam::FixedLagSmoother::KeyTimestampMap key_timestamps;
-  std::unique_ptr<ControledSmoother> smootherISAM2;
+  std::unique_ptr<ControledSmoother> smoother;
+  gtsam::noiseModel::Diagonal::shared_ptr marginalizationPoseModel;
   std::unique_ptr<gtsam::NonlinearFactorGraph> graph;
 
   void graph_init(const Eigen::Quaterniond &rotation,
