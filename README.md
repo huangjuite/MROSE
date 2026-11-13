@@ -1,11 +1,13 @@
-# Radar Inertial Odometry
+# MROSE: Multi-Radar Inertial Odometry
 
-C++ library and Python package for Radar-Inertial Odometry, with ROS2 support.
+C++ library and Python package for radar-inertial odometry.
 
 ## Dependencies
 
 **C++ library:**
-- CMake >= 3.22
+- CMake >= 3.22 and a C++17 compiler
+- Eigen 3.4
+- Boost
 - TBB
 - Ceres-Solver 2.2
 - yaml-cpp, fmt, spdlog
@@ -13,16 +15,42 @@ C++ library and Python package for Radar-Inertial Odometry, with ROS2 support.
 
 **Python package** (additional):
 - Python >= 3.12
+- nanobind, scikit-build-core
+- numpy, pyyaml
 
 ## Building
 
+### Using pixi (recommended)
+
+[pixi](https://pixi.sh) resolves all C++ and Python dependencies automatically. The project is pinned to the GTSAM 4.3a0 tag, which pixi builds from source using the recipe in `third_party/gtsam/`. This happens once, on the first `pixi install`, and takes several minutes; later installs reuse the cached package.
+
+Install pixi:
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+Then set up everything with one command:
+
+```bash
+pixi install
+```
+
+This installs the dependencies, builds GTSAM, and compiles and installs the `mrose` Python package (C++ core and bindings) in editable mode. Run things inside the environment with `pixi run`, for example `pixi run python your_script.py`; `pixi run` also performs the install if it has not been done yet.
+
+After changing C++ code, rebuild with:
+
+```bash
+pixi reinstall mrose
+```
+
 ### Manual
 
-Install the dependencies above, then build GTSAM 4.3a0 and install it to your prefix (see `env/build_gtsam.sh`). Then:
+Install the dependencies above. GTSAM 4.3a0 must be built from source and installed to your prefix; the CMake flags we use are listed in `third_party/gtsam/recipe.yaml`. Then:
 
 **C++ library:**
 ```bash
-cmake -S src -B build/cpp
+cmake -S src -B build/cpp -DCMAKE_BUILD_TYPE=Release
 cmake --build build/cpp --parallel
 ```
 
@@ -33,36 +61,21 @@ uv sync --verbose
 pip install -e . --no-build-isolation
 ```
 
-### Using pixi
+## Usage
 
-[pixi](https://pixi.sh) resolves all dependencies automatically. Install it first:
+```python
+import mrose
 
-```bash
-curl -fsSL https://pixi.sh/install.sh | sh
-```
-
-Then install the environment and the Python package:
-
-```bash
-pixi install
-pixi run install-python
-```
-
-Or build the standalone C++ library:
-
-```bash
-pixi install
-pixi run build-cpp
+manager = mrose.DIOManager.from_config("cfg/config_hugin_dual.yaml")
 ```
 
 ## Project Structure
 
 ```
 src/          C++ core library (factors, managers, velocity estimation)
-python/       Python package (rpl_rio) + nanobind bindings
-ros/          ROS2 package (launch files, CMakeLists, package.xml)
+python/       Python package (mrose) and nanobind bindings
 cfg/          Sensor configuration YAML files
-env/          Build helper scripts (build_gtsam.sh)
+third_party/  Build recipes for dependencies (gtsam/recipe.yaml, built by pixi)
 ```
 
 ## Citation
@@ -79,3 +92,7 @@ If you use this work, please cite:
   organization={IEEE}
 }
 ```
+
+## License
+
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for the full text.

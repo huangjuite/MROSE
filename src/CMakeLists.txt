@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # When invoked directly (cmake -S src -B build), set up as a standalone project.
-# When included via add_subdirectory from ros/CMakeLists.txt, skip — the parent
+# When included via add_subdirectory from another project, skip — the parent
 # project already provides cmake_minimum_required, project(), and global flags.
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   project(mrose VERSION 0.1.0)

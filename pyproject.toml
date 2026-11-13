@@ -7,6 +7,7 @@ name = "mrose"
 version = "0.1.0"
 description = "MROSE Python interface"
 readme = "README.md"
+license = { text = "GPL-3.0-only" }
 requires-python = ">=3.8"
 authors = [{ name = "Ray", email = "juiteh@andrew.cmu.edu" }]
 dependencies = ["numpy", "pyyaml"]

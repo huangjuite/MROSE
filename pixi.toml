@@ -4,13 +4,13 @@ version = "0.1.0"
 description = "Radar-Inertial Odometry"
 channels = ["conda-forge"]
 platforms = ["linux-64"]
+preview = ["pixi-build"]
 
 [dependencies]
 python = ">=3.12,<3.13"
 cmake = ">=3.22"
 ninja = "*"
 eigen = "3.4.*"
-boost-cpp = "*"
 tbb-devel = "*"
 ceres-solver = "*"
 suitesparse = "*"
@@ -22,17 +22,19 @@ hatchling = "*"
 git = "*"
 scikit-build-core = ">=0.10.0"
 nanobind = ">=2.4.0"
+numpy = "*"
+pyyaml = "*"
+# GTSAM 4.3a0, built from source via the rattler-build recipe in third_party/gtsam
+gtsam = { path = "third_party/gtsam" }
+
+# The mrose package itself: built (C++ core + bindings) and installed in editable
+# mode as part of `pixi install`. After changing C++ code, run `pixi reinstall mrose`.
+[pypi-dependencies]
+mrose = { path = ".", editable = true }
+
+[pypi-options]
+# Build against the conda environment (GTSAM, Ceres, nanobind, ...) instead of an isolated one.
+no-build-isolation = ["mrose"]
 
 [activation]
 env = { CMAKE_PREFIX_PATH = "$CONDA_PREFIX" }
-
-[tasks]
-build-gtsam = { cmd = "bash $PIXI_PROJECT_ROOT/env/build_gtsam.sh", description = "Clone and build GTSAM 4.3a0 from source into the pixi prefix" }
-
-install-python = { cmd = "uv pip install -e $PIXI_PROJECT_ROOT/ --no-build-isolation --reinstall -v", depends-on = [
-    "build-gtsam",
-], description = "Install rpl_rio Python package after GTSAM is built" }
-
-build-cpp = { cmd = "make -C $PIXI_PROJECT_ROOT BUILD_DIR=$PIXI_PROJECT_ROOT/.pixi/build/cpp BUILD_PYTHON_BINDINGS=ON", depends-on = [
-    "build-gtsam",
-], description = "Build standalone C++ library" }

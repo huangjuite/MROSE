@@ -1,0 +1,65 @@
+schema_version: 1
+
+context:
+  version: "4.3a0"
+
+package:
+  name: gtsam
+  version: ${{ version }}
+
+source:
+  url: https://github.com/borglab/gtsam/archive/refs/tags/${{ version }}.tar.gz
+  sha256: 5f821d3d306dc36730e2b71a78b3dd849e3e3a4cae725121cd6a9d151b894d21
+
+build:
+  number: 0
+  # GTSAM_COMPILE_OPTIONS_PRIVATE_COMMON is overridden to drop GTSAM's default
+  # -Werror, which fails on Eigen warnings with recent GCC.
+  script:
+    - >-
+      cmake -S . -B build -G Ninja
+      -DCMAKE_INSTALL_PREFIX=$PREFIX
+      -DCMAKE_PREFIX_PATH=$PREFIX
+      -DCMAKE_INSTALL_LIBDIR=lib
+      -DCMAKE_BUILD_TYPE=Release
+      -DGTSAM_BUILD_PYTHON=OFF
+      -DGTSAM_BUILD_TESTS=OFF
+      -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF
+      -DGTSAM_USE_SYSTEM_EIGEN=ON
+      -DGTSAM_WITH_TBB=ON
+      -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF
+      -DGTSAM_BUILD_WITH_CCACHE=OFF
+      -DGTSAM_COMPILE_OPTIONS_PRIVATE_COMMON=-Wall
+      -DGTSAM_POSE3_EXPMAP=ON
+      -DGTSAM_ROT3_EXPMAP=ON
+    - cmake --build build --parallel ${CPU_COUNT}
+    - cmake --install build
+
+requirements:
+  build:
+    - ${{ compiler('c') }}
+    - ${{ compiler('cxx') }}
+    - cmake
+    - ninja
+  host:
+    - eigen 3.4.*
+    - libboost-devel
+    - tbb-devel
+  run:
+    # GTSAM's public headers and GTSAMConfig.cmake need these at consumer build time.
+    - eigen 3.4.*
+    - libboost-devel
+    - tbb-devel
+
+tests:
+  - script:
+      - test -f $PREFIX/lib/libgtsam.so
+      - test -f $PREFIX/lib/cmake/GTSAM/GTSAMConfig.cmake
+      - test -f $PREFIX/include/gtsam/config.h
+
+about:
+  homepage: https://gtsam.org
+  repository: https://github.com/borglab/gtsam
+  license: BSD-3-Clause
+  license_file: LICENSE.BSD
+  summary: Georgia Tech Smoothing and Mapping library (factor graphs for robotics and vision)
